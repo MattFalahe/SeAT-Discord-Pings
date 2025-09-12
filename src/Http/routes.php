@@ -1,111 +1,110 @@
 <?php
-use Illuminate\Support\Facades\Route;
 
 Route::group([
-    'namespace' => 'YourName\Seat\DiscordBroadcast\Http\Controllers',
-    'prefix' => 'discord-broadcast',
+    'namespace' => 'MattFalahe\Seat\DiscordPings\Http\Controllers',
+    'prefix' => 'discord-pings',
     'middleware' => ['web', 'auth', 'locale'],
 ], function () {
     
-    // Broadcast routes
+    // Main ping routes
     Route::get('/', [
-        'as' => 'discord.broadcast.view',
-        'uses' => 'DiscordBroadcastController@showBroadcastForm',
-        'middleware' => 'can:discord.broadcast.send'
+        'as' => 'discord.pings.view',
+        'uses' => 'DiscordPingController@showPingForm',
+        'middleware' => 'can:discord.pings.send'
     ]);
     
     Route::post('/send', [
-        'as' => 'discord.broadcast.send',
-        'uses' => 'DiscordBroadcastController@sendBroadcast',
-        'middleware' => 'can:discord.broadcast.send'
+        'as' => 'discord.pings.send',
+        'uses' => 'DiscordPingController@sendPing',
+        'middleware' => 'can:discord.pings.send'
     ]);
     
     Route::post('/send-multiple', [
-        'as' => 'discord.broadcast.send.multiple',
-        'uses' => 'DiscordBroadcastController@sendMultipleBroadcast',
-        'middleware' => 'can:discord.broadcast.send.multiple'
+        'as' => 'discord.pings.send.multiple',
+        'uses' => 'DiscordPingController@sendMultiplePing',
+        'middleware' => 'can:discord.pings.send.multiple'
     ]);
     
     // Webhook management
-    Route::group(['prefix' => 'webhooks', 'middleware' => 'can:discord.webhooks.manage'], function () {
+    Route::group(['prefix' => 'webhooks', 'middleware' => 'can:discord.pings.webhooks.manage'], function () {
         Route::get('/', [
-            'as' => 'discord.webhooks.index',
-            'uses' => 'DiscordWebhookController@index'
+            'as' => 'discord.pings.webhooks.index',
+            'uses' => 'WebhookController@index'
         ]);
         
         Route::get('/create', [
-            'as' => 'discord.webhooks.create',
-            'uses' => 'DiscordWebhookController@create'
+            'as' => 'discord.pings.webhooks.create',
+            'uses' => 'WebhookController@create'
         ]);
         
         Route::post('/store', [
-            'as' => 'discord.webhooks.store',
-            'uses' => 'DiscordWebhookController@store'
+            'as' => 'discord.pings.webhooks.store',
+            'uses' => 'WebhookController@store'
         ]);
         
         Route::get('/{id}/edit', [
-            'as' => 'discord.webhooks.edit',
-            'uses' => 'DiscordWebhookController@edit'
+            'as' => 'discord.pings.webhooks.edit',
+            'uses' => 'WebhookController@edit'
         ]);
         
         Route::put('/{id}', [
-            'as' => 'discord.webhooks.update',
-            'uses' => 'DiscordWebhookController@update'
+            'as' => 'discord.pings.webhooks.update',
+            'uses' => 'WebhookController@update'
         ]);
         
         Route::delete('/{id}', [
-            'as' => 'discord.webhooks.destroy',
-            'uses' => 'DiscordWebhookController@destroy'
+            'as' => 'discord.pings.webhooks.destroy',
+            'uses' => 'WebhookController@destroy'
         ]);
         
         Route::post('/{id}/test', [
-            'as' => 'discord.webhooks.test',
-            'uses' => 'DiscordWebhookController@test'
+            'as' => 'discord.pings.webhooks.test',
+            'uses' => 'WebhookController@test'
         ]);
     });
     
     // History routes
-    Route::group(['prefix' => 'history', 'middleware' => 'can:discord.history.view'], function () {
+    Route::group(['prefix' => 'history', 'middleware' => 'can:discord.pings.history.view'], function () {
         Route::get('/', [
-            'as' => 'discord.history.index',
-            'uses' => 'BroadcastHistoryController@index'
+            'as' => 'discord.pings.history.index',
+            'uses' => 'PingHistoryController@index'
         ]);
         
         Route::get('/{id}', [
-            'as' => 'discord.history.show',
-            'uses' => 'BroadcastHistoryController@show'
+            'as' => 'discord.pings.history.show',
+            'uses' => 'PingHistoryController@show'
         ]);
         
         Route::post('/{id}/resend', [
-            'as' => 'discord.history.resend',
-            'uses' => 'BroadcastHistoryController@resend',
-            'middleware' => 'can:discord.broadcast.send'
+            'as' => 'discord.pings.history.resend',
+            'uses' => 'PingHistoryController@resend',
+            'middleware' => 'can:discord.pings.send'
         ]);
     });
     
-    // Scheduled broadcasts
-    Route::group(['prefix' => 'scheduled', 'middleware' => 'can:discord.scheduled.view'], function () {
+    // Scheduled pings
+    Route::group(['prefix' => 'scheduled', 'middleware' => 'can:discord.pings.scheduled.view'], function () {
         Route::get('/', [
-            'as' => 'discord.scheduled.index',
-            'uses' => 'ScheduledBroadcastController@index'
+            'as' => 'discord.pings.scheduled.index',
+            'uses' => 'ScheduledPingController@index'
         ]);
         
         Route::get('/create', [
-            'as' => 'discord.scheduled.create',
-            'uses' => 'ScheduledBroadcastController@create',
-            'middleware' => 'can:discord.scheduled.create'
+            'as' => 'discord.pings.scheduled.create',
+            'uses' => 'ScheduledPingController@create',
+            'middleware' => 'can:discord.pings.scheduled.create'
         ]);
         
         Route::post('/store', [
-            'as' => 'discord.scheduled.store',
-            'uses' => 'ScheduledBroadcastController@store',
-            'middleware' => 'can:discord.scheduled.create'
+            'as' => 'discord.pings.scheduled.store',
+            'uses' => 'ScheduledPingController@store',
+            'middleware' => 'can:discord.pings.scheduled.create'
         ]);
         
         Route::delete('/{id}', [
-            'as' => 'discord.scheduled.destroy',
-            'uses' => 'ScheduledBroadcastController@destroy',
-            'middleware' => 'can:discord.scheduled.delete'
+            'as' => 'discord.pings.scheduled.destroy',
+            'uses' => 'ScheduledPingController@destroy',
+            'middleware' => 'can:discord.pings.scheduled.delete'
         ]);
     });
 });

@@ -3,7 +3,7 @@
 A comprehensive Discord ping and broadcast management plugin for [SeAT](https://github.com/eveseat/seat) - Send fleet notifications to Discord channels with rich embeds and advanced features.
 
 [![Latest Version](https://img.shields.io/github/v/release/MattFalahe/seat-discord-pings)](https://github.com/MattFalahe/seat-discord-pings/releases)
-[![License](https://img.shields.io/github/license/MattFalahe/seat-discord-pings)](https://github.com/MattFalahe/seat-discord-pings/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](https://github.com/MattFalahe/seat-discord-pings/blob/master/LICENSE)
 [![SeAT 5.0](https://img.shields.io/badge/SeAT-5.0-blue)](https://github.com/eveseat/seat)
 
 ## Features
@@ -161,7 +161,7 @@ Pings are sent as rich Discord embeds with:
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/MattFalahe/seat-discord-pings/issues)
-- **Discord**: Join the SeAT Discord server
+- **Discord**: Join the [SeAT Discord server](https://discord.gg/seat)
 - **Documentation**: [SeAT Docs](https://docs.eveseat.net/)
 
 ## Contributing
@@ -176,17 +176,17 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under GNU General Public License v2.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Credits
 
-- Created by Matt Falahe
+- Created by [Matt Falahe](https://github.com/MattFalahe)
 - Built for the [SeAT](https://github.com/eveseat/seat) Alliance / Corporation Management Platform
 - Inspired by the EVE Online community's need for better fleet communication tools
 
 ## Changelog
 
-### Version 1.0.0
+### Version 1.0.0 (Planned)
 - Initial release
 - Core ping functionality
 - Webhook management

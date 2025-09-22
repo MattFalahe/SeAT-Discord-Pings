@@ -19,7 +19,7 @@ class DiscordPingsServiceProvider extends AbstractSeatPlugin
         $this->addMigrations();
         $this->addTranslations();
         $this->addPermissions();
-        $this->addMenuItem();
+        $this->addMenu();
         $this->registerScheduledJobs();
     }
 
@@ -78,43 +78,10 @@ class DiscordPingsServiceProvider extends AbstractSeatPlugin
     /**
      * Add menu items
      */
-    private function addMenuItem()
+    private function addMenu()
     {
-        $this->mergeMenuItems([
-            'tools' => [
-                'discord_pings' => [
-                    'name' => 'Discord Pings',
-                    'icon' => 'fas fa-bullhorn',
-                    'route_segment' => 'discord-pings',
-                    'entries' => [
-                        [
-                            'name' => 'Send Ping',
-                            'icon' => 'fas fa-paper-plane',
-                            'route' => 'discord.pings.view',
-                            'permission' => 'discord.pings.send'
-                        ],
-                        [
-                            'name' => 'Scheduled',
-                            'icon' => 'fas fa-clock',
-                            'route' => 'discord.pings.scheduled.index',
-                            'permission' => 'discord.pings.scheduled.view'
-                        ],
-                        [
-                            'name' => 'History',
-                            'icon' => 'fas fa-history',
-                            'route' => 'discord.pings.history.index',
-                            'permission' => 'discord.pings.history.view'
-                        ],
-                        [
-                            'name' => 'Webhooks',
-                            'icon' => 'fas fa-link',
-                            'route' => 'discord.pings.webhooks.index',
-                            'permission' => 'discord.pings.webhooks.manage'
-                        ]
-                    ]
-                ]
-            ]
-        ]);
+        // Register menu configuration
+        $this->mergeMenuFrom(__DIR__ . '/Config/Menu/discord-pings.menu.php');
     }
 
     /**

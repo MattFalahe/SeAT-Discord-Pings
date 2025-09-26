@@ -3,123 +3,88 @@
 namespace MattFalahe\Seat\DiscordPings;
 
 use Seat\Services\AbstractSeatPlugin;
-use MattFalahe\Seat\DiscordPings\Jobs\SendScheduledPing;
+use MattFalahe\Seat\DiscordPings\Console\Commands\ProcessScheduledPings;
+use MattFalahe\Seat\DiscordPings\Console\Commands\CleanupPingHistory;
+use MattFalahe\Seat\DiscordPings\Console\Commands\SetupPermissionsCommand;
 
 class DiscordPingsServiceProvider extends AbstractSeatPlugin
 {
-    /**
-     * Bootstrap the application services.
-     *
-     * @return void
-     */
     public function boot()
     {
-        $this->addRoutes();
-        $this->addViews();
-        $this->addMigrations();
-        $this->addTranslations();
-        $this->addPermissions();
-        $this->addMenu();
-        $this->registerScheduledJobs();
+        // Check if routes are cached before loading
+        if (!$this->app->routesAreCached()) {
+            include __DIR__ . '/Http/routes.php';
+        }
+        
+        $this->loadTranslationsFrom(__DIR__ . '/resources/lang/', 'discordpings');
+        $this->loadViewsFrom(__DIR__ . '/resources/views/', 'discordpings');
+        $this->loadMigrationsFrom(__DIR__ . '/database/migrations/');
+
+        // Register commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ProcessScheduledPings::class,
+                CleanupPingHistory::class,
+                SetupPermissionsCommand::class,
+            ]);
+        }
+
+        // Add publications
+        $this->add_publications();
+        
+        // Add database seeders
+        $this->add_database_seeders();
     }
 
     /**
-     * Register the application services.
-     *
-     * @return void
+     * Add content which must be published.
      */
+    private function add_publications()
+    {
+        $this->publishes([
+            __DIR__ . '/Config/discordpings.config.php' => config_path('discordpings.php'),
+        ], ['config', 'seat']);
+    }
+
+    /**
+     * Register database seeders
+     */
+    private function add_database_seeders()
+    {
+        $this->publishes([
+            __DIR__ . '/database/seeders/' => database_path('seeders/'),
+        ], ['seeders', 'seat']);
+    }
+
     public function register()
     {
-        $this->mergeConfigFrom(
-            __DIR__ . '/Config/discord-pings.config.php', 'discord-pings'
-        );
+        // Register sidebar configuration with correct path
+        $this->mergeConfigFrom(__DIR__ . '/Config/Menu/package.sidebar.php', 'package.sidebar');
+        
+        // Register permissions
+        $this->registerPermissions(__DIR__ . '/Config/Permissions/discordpings.permissions.php', 'discordpings');
+        
+        // Register config
+        $this->mergeConfigFrom(__DIR__.'/Config/discordpings.config.php', 'discordpings');
     }
 
-    /**
-     * Add routes
-     */
-    private function addRoutes()
-    {
-        $this->loadRoutesFrom(__DIR__ . '/Http/routes.php');
-    }
-
-    /**
-     * Add views
-     */
-    private function addViews()
-    {
-        $this->loadViewsFrom(__DIR__ . '/resources/views', 'discord-pings');
-    }
-
-    /**
-     * Add migrations
-     */
-    private function addMigrations()
-    {
-        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
-    }
-
-    /**
-     * Add translations
-     */
-    private function addTranslations()
-    {
-        $this->loadTranslationsFrom(__DIR__ . '/resources/lang', 'discord-pings');
-    }
-
-    /**
-     * Add permissions
-     */
-    private function addPermissions()
-    {
-        $this->registerPermissions(__DIR__ . '/Config/Permissions/discord-pings.permissions.php', 'discord-pings');
-    }
-
-    /**
-     * Add menu items
-     */
-    private function addMenu()
-    {
-        // Register menu configuration
-        $this->mergeMenuFrom(__DIR__ . '/Config/Menu/discord-pings.menu.php');
-    }
-
-    /**
-     * Register scheduled jobs
-     */
-    private function registerScheduledJobs()
-    {
-        $schedule = app()->make(\Illuminate\Console\Scheduling\Schedule::class);
-        $schedule->job(new SendScheduledPing)->everyMinute();
-    }
-
-    /**
-     * Get the name of the plugin
-     *
-     * @return string
-     */
     public function getName(): string
     {
         return 'Discord Pings';
     }
 
-    /**
-     * Get the packagist vendor/package name
-     *
-     * @return string
-     */
-    public function getPackagistPackageName(): string
+    public function getPackageRepositoryUrl(): string
     {
-        return 'mattfalahe/seat-discord-pings';
+        return 'https://github.com/MattFalahe/seat-discord-pings';
     }
 
-    /**
-     * Get the version of the plugin
-     *
-     * @return string
-     */
-    public function getVersion(): string
+    public function getPackagistPackageName(): string
     {
-        return config('discord-pings.config.version');
+        return 'seat-discord-pings';
+    }
+
+    public function getPackagistVendorName(): string
+    {
+        return 'mattfalahe';
     }
 }

@@ -8,7 +8,7 @@
         <div class="card-header">
             <h3 class="card-title">Manage Webhooks</h3>
             <div class="card-tools">
-                <a href="{{ route('discord.pings.webhooks.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('discordpings.webhooks.create') }}" class="btn btn-sm btn-success">
                     <i class="fas fa-plus"></i> Add Webhook
                 </a>
             </div>
@@ -20,14 +20,12 @@
                         <th>Name</th>
                         <th>Type</th>
                         <th>Status</th>
-                        <th>Restricted To</th>
-                        <th>Uses</th>
                         <th>Created</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($webhooks as $webhook)
+                    @forelse($webhooks as $webhook)
                         <tr>
                             <td>
                                 <span class="badge" style="background-color: {{ $webhook->embed_color }}">
@@ -42,27 +40,17 @@
                                     <span class="badge badge-danger">Inactive</span>
                                 @endif
                             </td>
-                            <td>
-                                @if($webhook->roles->count() > 0)
-                                    @foreach($webhook->roles as $role)
-                                        <span class="badge badge-info">{{ $role->title }}</span>
-                                    @endforeach
-                                @else
-                                    <span class="text-muted">Everyone</span>
-                                @endif
-                            </td>
-                            <td>{{ $webhook->histories()->count() }}</td>
                             <td>{{ $webhook->created_at->diffForHumans() }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-info test-webhook" data-id="{{ $webhook->id }}">
-                                        <i class="fas fa-vial"></i> Test
+                                        <i class="fas fa-vial"></i>
                                     </button>
-                                    <a href="{{ route('discord.pings.webhooks.edit', $webhook->id) }}" 
+                                    <a href="{{ route('discordpings.webhooks.edit', $webhook->id) }}" 
                                        class="btn btn-warning">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form method="POST" action="{{ route('discord.pings.webhooks.destroy', $webhook->id) }}" 
+                                    <form method="POST" action="{{ route('discordpings.webhooks.destroy', $webhook->id) }}" 
                                           style="display: inline;">
                                         @csrf
                                         @method('DELETE')
@@ -74,7 +62,11 @@
                                 </div>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center">No webhooks configured</td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
@@ -87,25 +79,25 @@ $('.test-webhook').click(function() {
     const webhookId = $(this).data('id');
     const button = $(this);
     
-    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Testing...');
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
     
     $.post('{{ url("discord-pings/webhooks") }}/' + webhookId + '/test', {
         _token: '{{ csrf_token() }}'
     })
     .done(function(response) {
         button.removeClass('btn-info').addClass('btn-success');
-        button.html('<i class="fas fa-check"></i> Success');
+        button.html('<i class="fas fa-check"></i>');
     })
     .fail(function() {
         button.removeClass('btn-info').addClass('btn-danger');
-        button.html('<i class="fas fa-times"></i> Failed');
+        button.html('<i class="fas fa-times"></i>');
     })
     .always(function() {
         setTimeout(function() {
             button.prop('disabled', false)
                   .removeClass('btn-success btn-danger')
                   .addClass('btn-info')
-                  .html('<i class="fas fa-vial"></i> Test');
+                  .html('<i class="fas fa-vial"></i>');
         }, 3000);
     });
 });

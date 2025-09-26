@@ -7,7 +7,7 @@ use Carbon\Carbon;
 
 class ScheduledPing extends Model
 {
-    protected $table = 'discord_pings_scheduled';
+    protected $table = 'discord_scheduled_pings';
 
     protected $fillable = [
         'webhook_id', 'user_id', 'message', 'fields', 'scheduled_at',

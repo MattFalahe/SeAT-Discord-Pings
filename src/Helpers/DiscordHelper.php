@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use MattFalahe\Seat\DiscordPings\Models\PingHistory;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class DiscordHelper
 {
@@ -48,6 +49,12 @@ class DiscordHelper
             return ['success' => true, 'history_id' => $history->id];
 
         } catch (RequestException $e) {
+            Log::error('Discord ping send error', [
+                'webhook_id' => $webhook->id,
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+            
             // Log failure
             PingHistory::create([
                 'webhook_id' => $webhook->id,
@@ -79,6 +86,7 @@ class DiscordHelper
                 case 'here':
                     $payload['content'] = '@here';
                     break;
+                case 'role':
                 case 'custom':
                     $payload['content'] = $data['custom_mention'] ?? '';
                     break;
@@ -97,36 +105,64 @@ class DiscordHelper
                     $user->name,
                     Carbon::now()->format('Y-m-d H:i:s.u')
                 ),
-                'icon_url' => config('discord-pings.discord.default_avatar')
             ],
             'timestamp' => Carbon::now()->toIso8601String()
         ];
 
         // Add optional fields
-        $fieldMappings = [
-            'fc_name' => ['name' => '👤 FC Name', 'inline' => true],
-            'formup_location' => ['name' => '📍 Formup Location', 'inline' => true],
-            'pap_type' => ['name' => '🎯 PAP Type', 'inline' => true],
-            'comms' => ['name' => '🎧 Comms', 'inline' => false],
-            'doctrine' => ['name' => '🚀 Doctrine', 'inline' => false],
-        ];
-
-        foreach ($fieldMappings as $key => $field) {
-            if (!empty($data[$key])) {
-                $embed['fields'][] = [
-                    'name' => $field['name'],
-                    'value' => $data[$key],
-                    'inline' => $field['inline']
-                ];
-            }
+         $fieldMappings = [
+        'fc_name' => ['name' => '👤 FC Name', 'inline' => true],
+        'formup_location' => ['name' => '📍 Formup Location', 'inline' => true],
+        'pap_type' => ['name' => '🎯 PAP Type', 'inline' => true],
+        'comms' => ['name' => '🎧 Comms', 'inline' => false],
+    ];
+    
+    foreach ($fieldMappings as $key => $field) {
+        if (!empty($data[$key])) {
+            $embed['fields'][] = [
+                'name' => $field['name'],
+                'value' => $data[$key],
+                'inline' => $field['inline']
+            ];
         }
+    }
+    
+    // Handle doctrine field specially - it might contain a link
+    if (!empty($data['doctrine'])) {
+        // Check if we have a doctrine URL from seat-fitting
+        if (!empty($data['doctrine_url']) && !empty($data['doctrine_name'])) {
+            // Create a clickable link in Discord
+            $doctrineValue = "[{$data['doctrine_name']}]({$data['doctrine_url']})";
+        } else {
+            // Use plain text doctrine
+            $doctrineValue = $data['doctrine'];
+        }
+        
+        $embed['fields'][] = [
+            'name' => '🚀 Doctrine',
+            'value' => $doctrineValue,
+            'inline' => false
+        ];
+    }
+    
+    // Add channel link if provided
+    if (!empty($data['channel_url'])) {
+        $channelValue = !empty($data['channel_mention']) 
+            ? "Join: {$data['channel_mention']}\n[Click to open]({$data['channel_url']})"
+            : "[Join Channel]({$data['channel_url']})";
+            
+        $embed['fields'][] = [
+            'name' => '💬 Channel',
+            'value' => $channelValue,
+            'inline' => false
+        ];
+    }
 
         $payload['embeds'] = [$embed];
 
         // Add username and avatar
-        $payload['username'] = config('discord-pings.discord.default_username');
-        $payload['avatar_url'] = config('discord-pings.discord.default_avatar');
-
+        $payload['username'] = config('discordpings.default_username', 'SeAT Fleet Pings');
+        
         return $payload;
     }
 
@@ -136,7 +172,7 @@ class DiscordHelper
     private function extractFields($data)
     {
         $fields = [];
-        $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine'];
+        $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 'channel_url', 'channel_mention', 'doctrine_name', 'doctrine_url'];
         
         foreach ($fieldKeys as $key) {
             if (isset($data[$key]) && !empty($data[$key])) {

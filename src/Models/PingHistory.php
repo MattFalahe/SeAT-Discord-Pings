@@ -7,7 +7,7 @@ use Seat\Web\Models\User;
 
 class PingHistory extends Model
 {
-    protected $table = 'discord_pings_histories';
+    protected $table = 'discord_ping_histories';
 
     protected $fillable = [
         'webhook_id', 'user_id', 'user_name', 'message', 'fields',
@@ -34,21 +34,5 @@ class PingHistory extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    /**
-     * Scope for successful pings
-     */
-    public function scopeSuccessful($query)
-    {
-        return $query->where('status', 'sent');
-    }
-
-    /**
-     * Scope for failed pings
-     */
-    public function scopeFailed($query)
-    {
-        return $query->where('status', 'failed');
     }
 }

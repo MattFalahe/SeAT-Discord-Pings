@@ -23,7 +23,7 @@
                 <tbody>
                     @forelse($histories as $history)
                         <tr>
-                            <td>{{ $history->created_at->format('Y-m-d H:i') }}</td>
+                            <td>{{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE</td>
                             <td>
                                 @if($history->webhook)
                                     <span class="badge" style="background-color: {{ $history->webhook->embed_color }}">

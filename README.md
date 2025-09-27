@@ -1,6 +1,6 @@
 # SeAT Discord Pings
 
-A comprehensive Discord ping and broadcast management plugin for [SeAT](https://github.com/eveseat/seat) - Send fleet notifications to Discord channels with rich embeds, role mentions, channel links, and advanced scheduling features.
+A comprehensive Discord ping and broadcast management plugin for [SeAT](https://github.com/eveseat/seat) - Send fleet notifications to Discord channels with rich embeds, role mentions, channel links, staging locations, and advanced scheduling features.
 
 [![Latest Version](https://img.shields.io/github/v/release/MattFalahe/seat-discord-pings)](https://github.com/MattFalahe/seat-discord-pings/releases)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](https://github.com/MattFalahe/seat-discord-pings/blob/master/LICENSE)
@@ -13,32 +13,35 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 - 🎯 **Multiple Webhooks** - Manage unlimited Discord webhooks for different channels
 - 📝 **Templates** - Quick templates for common ping types (CTA, Mining, Strategic, etc.)
 - 📊 **Rich Embeds** - Beautiful Discord embeds with customizable colors and fields
-- ⏰ **EVE Time** - Automatic EVE time stamps in broadcasts
+- ⏰ **EVE Time** - Automatic EVE time stamps with local time display
 
 ### Discord Integration
 - 👥 **Discord Roles** - Manage and mention Discord roles in your pings
 - 💬 **Discord Channels** - Link to specific Discord channels in messages
 - 🎨 **Custom Mentions** - Support for @everyone, @here, role mentions, and custom mentions
 - 🔗 **Channel Links** - Add clickable channel references to guide users
+- 📍 **Staging Locations** - Pre-configure staging locations with quick dropdown selection
 
 ### Fleet Information Fields
 - FC Name
-- Formup Location  
+- Formup Location (with staging dropdown)
 - PAP Type (Strategic/Peacetime/CTA)
 - Comms Information
-- Doctrine Details
-- Custom Messages
+- Doctrine Details (with seat-fitting integration)
 - Discord Channel Links
+- Custom Messages
 
 ### Advanced Features
-- 📅 **Scheduled Pings** - Schedule pings for future times with recurring options
+- 📅 **Scheduled Pings** - Schedule pings with EVE time and recurring options
+- 🚀 **Doctrine Integration** - Automatic integration with seat-fitting plugins
+- 📍 **Staging Management** - Configure and manage staging locations
 - 📜 **History Tracking** - Complete history of all sent pings with resend capability
 - 👥 **Role Restrictions** - Limit webhook access to specific SeAT roles
 - 🔄 **Multiple Recipients** - Send to multiple Discord channels simultaneously
 - 🎨 **Custom Colors** - Per-webhook and per-ping embed color customization
 - 🧪 **Webhook Testing** - Test webhooks before using them
 - 🗑️ **Automatic Cleanup** - Scheduled cleanup of old ping history
-- ⚙️ **Discord Configuration** - Unified interface for managing webhooks, roles, and channels
+- ⚙️ **Discord Configuration** - Unified interface for managing webhooks, roles, channels, and stagings
 
 ## Requirements
 
@@ -136,6 +139,16 @@ Add to your crontab if not already configured:
 5. Select the channel type (text, voice, announcement, etc.)
 6. Click **Add Channel**
 
+#### Configuring Staging Locations
+
+1. Navigate to **Discord Pings** → **Discord Config** → **Staging Locations tab**
+2. Click **Add Staging**
+3. Enter a name for the staging (e.g., "Home Staging")
+4. Enter the system name (e.g., "Jita")
+5. Optionally enter the structure name (e.g., "4-4 CNAP")
+6. Optionally set as default staging
+7. Click **Add Staging**
+
 ### Permissions
 
 Configure permissions through SeAT's Access Management system:
@@ -145,7 +158,7 @@ Configure permissions through SeAT's Access Management system:
 | `discordpings.view` | Access to Discord Pings plugin menu |
 | `discordpings.send` | Send pings to Discord |
 | `discordpings.send_multiple` | Send to multiple webhooks at once |
-| `discordpings.manage_webhooks` | Manage webhooks, roles, and channels |
+| `discordpings.manage_webhooks` | Manage webhooks, roles, channels, and stagings |
 | `discordpings.view_history` | View own ping history |
 | `discordpings.view_all_history` | View all users' ping history |
 | `discordpings.manage_scheduled` | Create and manage scheduled pings |
@@ -164,6 +177,7 @@ Edit `config/discordpings.php` to customize:
 - History retention period (default: 90 days)
 - Maximum scheduled pings per user (default: 50)
 - Default templates
+- Seat-fitting integration settings
 
 ## Usage
 
@@ -179,8 +193,10 @@ Edit `config/discordpings.php` to customize:
    - Discord Role (select from configured roles)
    - Custom mention
 5. Select a Discord channel to link (optional)
-6. Fill in fleet details (FC, location, doctrine, etc.)
-7. Click **Send Ping**
+6. Select formup location from staging dropdown or type manually
+7. Select doctrine from dropdown (if seat-fitting is installed) or type manually
+8. Fill in fleet details (FC, PAP type, comms, etc.)
+9. Click **Send Ping**
 
 ### Using Templates
 
@@ -191,18 +207,27 @@ Click any template button to quickly fill the message field:
 - **Roam Fleet** - PvP roam announcement
 - **Strategic Op** - Important strategic operations
 
+### Using Staging Locations
+
+1. Click the dropdown arrow next to Formup Location
+2. Select from pre-configured staging locations
+3. Or type a custom location manually
+4. Set default staging in Discord Config for quick access
+
 ### Scheduling Pings
 
 1. Fill out your ping details on the Send Ping page
 2. Click **Schedule** instead of Send
-3. Set date, time, and recurrence options:
+3. Set date and time in EVE time (UTC)
+4. View both EVE time and your local time for reference
+5. Set recurrence options:
    - One-time
    - Hourly
    - Daily
    - Weekly
    - Monthly
-4. Optionally set an end date for recurring pings
-5. Pings will be sent automatically at the scheduled time
+6. Optionally set an end date for recurring pings
+7. Pings will be sent automatically at the scheduled EVE time
 
 ### Bulk Sending
 
@@ -218,6 +243,16 @@ Access **Discord Pings** → **Discord Config** to manage:
 - **Webhooks Tab**: Add, edit, test, and delete webhook configurations
 - **Discord Roles Tab**: Configure Discord roles for mentions
 - **Discord Channels Tab**: Add Discord channels for quick linking
+- **Staging Locations Tab**: Manage staging locations for quick selection
+
+## Integration with Seat-Fitting
+
+The plugin automatically detects and integrates with seat-fitting plugins (CryptaTech or Denngarr versions):
+
+- Doctrine dropdown appears when seat-fitting is installed
+- Creates clickable doctrine links in Discord
+- Falls back to plain text if doctrine viewing route is not available
+- Works with both scheduled and immediate pings
 
 ## Discord Embed Format
 
@@ -228,12 +263,18 @@ Pings are sent as rich Discord embeds with:
   - 👤 FC Name
   - 📍 Formup Location
   - 🎯 PAP Type
-  - 🎧 Comms
-  - 🚀 Doctrine
-  - 💬 Channel (with clickable link)
+  - 🚀 Doctrine (with clickable link if using seat-fitting)
+  - 🎧 Comms / Channel (combined field)
 - **Footer**: "This was a coord broadcast from [username] to discord at [timestamp] EVE"
 - **Color**: Customizable per webhook or per ping
 - **Mentions**: Configurable @everyone, @here, or specific roles
+
+## Time Zones
+
+- All times in the interface are displayed in EVE time (UTC)
+- Your local time is shown for reference when scheduling
+- Scheduled pings execute based on EVE time
+- History timestamps are in EVE time
 
 ## Scheduled Jobs
 
@@ -288,6 +329,7 @@ php artisan discordpings:cleanup-history
 - Ensure the scheduler is running (check crontab)
 - Verify queue workers are processing jobs
 - Check if the scheduled ping is marked as active
+- Verify times are being set correctly in EVE time
 
 ### Permission Issues
 - Run `php artisan discordpings:setup --grant-admin` to grant admin permissions
@@ -299,6 +341,11 @@ php artisan discordpings:cleanup-history
 - Ensure roles and channels are added in Discord Config
 - Check that they are marked as active
 - Verify the Discord IDs are correct
+
+### Doctrine Dropdown Not Showing
+- Ensure seat-fitting plugin is installed (CryptaTech or Denngarr version)
+- Create at least one doctrine in the fitting plugin
+- Check logs for any loading errors
 
 ### Database Errors
 - Run `php artisan migrate` to ensure all tables are created
@@ -359,6 +406,20 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 
 ## Changelog
 
+### Version 1.0.2 (2025-09-27)
+- Added staging locations management with quick dropdown selection
+- Fixed embed color not being applied correctly
+- Fixed doctrine links not showing in Discord embeds
+- Combined Comms and Channel fields into single embed field
+- Added seat-fitting integration for both CryptaTech and Denngarr versions
+- Enhanced scheduled pings with all features from send ping (roles, channels, doctrines, stagings)
+- Added EVE time display with local time reference
+- Fixed webhook testing functionality
+- Added working preview modal for Discord embeds
+- Improved error handling and logging
+- Updated Discord Configuration interface with tabbed layout
+- Added support for default staging locations
+
 ### Version 1.0.1 (2025-09-26)
 - Added Discord role management and mentions
 - Added Discord channel linking functionality
@@ -368,7 +429,6 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 - Improved permission setup command with --grant-admin option
 - Added role-based webhook restrictions
 - Enhanced UI with role and channel dropdowns
-- Added webhook testing functionality
 - Fixed database migration issues
 - Improved error handling and logging
 

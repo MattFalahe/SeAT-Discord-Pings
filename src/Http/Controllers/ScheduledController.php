@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use MattFalahe\Seat\DiscordPings\Models\ScheduledPing;
 use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
+use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
+use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
+use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
 use Carbon\Carbon;
 
 class ScheduledController extends Controller
@@ -38,8 +41,38 @@ class ScheduledController extends Controller
     {
         try {
             $webhooks = DiscordWebhook::active()->get();
+            $roles = DiscordRole::active()->get();
+            $channels = DiscordChannel::active()->get();
+            $stagings = StagingLocation::active()->get();
             
-            return view('discordpings::scheduled.create', compact('webhooks'));
+            // Check for seat-fitting plugin
+            $doctrines = [];
+            $hasFittingPlugin = false;
+            
+            if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
+                $hasFittingPlugin = true;
+                try {
+                    $doctrines = \CryptaTech\Seat\Fitting\Models\Doctrine::all();
+                } catch (\Exception $e) {
+                    Log::info('CryptaTech seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
+                }
+            } elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
+                $hasFittingPlugin = true;
+                try {
+                    $doctrines = \Denngarr\Seat\Fitting\Models\Doctrine::all();
+                } catch (\Exception $e) {
+                    Log::info('Denngarr seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
+                }
+            }
+            
+            return view('discordpings::scheduled.create', compact(
+                'webhooks', 
+                'roles', 
+                'channels', 
+                'stagings',
+                'doctrines',
+                'hasFittingPlugin'
+            ));
             
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled create error: ' . $e->getMessage());
@@ -53,22 +86,36 @@ class ScheduledController extends Controller
     public function store(Request $request)
     {
         try {
+            // Use the UTC times if provided (from JavaScript conversion), otherwise use the raw input
+            $scheduledAt = $request->input('scheduled_at_utc') ?? $request->input('scheduled_at');
+            $repeatUntil = $request->input('repeat_until_utc') ?? $request->input('repeat_until');
+            
             $validated = $request->validate([
                 'webhook_id' => 'required|exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
-                'scheduled_at' => 'required|date|after:now',
                 'repeat_interval' => 'nullable|in:hourly,daily,weekly,monthly',
-                'repeat_until' => 'nullable|date|after:scheduled_at',
                 // Optional fields
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
                 'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
                 'comms' => 'nullable|string|max:200',
                 'doctrine' => 'nullable|string|max:200',
-                'mention_type' => 'nullable|string|in:none,everyone,here,custom',
+                'doctrine_id' => 'nullable|integer',
+                'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
+                'role_mention' => 'nullable|exists:discord_roles,id',
+                'channel_link' => 'nullable|exists:discord_channels,id',
                 'custom_mention' => 'nullable|string|max:100',
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             ]);
+            
+            // Validate the times separately since they're not in the normal validation
+            if (!$scheduledAt || Carbon::parse($scheduledAt)->isPast()) {
+                return redirect()->back()->with('error', 'Scheduled time must be in the future.');
+            }
+            
+            if ($repeatUntil && Carbon::parse($repeatUntil)->lte(Carbon::parse($scheduledAt))) {
+                return redirect()->back()->with('error', 'Repeat until time must be after scheduled time.');
+            }
             
             // Check webhook exists and is active
             $webhook = DiscordWebhook::find($validated['webhook_id']);
@@ -85,10 +132,62 @@ class ScheduledController extends Controller
                 return redirect()->back()->with('error', 'You have reached the maximum number of scheduled pings.');
             }
             
+            // Handle doctrine from seat-fitting if selected
+            if (!empty($validated['doctrine_id'])) {
+                $doctrine = null;
+                
+                // Try CryptaTech namespace first
+                if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
+                    try {
+                        $doctrine = \CryptaTech\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
+                    } catch (\Exception $e) {
+                        Log::info('Could not load doctrine from CryptaTech seat-fitting: ' . $e->getMessage());
+                    }
+                }
+                // Fall back to Denngarr namespace
+                elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
+                    try {
+                        $doctrine = \Denngarr\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
+                    } catch (\Exception $e) {
+                        Log::info('Could not load doctrine from Denngarr seat-fitting: ' . $e->getMessage());
+                    }
+                }
+                
+                if ($doctrine) {
+                    try {
+                        $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
+                        $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
+                        $validated['doctrine_url'] = $doctrineUrl;
+                    } catch (\Exception $e) {
+                        $validated['doctrine'] = $doctrine->name;
+                    }
+                    $validated['doctrine_name'] = $doctrine->name;
+                }
+            }
+            
+            // Handle role mention
+            if (($validated['mention_type'] ?? 'none') === 'role' && !empty($validated['role_mention'])) {
+                $role = DiscordRole::find($validated['role_mention']);
+                if ($role) {
+                    $validated['custom_mention'] = $role->getMentionString();
+                }
+            }
+            
+            // Handle channel link
+            if (!empty($validated['channel_link'])) {
+                $channel = DiscordChannel::find($validated['channel_link']);
+                if ($channel) {
+                    $validated['channel_url'] = $channel->getChannelLink();
+                    $validated['channel_mention'] = $channel->getMentionString();
+                }
+            }
+            
             // Build fields array
             $fields = [];
             $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 
-                         'mention_type', 'custom_mention', 'embed_color'];
+                         'doctrine_name', 'doctrine_url', 'mention_type', 'custom_mention', 
+                         'embed_color', 'role_mention', 'channel_link', 'channel_url', 
+                         'channel_mention'];
             
             foreach ($fieldKeys as $key) {
                 if (isset($validated[$key]) && !empty($validated[$key])) {
@@ -96,20 +195,20 @@ class ScheduledController extends Controller
                 }
             }
             
-            // Create scheduled ping
+            // Create scheduled ping with UTC times
             ScheduledPing::create([
                 'webhook_id' => $validated['webhook_id'],
                 'user_id' => auth()->id(),
                 'message' => $validated['message'],
                 'fields' => $fields,
-                'scheduled_at' => Carbon::parse($validated['scheduled_at']),
+                'scheduled_at' => Carbon::parse($scheduledAt)->utc(),
                 'repeat_interval' => $validated['repeat_interval'] ?? null,
-                'repeat_until' => isset($validated['repeat_until']) ? Carbon::parse($validated['repeat_until']) : null,
+                'repeat_until' => $repeatUntil ? Carbon::parse($repeatUntil)->utc() : null,
                 'is_active' => true,
             ]);
             
             return redirect()->route('discordpings.scheduled')
-                ->with('success', 'Ping scheduled successfully!');
+                ->with('success', 'Ping scheduled successfully for ' . Carbon::parse($scheduledAt)->utc()->format('Y-m-d H:i:s') . ' EVE!');
                 
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled store error: ' . $e->getMessage());

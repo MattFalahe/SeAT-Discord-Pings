@@ -50,6 +50,23 @@ Route::group([
     Route::post('/config/channels/{id}/toggle', 'DiscordConfigController@toggleChannel')
         ->name('discordpings.config.channels.toggle')
         ->middleware('can:discordpings.manage_webhooks');
+
+    // Staging Locations
+    Route::post('/config/stagings', 'DiscordConfigController@storeStaging')
+        ->name('discordpings.config.stagings.store')
+        ->middleware('can:discordpings.manage_webhooks');
+    
+    Route::delete('/config/stagings/{id}', 'DiscordConfigController@destroyStaging')
+        ->name('discordpings.config.stagings.destroy')
+        ->middleware('can:discordpings.manage_webhooks');
+    
+    Route::post('/config/stagings/{id}/toggle', 'DiscordConfigController@toggleStaging')
+        ->name('discordpings.config.stagings.toggle')
+        ->middleware('can:discordpings.manage_webhooks');
+    
+    Route::post('/config/stagings/{id}/default', 'DiscordConfigController@setDefaultStaging')
+        ->name('discordpings.config.stagings.default')
+        ->middleware('can:discordpings.manage_webhooks');
     
     // Webhook management (keeping existing routes)
     Route::get('/webhooks', 'WebhookController@index')

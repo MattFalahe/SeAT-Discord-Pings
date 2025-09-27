@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
+use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
 
 class DiscordConfigController extends Controller
 {
@@ -19,8 +20,9 @@ class DiscordConfigController extends Controller
         $webhooks = DiscordWebhook::all();
         $roles = DiscordRole::all();
         $channels = DiscordChannel::all();
+        $stagings = StagingLocation::all();
         
-        return view('discordpings::config.index', compact('webhooks', 'roles', 'channels'));
+        return view('discordpings::config.index', compact('webhooks', 'roles', 'channels', 'stagings'));
     }
     
     /**
@@ -107,6 +109,43 @@ class DiscordConfigController extends Controller
     }
     
     /**
+     * Store new staging location
+     */
+    public function storeStaging(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'system_name' => 'required|string|max:255',
+                'structure_name' => 'nullable|string|max:255',
+                'description' => 'nullable|string|max:500',
+                'is_default' => 'boolean',
+            ]);
+            
+            // If this is set as default, unset any existing defaults
+            if ($request->boolean('is_default')) {
+                StagingLocation::where('is_default', true)->update(['is_default' => false]);
+            }
+            
+            StagingLocation::create([
+                'name' => $validated['name'],
+                'system_name' => $validated['system_name'],
+                'structure_name' => $validated['structure_name'] ?? null,
+                'description' => $validated['description'] ?? null,
+                'is_default' => $request->boolean('is_default'),
+                'is_active' => true,
+                'created_by' => auth()->id(),
+            ]);
+            
+            return redirect()->back()->with('success', 'Staging location added successfully!');
+            
+        } catch (\Exception $e) {
+            Log::error('Staging location creation error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to add staging location.');
+        }
+    }
+    
+    /**
      * Delete Discord role
      */
     public function destroyRole($id)
@@ -135,6 +174,22 @@ class DiscordConfigController extends Controller
         } catch (\Exception $e) {
             Log::error('Discord channel deletion error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to remove Discord channel.');
+        }
+    }
+    
+    /**
+     * Delete staging location
+     */
+    public function destroyStaging($id)
+    {
+        try {
+            $staging = StagingLocation::findOrFail($id);
+            $staging->delete();
+            
+            return redirect()->back()->with('success', 'Staging location removed successfully!');
+        } catch (\Exception $e) {
+            Log::error('Staging location deletion error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to remove staging location.');
         }
     }
     
@@ -169,6 +224,43 @@ class DiscordConfigController extends Controller
             return response()->json(['success' => true, 'message' => "Channel {$status} successfully"]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to toggle channel status'], 500);
+        }
+    }
+    
+    /**
+     * Toggle staging location active status
+     */
+    public function toggleStaging($id)
+    {
+        try {
+            $staging = StagingLocation::findOrFail($id);
+            $staging->is_active = !$staging->is_active;
+            $staging->save();
+            
+            $status = $staging->is_active ? 'activated' : 'deactivated';
+            return response()->json(['success' => true, 'message' => "Staging location {$status} successfully"]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to toggle staging status'], 500);
+        }
+    }
+    
+    /**
+     * Set default staging location
+     */
+    public function setDefaultStaging($id)
+    {
+        try {
+            // Unset all defaults
+            StagingLocation::where('is_default', true)->update(['is_default' => false]);
+            
+            // Set new default
+            $staging = StagingLocation::findOrFail($id);
+            $staging->is_default = true;
+            $staging->save();
+            
+            return response()->json(['success' => true, 'message' => 'Default staging location set']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to set default'], 500);
         }
     }
 }

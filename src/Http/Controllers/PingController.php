@@ -8,6 +8,7 @@ use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
 use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\PingHistory;
+use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
 use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
 
 class PingController extends Controller
@@ -21,6 +22,7 @@ class PingController extends Controller
             $webhooks = DiscordWebhook::active()->get();
             $roles = DiscordRole::active()->get();
             $channels = DiscordChannel::active()->get();
+            $stagings = StagingLocation::active()->get();
             
             $templates = config('discordpings.default_templates', []);
             
@@ -57,6 +59,7 @@ class PingController extends Controller
                 'webhooks', 
                 'roles', 
                 'channels', 
+                'stagings',
                 'templates', 
                 'recentPings', 
                 'doctrines', 
@@ -119,39 +122,14 @@ class PingController extends Controller
                 }
                 
                 if ($doctrine) {
-                    // Try to build doctrine link - check if route exists
-                    $doctrineUrl = null;
-                    
-                    // Try different possible route names
-                    $possibleRoutes = [
-                        'cryptatech.fitting.view',
-                        'fitting.doctrine.view', 
-                        'fitting.fitting.view',
-                        'fitting.view'
-                    ];
-                    
-                    foreach ($possibleRoutes as $routeName) {
-                        if (\Route::has($routeName)) {
-                            try {
-                                $doctrineUrl = route($routeName, ['id' => $doctrine->id]);
-                                break;
-                            } catch (\Exception $e) {
-                                // Try with different parameter name
-                                try {
-                                    $doctrineUrl = route($routeName, ['doctrine_id' => $doctrine->id]);
-                                    break;
-                                } catch (\Exception $e2) {
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // If we found a route, use markdown link, otherwise just use the name
-                    if ($doctrineUrl) {
+                    // Build doctrine link - we know the correct route
+                    try {
+                        $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
                         $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
                         $validated['doctrine_url'] = $doctrineUrl;
-                    } else {
+                    } catch (\Exception $e) {
+                        // If route fails for any reason, just use the name
+                        Log::info('Could not generate doctrine URL: ' . $e->getMessage());
                         $validated['doctrine'] = $doctrine->name;
                     }
                     $validated['doctrine_name'] = $doctrine->name;
@@ -239,7 +217,7 @@ class PingController extends Controller
                 }
                 
                 if ($doctrine) {
-                    // Build doctrine link - we now know the correct route
+                    // Build doctrine link - we know the correct route
                     try {
                         $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
                         $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";

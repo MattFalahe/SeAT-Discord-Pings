@@ -93,70 +93,84 @@ class DiscordHelper
             }
         }
 
+        // Use the provided embed color, or fall back to webhook default
+        $embedColor = $data['embed_color'] ?? $webhook->embed_color ?? '#5865F2';
+        
+        // Remove # from color for Discord
+        $embedColor = str_replace('#', '', $embedColor);
+
         // Build embed
         $embed = [
             'title' => '📢 Fleet Broadcast',
             'description' => $data['message'],
-            'color' => hexdec(str_replace('#', '', $data['embed_color'] ?? $webhook->embed_color)),
+            'color' => hexdec($embedColor),
             'fields' => [],
             'footer' => [
                 'text' => sprintf(
                     'This was a coord broadcast from %s to discord at %s EVE',
                     $user->name,
-                    Carbon::now()->format('Y-m-d H:i:s.u')
+                    Carbon::now()->utc()->format('Y-m-d H:i:s.u')  // Explicitly use UTC for EVE time
                 ),
             ],
-            'timestamp' => Carbon::now()->toIso8601String()
+            'timestamp' => Carbon::now()->utc()->toIso8601String()  // Discord timestamp in UTC
         ];
 
         // Add optional fields
-         $fieldMappings = [
-        'fc_name' => ['name' => '👤 FC Name', 'inline' => true],
-        'formup_location' => ['name' => '📍 Formup Location', 'inline' => true],
-        'pap_type' => ['name' => '🎯 PAP Type', 'inline' => true],
-        'comms' => ['name' => '🎧 Comms', 'inline' => false],
-    ];
-    
-    foreach ($fieldMappings as $key => $field) {
-        if (!empty($data[$key])) {
-            $embed['fields'][] = [
-                'name' => $field['name'],
-                'value' => $data[$key],
-                'inline' => $field['inline']
-            ];
-        }
-    }
-    
-    // Handle doctrine field specially - it might contain a link
-    if (!empty($data['doctrine'])) {
-        // Check if we have a doctrine URL from seat-fitting
-        if (!empty($data['doctrine_url']) && !empty($data['doctrine_name'])) {
-            // Create a clickable link in Discord
-            $doctrineValue = "[{$data['doctrine_name']}]({$data['doctrine_url']})";
-        } else {
-            // Use plain text doctrine
-            $doctrineValue = $data['doctrine'];
+        $fieldMappings = [
+            'fc_name' => ['name' => '👤 FC Name', 'inline' => true],
+            'formup_location' => ['name' => '📍 Formup Location', 'inline' => true],
+            'pap_type' => ['name' => '🎯 PAP Type', 'inline' => true],
+        ];
+        
+        foreach ($fieldMappings as $key => $field) {
+            if (!empty($data[$key])) {
+                $embed['fields'][] = [
+                    'name' => $field['name'],
+                    'value' => $data[$key],
+                    'inline' => $field['inline']
+                ];
+            }
         }
         
-        $embed['fields'][] = [
-            'name' => '🚀 Doctrine',
-            'value' => $doctrineValue,
-            'inline' => false
-        ];
-    }
-    
-    // Add channel link if provided
-    if (!empty($data['channel_url'])) {
-        $channelValue = !empty($data['channel_mention']) 
-            ? "Join: {$data['channel_mention']}\n[Click to open]({$data['channel_url']})"
-            : "[Join Channel]({$data['channel_url']})";
+        // Handle doctrine field - check for both doctrine and doctrine_name
+        if (!empty($data['doctrine']) || !empty($data['doctrine_name'])) {
+            $doctrineValue = $data['doctrine'] ?? $data['doctrine_name'];
             
-        $embed['fields'][] = [
-            'name' => '💬 Channel',
-            'value' => $channelValue,
-            'inline' => false
-        ];
-    }
+            // If we have a URL, create a markdown link
+            if (!empty($data['doctrine_url']) && !empty($data['doctrine_name'])) {
+                $doctrineValue = "[{$data['doctrine_name']}]({$data['doctrine_url']})";
+            }
+            
+            $embed['fields'][] = [
+                'name' => '🚀 Doctrine',
+                'value' => $doctrineValue,
+                'inline' => false
+            ];
+        }
+        
+        // Handle comms/channel - intelligently combine them
+        $channelInfo = [];
+        
+        // Check if we have a Discord channel selected
+        $hasDiscordChannel = !empty($data['channel_url']) || !empty($data['channel_mention']);
+        
+        // If we have a Discord channel selected, use that
+        if ($hasDiscordChannel && !empty($data['channel_mention'])) {
+            // Use only the channel mention (which is already a clickable link in Discord)
+            $channelInfo[] = $data['channel_mention'];
+        } elseif (!empty($data['comms'])) {
+            // If no Discord channel is selected but comms is filled, use comms
+            $channelInfo[] = $data['comms'];
+        }
+        
+        // Add combined comms/channel field if we have any info
+        if (!empty($channelInfo)) {
+            $embed['fields'][] = [
+                'name' => '🎧 Comms / Channel',
+                'value' => implode("\n", $channelInfo),
+                'inline' => false
+            ];
+        }
 
         $payload['embeds'] = [$embed];
 
@@ -172,7 +186,8 @@ class DiscordHelper
     private function extractFields($data)
     {
         $fields = [];
-        $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 'channel_url', 'channel_mention', 'doctrine_name', 'doctrine_url'];
+        $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 'channel_url', 
+                      'channel_mention', 'doctrine_name', 'doctrine_url', 'embed_color'];
         
         foreach ($fieldKeys as $key) {
             if (isset($data[$key]) && !empty($data[$key])) {

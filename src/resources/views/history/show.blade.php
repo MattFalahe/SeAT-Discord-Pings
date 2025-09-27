@@ -16,7 +16,7 @@
         <div class="card-body">
             <dl class="row">
                 <dt class="col-sm-3">Sent At</dt>
-                <dd class="col-sm-9">{{ $history->created_at->format('Y-m-d H:i:s') }}</dd>
+                <dd class="col-sm-9">{{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE</dd>
 
                 <dt class="col-sm-3">Webhook</dt>
                 <dd class="col-sm-9">

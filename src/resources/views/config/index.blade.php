@@ -44,6 +44,11 @@
                         <i class="fas fa-hashtag"></i> Discord Channels
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#stagings-tab">
+                        <i class="fas fa-map-marker-alt"></i> Staging Locations
+                    </a>
+                </li>
             </ul>
         </div>
         <div class="card-body">
@@ -267,6 +272,78 @@
                         </table>
                     </div>
                 </div>
+
+                {{-- Staging Locations Tab --}}
+                <div class="tab-pane fade" id="stagings-tab">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h4>Staging Locations</h4>
+                        <button class="btn btn-success" data-toggle="modal" data-target="#addStagingModal">
+                            <i class="fas fa-plus"></i> Add Staging
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>System</th>
+                                    <th>Structure</th>
+                                    <th>Default</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($stagings ?? [] as $staging)
+                                    <tr>
+                                        <td>{{ $staging->name }}</td>
+                                        <td>{{ $staging->system_name }}</td>
+                                        <td>{{ $staging->structure_name ?? '-' }}</td>
+                                        <td>
+                                            @if($staging->is_default)
+                                                <span class="badge badge-primary">Default</span>
+                                            @else
+                                                <button class="btn btn-sm btn-outline-secondary set-default-staging" 
+                                                        data-id="{{ $staging->id }}">
+                                                    Set Default
+                                                </button>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($staging->is_active)
+                                                <span class="badge badge-success">Active</span>
+                                            @else
+                                                <span class="badge badge-danger">Inactive</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-info toggle-staging" 
+                                                        data-id="{{ $staging->id }}" 
+                                                        title="Toggle Status">
+                                                    <i class="fas fa-power-off"></i>
+                                                </button>
+                                                <form method="POST" action="{{ route('discordpings.config.stagings.destroy', $staging->id) }}" 
+                                                      style="display: inline;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger" title="Delete"
+                                                            onclick="return confirm('Are you sure?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center">No staging locations configured</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -375,6 +452,63 @@
             </div>
         </div>
     </div>
+
+    {{-- Add Staging Modal --}}
+    <div class="modal fade" id="addStagingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('discordpings.config.stagings.store') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Staging Location</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Location Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required 
+                                   placeholder="e.g., Home Staging">
+                            <small class="form-text text-muted">A friendly name for this staging</small>
+                        </div>
+                        <div class="form-group">
+                            <label>System Name <span class="text-danger">*</span></label>
+                            <input type="text" name="system_name" class="form-control" required 
+                                   placeholder="e.g., Jita">
+                            <small class="form-text text-muted">The EVE system name</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Structure Name (Optional)</label>
+                            <input type="text" name="structure_name" class="form-control" 
+                                   placeholder="e.g., 4-4 CNAP">
+                            <small class="form-text text-muted">Station or citadel name</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Description (Optional)</label>
+                            <textarea name="description" class="form-control" rows="2" 
+                                      placeholder="Optional notes about this staging"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" 
+                                       id="is_default" name="is_default" value="1">
+                                <label class="custom-control-label" for="is_default">
+                                    Set as default staging location
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Staging
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @push('javascript')
@@ -422,6 +556,36 @@ $(document).ready(function() {
         })
         .fail(function() {
             alert('Failed to toggle channel status');
+        });
+    });
+
+    // Toggle staging status
+    $('.toggle-staging').click(function() {
+        const stagingId = $(this).data('id');
+        
+        $.post(`{{ url('discord-pings/config/stagings') }}/${stagingId}/toggle`, {
+            _token: '{{ csrf_token() }}'
+        })
+        .done(function(response) {
+            location.reload();
+        })
+        .fail(function() {
+            alert('Failed to toggle staging status');
+        });
+    });
+    
+    // Set default staging
+    $('.set-default-staging').click(function() {
+        const stagingId = $(this).data('id');
+        
+        $.post(`{{ url('discord-pings/config/stagings') }}/${stagingId}/default`, {
+            _token: '{{ csrf_token() }}'
+        })
+        .done(function(response) {
+            location.reload();
+        })
+        .fail(function() {
+            alert('Failed to set default staging');
         });
     });
 

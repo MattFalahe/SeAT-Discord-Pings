@@ -176,9 +176,9 @@
 
                 {{-- Channel Link Dropdown --}}
                 <div class="form-group">
-                    <label>Channel Link (Optional)</label>
-                    <select name="channel_link" class="form-control">
-                        <option value="">No Channel Link...</option>
+                    <label>Discord Channel (Optional)</label>
+                    <select name="channel_link" class="form-control" id="channelSelect">
+                        <option value="">No Discord Channel...</option>
                         @foreach($channels ?? [] as $channel)
                             <option value="{{ $channel->id }}">
                                 #{{ $channel->name }} 
@@ -187,7 +187,8 @@
                         @endforeach
                     </select>
                     <small class="form-text text-muted">
-                        Adds a clickable channel link to the Discord message
+                        <i class="fas fa-info-circle"></i> Select a pre-configured Discord channel. 
+                        <strong>If you select a channel here, leave the Comms field empty</strong> to avoid duplicate entries.
                     </small>
                 </div>
 
@@ -225,8 +226,36 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label><i class="fas fa-map-marker-alt"></i> Formup Location</label>
-                            <input type="text" name="formup_location" class="form-control" 
-                                   value="{{ old('formup_location') }}">
+                            <div class="input-group">
+                                <input type="text" name="formup_location" id="formupLocation" class="form-control" 
+                                       placeholder="e.g., Jita 4-4" value="{{ old('formup_location') }}">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <h6 class="dropdown-header">Quick Select Staging</h6>
+                                        @forelse($stagings ?? [] as $staging)
+                                            <a class="dropdown-item staging-select" href="#" 
+                                               data-location="{{ $staging->getFullLocationString() }}">
+                                                {{ $staging->name }}
+                                                @if($staging->is_default)
+                                                    <span class="badge badge-primary ml-1">Default</span>
+                                                @endif
+                                                <br>
+                                                <small class="text-muted">{{ $staging->getFullLocationString() }}</small>
+                                            </a>
+                                        @empty
+                                            <span class="dropdown-item text-muted">No staging locations configured</span>
+                                        @endforelse
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="{{ route('discordpings.config') }}#stagings-tab">
+                                            <i class="fas fa-cog"></i> Configure Stagings
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -246,8 +275,13 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label><i class="fas fa-headset"></i> Comms</label>
-                            <input type="text" name="comms" class="form-control" 
+                            <input type="text" name="comms" class="form-control" id="commsField"
+                                   placeholder="e.g., Mumble Channel 3 or TeamSpeak Room 5"
                                    value="{{ old('comms') }}">
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> For voice comms or custom channels. 
+                                <strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -383,6 +417,57 @@ $(document).ready(function() {
             $('#webhookSelect').prop('required', false);
             $(this).html('<i class="fas fa-bullhorn"></i> Single Webhook');
             $('#pingForm').attr('action', '{{ route("discordpings.send.multiple") }}');
+        }
+    });
+
+    // Handle staging location selection
+    $('.staging-select').click(function(e) {
+        e.preventDefault();
+        const location = $(this).data('location');
+        $('#formupLocation').val(location);
+    });
+    
+    // Set default staging on page load if field is empty
+    @if(($stagings ?? collect())->where('is_default', true)->first())
+        if (!$('#formupLocation').val()) {
+            const defaultStaging = '{{ ($stagings ?? collect())->where('is_default', true)->first()->getFullLocationString() }}';
+            // Don't auto-fill, but show placeholder
+            $('#formupLocation').attr('placeholder', defaultStaging + ' (default)');
+        }
+    @endif
+
+    // Add visual feedback when channel is selected
+    $('#channelSelect').change(function() {
+        if ($(this).val()) {
+            // Channel selected - add warning to comms field
+            $('#commsField').attr('placeholder', 'Leave empty - Discord channel already selected');
+            $('#commsField').parent().find('.text-warning').addClass('text-danger font-weight-bold');
+            
+            // Clear comms field if channel is selected
+            if ($('#commsField').val()) {
+                if (confirm('You have selected a Discord channel. Clear the Comms field to avoid duplication?')) {
+                    $('#commsField').val('');
+                }
+            }
+        } else {
+            // No channel selected - restore normal placeholder
+            $('#commsField').attr('placeholder', 'e.g., Mumble Channel 3 or TeamSpeak Room 5');
+            $('#commsField').parent().find('.text-warning').removeClass('text-danger font-weight-bold');
+        }
+    });
+    
+    // Warn when typing in comms if channel is selected
+    $('#commsField').on('input', function() {
+        if ($('#channelSelect').val() && $(this).val()) {
+            $(this).parent().find('small').html(
+                '<i class="fas fa-exclamation-triangle text-warning"></i> ' +
+                '<strong class="text-danger">Warning: Discord channel already selected. This may create duplicate entries!</strong>'
+            );
+        } else if (!$('#channelSelect').val()) {
+            $(this).parent().find('small').html(
+                '<i class="fas fa-info-circle"></i> For voice comms or custom channels. ' +
+                '<strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.'
+            );
         }
     });
 

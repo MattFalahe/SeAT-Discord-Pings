@@ -90,6 +90,7 @@ class ScheduledController extends Controller
             $validated = $request->validate([
                 'webhook_id' => 'required|exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
+                'embed_type' => 'nullable|string|in:fleet,announcement,message',
                 'repeat_interval' => 'nullable|in:hourly,daily,weekly,monthly',
                 // Optional fields
                 'fc_name' => 'nullable|string|max:100',
@@ -159,7 +160,7 @@ class ScheduledController extends Controller
                 ->count();
                 
             if ($userScheduledCount >= config('discordpings.max_scheduled_per_user', 50)) {
-                return redirect()->back()->with('error', 'You have reached the maximum number of scheduled pings.');
+                return redirect()->back()->with('error', 'You have reached the maximum number of scheduled broadcasts.');
             }
             
             // Handle doctrine from seat-fitting if selected
@@ -216,8 +217,8 @@ class ScheduledController extends Controller
             $fields = [];
             $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 
                          'doctrine_name', 'doctrine_url', 'mention_type', 'custom_mention', 
-                         'embed_color', 'role_mention', 'channel_link', 'channel_url', 
-                         'channel_mention'];
+                         'embed_color', 'embed_type', 'role_mention', 'channel_link', 
+                         'channel_url', 'channel_mention'];
             
             foreach ($fieldKeys as $key) {
                 if (isset($validated[$key]) && !empty($validated[$key])) {
@@ -240,7 +241,7 @@ class ScheduledController extends Controller
             // Success message showing EVE time
             return redirect()->route('discordpings.scheduled')
                 ->with('success', sprintf(
-                    'Ping scheduled successfully for %s EVE!',
+                    'Broadcast scheduled successfully for %s EVE!',
                     $scheduledAt->format('Y-m-d H:i:s')
                 ));
                 
@@ -248,7 +249,7 @@ class ScheduledController extends Controller
             Log::error('Discord Pings scheduled store error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Failed to schedule ping. Error: ' . $e->getMessage());
+                ->with('error', 'Failed to schedule broadcast. Error: ' . $e->getMessage());
         }
     }
     

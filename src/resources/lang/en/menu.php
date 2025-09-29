@@ -1,10 +1,10 @@
 <?php
 
 return [
-    'main_level' => 'Discord Pings',
-    'send_ping' => 'Send Ping',
+    'main_level' => 'SeAT Broadcast',
+    'send_ping' => 'Send Broadcast',
     'discord_config' => 'Discord Configuration',
     'webhooks' => 'Webhooks',
-    'history' => 'Ping History',
-    'scheduled' => 'Scheduled Pings',
+    'history' => 'Broadcast History',
+    'scheduled' => 'Scheduled Broadcasts',
 ];

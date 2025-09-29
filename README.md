@@ -257,7 +257,10 @@ The plugin automatically detects and integrates with seat-fitting plugins (Crypt
 ## Discord Embed Format
 
 Pings are sent as rich Discord embeds with:
-- **Title**: 📢 Fleet Broadcast
+- **Title**:  
+   - :loudspeaker: Fleet Broadcast (for fleet operations)
+   - :mega: Announcement (for general announcements)
+   - :speech_balloon: Message (for simple messages)
 - **Message**: Your custom message
 - **Fields**: 
   - 👤 FC Name
@@ -405,6 +408,17 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 - Inspired by the EVE Online community's need for better fleet communication tools
 
 ## Changelog
+
+### Version 1.0.4 (2025-09-29)
+- Rename the plugin** from "Discord Pings" to "SeAT Broadcast" throughout the interface
+- **Add broadcast type selector** with three options:
+   - :loudspeaker: Fleet Broadcast (for fleet operations)
+   - :mega: Announcement (for general announcements)
+   - :speech_balloon: Message (for simple messages)
+- Update Discord embeds to show the appropriate title based on the selected type
+- Make the plugin more versatile for different types of communications
+
+The plugin will now be more universal and can be used for any type of broadcast, not just fleet pings. The Discord embed will clearly show what type of message it is with the appropriate icon and title.
 
 ### Version 1.0.3 (2025-09-29)
 - Reworked time handling:

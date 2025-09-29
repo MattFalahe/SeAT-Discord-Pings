@@ -99,20 +99,35 @@ class DiscordHelper
         // Remove # from color for Discord
         $embedColor = str_replace('#', '', $embedColor);
 
+        // Determine embed title and icon based on embed type
+        $embedType = $data['embed_type'] ?? 'fleet';
+        switch ($embedType) {
+            case 'announcement':
+                $embedTitle = '📣 Announcement';
+                break;
+            case 'message':
+                $embedTitle = '💬 Message';
+                break;
+            case 'fleet':
+            default:
+                $embedTitle = '📢 Fleet Broadcast';
+                break;
+        }
+
         // Build embed
         $embed = [
-            'title' => '📢 Fleet Broadcast',
+            'title' => $embedTitle,
             'description' => $data['message'],
             'color' => hexdec($embedColor),
             'fields' => [],
             'footer' => [
                 'text' => sprintf(
-                    'This was a coord broadcast from %s to discord at %s EVE',
+                    'This was a broadcast from %s to discord at %s EVE',
                     $user->name,
-                    Carbon::now()->utc()->format('Y-m-d H:i:s.u')  // Explicitly use UTC for EVE time
+                    Carbon::now()->utc()->format('Y-m-d H:i:s.u')
                 ),
             ],
-            'timestamp' => Carbon::now()->utc()->toIso8601String()  // Discord timestamp in UTC
+            'timestamp' => Carbon::now()->utc()->toIso8601String()
         ];
 
         // Add optional fields
@@ -132,7 +147,7 @@ class DiscordHelper
             }
         }
         
-        // Handle doctrine field - check for both doctrine and doctrine_name
+        // Handle doctrine field
         if (!empty($data['doctrine']) || !empty($data['doctrine_name'])) {
             $doctrineValue = $data['doctrine'] ?? $data['doctrine_name'];
             
@@ -175,7 +190,7 @@ class DiscordHelper
         $payload['embeds'] = [$embed];
 
         // Add username and avatar
-        $payload['username'] = config('discordpings.default_username', 'SeAT Fleet Pings');
+        $payload['username'] = config('discordpings.app_name', 'SeAT Broadcast');
         
         return $payload;
     }
@@ -187,7 +202,7 @@ class DiscordHelper
     {
         $fields = [];
         $fieldKeys = ['fc_name', 'formup_location', 'pap_type', 'comms', 'doctrine', 'channel_url', 
-                      'channel_mention', 'doctrine_name', 'doctrine_url', 'embed_color'];
+                      'channel_mention', 'doctrine_name', 'doctrine_url', 'embed_color', 'embed_type'];
         
         foreach ($fieldKeys as $key) {
             if (isset($data[$key]) && !empty($data[$key])) {
@@ -204,13 +219,14 @@ class DiscordHelper
     public function testWebhook($webhook)
     {
         $testData = [
-            'message' => 'This is a test ping from SeAT Discord Pings plugin.',
+            'message' => 'This is a test ping from SeAT Broadcast plugin.',
             'fc_name' => 'Test FC',
             'formup_location' => 'Test System',
             'pap_type' => 'Strategic',
             'comms' => 'Test Comms Channel',
             'doctrine' => 'Test Ships',
-            'embed_color' => '#00FF00'
+            'embed_color' => '#00FF00',
+            'embed_type' => 'fleet'
         ];
 
         $testUser = (object) [

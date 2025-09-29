@@ -22,11 +22,29 @@
         font-weight: bold;
         color: #007bff;
     }
+    .local-time {
+        font-weight: bold;
+        color: #28a745;
+    }
+    .timezone-selector {
+        margin-top: 10px;
+    }
+    .time-confirmation {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+    .time-confirmation.repeat {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+    }
 </style>
 @endpush
 
 @section('full')
-    <form method="POST" action="{{ route('discordpings.scheduled.store') }}">
+    <form method="POST" action="{{ route('discordpings.scheduled.store') }}" id="scheduledPingForm">
         @csrf
         
         <div class="card">
@@ -37,17 +55,54 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Scheduled Date/Time (Your Local Time) <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="scheduled_at" id="scheduled_at" class="form-control" required
-                                   min="{{ now()->format('Y-m-d\TH:i') }}"
-                                   value="{{ old('scheduled_at', now()->addHour()->format('Y-m-d\TH:i')) }}">
-                            <small class="form-text">
-                                <div class="time-display">
-                                    <i class="fas fa-info-circle"></i> You are entering time in your local timezone<br>
-                                    <strong>EVE Time:</strong> <span class="eve-time" id="eve-time-display">Calculating...</span><br>
-                                    <strong>Your Time:</strong> <span id="local-time-display">Calculating...</span>
-                                </div>
+                            <label>Scheduled Date/Time (EVE Time / UTC) <span class="text-danger">*</span></label>
+                            <input type="datetime-local" name="scheduled_at" id="scheduled_at_eve" class="form-control" required
+                                   min="{{ now()->utc()->format('Y-m-d\TH:i') }}"
+                                   value="{{ old('scheduled_at', now()->utc()->addHour()->format('Y-m-d\TH:i')) }}">
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Enter the time in EVE Time (UTC)
                             </small>
+                            
+                            {{-- Timezone Selector --}}
+                            <div class="timezone-selector">
+                                <label>Your Timezone:</label>
+                                <select id="timezone-offset" class="form-control form-control-sm">
+                                    <option value="-12">UTC-12 (Baker Island)</option>
+                                    <option value="-11">UTC-11 (American Samoa)</option>
+                                    <option value="-10">UTC-10 (Hawaii)</option>
+                                    <option value="-9">UTC-9 (Alaska)</option>
+                                    <option value="-8">UTC-8 (PST - Los Angeles)</option>
+                                    <option value="-7">UTC-7 (MST - Denver)</option>
+                                    <option value="-6">UTC-6 (CST - Chicago)</option>
+                                    <option value="-5">UTC-5 (EST - New York)</option>
+                                    <option value="-4">UTC-4 (Atlantic)</option>
+                                    <option value="-3">UTC-3 (Brazil)</option>
+                                    <option value="-2">UTC-2 (Mid-Atlantic)</option>
+                                    <option value="-1">UTC-1 (Azores)</option>
+                                    <option value="0">UTC+0 (London/EVE Time)</option>
+                                    <option value="1">UTC+1 (Berlin/Paris)</option>
+                                    <option value="2">UTC+2 (Cairo/Athens)</option>
+                                    <option value="3">UTC+3 (Moscow/Istanbul)</option>
+                                    <option value="4">UTC+4 (Dubai)</option>
+                                    <option value="5">UTC+5 (Pakistan)</option>
+                                    <option value="5.5">UTC+5:30 (India)</option>
+                                    <option value="6">UTC+6 (Kazakhstan)</option>
+                                    <option value="7">UTC+7 (Bangkok)</option>
+                                    <option value="8">UTC+8 (Singapore/Beijing/Perth)</option>
+                                    <option value="9">UTC+9 (Tokyo/Seoul)</option>
+                                    <option value="9.5">UTC+9:30 (Adelaide)</option>
+                                    <option value="10">UTC+10 (Sydney)</option>
+                                    <option value="11">UTC+11 (Solomon Islands)</option>
+                                    <option value="12">UTC+12 (New Zealand)</option>
+                                </select>
+                            </div>
+                            
+                            {{-- Time Confirmation Box --}}
+                            <div class="time-confirmation" id="time-confirmation">
+                                <strong>📅 Scheduled Time Confirmation:</strong><br>
+                                <span class="eve-time">EVE Time: <span id="eve-time-display">--</span></span><br>
+                                <span class="local-time">Your Local Time: <span id="local-time-display">--</span></span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -83,13 +138,17 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Repeat Until (Your Local Time)</label>
-                            <input type="datetime-local" name="repeat_until" id="repeat_until" class="form-control"
-                                   min="{{ now()->addDay()->format('Y-m-d\TH:i') }}">
+                            <label>Repeat Until (EVE Time / UTC)</label>
+                            <input type="datetime-local" name="repeat_until" id="repeat_until_eve" class="form-control"
+                                   min="{{ now()->utc()->addDay()->format('Y-m-d\TH:i') }}">
                             <small class="form-text text-muted">
-                                Leave empty for indefinite repeat<br>
-                                <span id="repeat-eve-time" class="eve-time"></span>
+                                Leave empty for indefinite repeat
                             </small>
+                            <div class="time-confirmation repeat" id="repeat-time-confirmation" style="display: none;">
+                                <strong>🔄 Repeat Until:</strong><br>
+                                <span class="eve-time">EVE Time: <span id="repeat-eve-display">--</span></span><br>
+                                <span class="local-time">Your Local Time: <span id="repeat-local-display">--</span></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -277,11 +336,144 @@
 @push('javascript')
 <script>
 $(document).ready(function() {
+    // Auto-detect user's timezone offset
+    function detectUserTimezone() {
+        const now = new Date();
+        const offsetMinutes = -now.getTimezoneOffset();
+        const offsetHours = offsetMinutes / 60;
+        
+        // Try to select the closest offset in the dropdown
+        $('#timezone-offset').val(offsetHours.toString());
+        
+        // If exact match not found, find closest
+        if ($('#timezone-offset').val() === null) {
+            let closest = 0;
+            let minDiff = 24;
+            $('#timezone-offset option').each(function() {
+                const val = parseFloat($(this).val());
+                const diff = Math.abs(val - offsetHours);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = val;
+                }
+            });
+            $('#timezone-offset').val(closest.toString());
+        }
+    }
+    
+    // Format datetime for display
+    function formatDateTime(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+    
+    // Format UTC datetime for display
+    function formatDateTimeUTC(date) {
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const hours = String(date.getUTCHours()).padStart(2, '0');
+        const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+    
+    // Parse datetime-local as UTC (not local time)
+    function parseAsUTC(datetimeLocalValue) {
+        if (!datetimeLocalValue) return null;
+        
+        // Split the datetime-local value
+        const [datePart, timePart] = datetimeLocalValue.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes] = timePart.split(':').map(Number);
+        
+        // Create date explicitly in UTC
+        return new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
+    }
+    
+    // Update time displays based on EVE time input
+    function updateTimeDisplay() {
+        const eveTimeInput = $('#scheduled_at_eve').val();
+        
+        if (!eveTimeInput) {
+            $('#eve-time-display').text('--');
+            $('#local-time-display').text('--');
+            return;
+        }
+        
+        // Parse the input as UTC time directly
+        const eveDate = parseAsUTC(eveTimeInput);
+        
+        if (!eveDate || isNaN(eveDate.getTime())) {
+            $('#eve-time-display').text('Invalid date');
+            $('#local-time-display').text('Invalid date');
+            return;
+        }
+        
+        // Display EVE time (which is what was entered)
+        $('#eve-time-display').text(formatDateTimeUTC(eveDate) + ' EVE');
+        
+        // Calculate local time based on selected timezone
+        const offsetHours = parseFloat($('#timezone-offset').val());
+        const localDate = new Date(eveDate.getTime() + (offsetHours * 60 * 60 * 1000));
+        
+        const offsetString = offsetHours >= 0 ? `UTC+${offsetHours}` : `UTC${offsetHours}`;
+        $('#local-time-display').text(formatDateTime(localDate) + ' (' + offsetString + ')');
+    }
+    
+    // Update repeat until display
+    function updateRepeatDisplay() {
+        const repeatInput = $('#repeat_until_eve').val();
+        
+        if (!repeatInput) {
+            $('#repeat-time-confirmation').hide();
+            return;
+        }
+        
+        $('#repeat-time-confirmation').show();
+        
+        // Parse as UTC time
+        const eveDate = parseAsUTC(repeatInput);
+        
+        if (!eveDate || isNaN(eveDate.getTime())) {
+            $('#repeat-eve-display').text('Invalid date');
+            $('#repeat-local-display').text('Invalid date');
+            return;
+        }
+        
+        // Display EVE time
+        $('#repeat-eve-display').text(formatDateTimeUTC(eveDate) + ' EVE');
+        
+        // Calculate local time based on selected timezone
+        const offsetHours = parseFloat($('#timezone-offset').val());
+        const localDate = new Date(eveDate.getTime() + (offsetHours * 60 * 60 * 1000));
+        
+        const offsetString = offsetHours >= 0 ? `UTC+${offsetHours}` : `UTC${offsetHours}`;
+        $('#repeat-local-display').text(formatDateTime(localDate) + ' (' + offsetString + ')');
+    }
+    
+    // Event listeners for time updates
+    $('#scheduled_at_eve').on('change input', updateTimeDisplay);
+    $('#repeat_until_eve').on('change input', updateRepeatDisplay);
+    $('#timezone-offset').on('change', function() {
+        updateTimeDisplay();
+        updateRepeatDisplay();
+    });
+    
+    // Initialize timezone detection and time display
+    detectUserTimezone();
+    updateTimeDisplay();
+    
     // Character counter
     $('textarea[name="message"]').on('input', function() {
         $('#charCount').text($(this).val().length);
     });
-
+    
     // Load saved form data from localStorage if coming from send page
     const savedData = localStorage.getItem('pingFormData');
     if (savedData) {
@@ -378,89 +570,39 @@ $(document).ready(function() {
         }
     });
     @endif
-
-    // Corrected EVE Time handling
-    function updateTimeDisplays() {
-        const input = $('#scheduled_at').val();
-        if (!input) return;
-        
-        // User enters local time
-        const localDate = new Date(input);
-        
-        // Convert to UTC (EVE Time) - this is the correct way
-        const eveDate = new Date(localDate.toUTCString());
-        
-        // Format displays
-        const eveTimeString = eveDate.getUTCFullYear() + '-' +
-                              String(eveDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
-                              String(eveDate.getUTCDate()).padStart(2, '0') + ' ' +
-                              String(eveDate.getUTCHours()).padStart(2, '0') + ':' +
-                              String(eveDate.getUTCMinutes()).padStart(2, '0') + ':' +
-                              String(eveDate.getUTCSeconds()).padStart(2, '0');
-        
-        $('#eve-time-display').text(eveTimeString + ' EVE');
-        $('#local-time-display').text(localDate.toLocaleString() + ' (your timezone)');
-    }
     
-    function updateRepeatTimeDisplay() {
-        const input = $('#repeat_until').val();
-        if (!input) {
-            $('#repeat-eve-time').text('');
-            return;
+    // Handle form submission
+    $('#scheduledPingForm').on('submit', function(e) {
+        const scheduledInput = $('#scheduled_at_eve').val();
+        const repeatInput = $('#repeat_until_eve').val();
+        
+        // Remove any existing hidden inputs
+        $('input[name="scheduled_at_utc"]').remove();
+        $('input[name="repeat_until_utc"]').remove();
+        
+        if (scheduledInput) {
+            // Parse as UTC and convert to ISO string
+            const utcDate = parseAsUTC(scheduledInput);
+            if (utcDate) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'scheduled_at_utc',
+                    value: utcDate.toISOString()
+                }).appendTo($(this));
+            }
         }
         
-        const localDate = new Date(input);
-        const eveTimeString = localDate.getUTCFullYear() + '-' +
-                              String(localDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
-                              String(localDate.getUTCDate()).padStart(2, '0') + ' ' +
-                              String(localDate.getUTCHours()).padStart(2, '0') + ':' +
-                              String(localDate.getUTCMinutes()).padStart(2, '0') + ':' +
-                              String(localDate.getUTCSeconds()).padStart(2, '0');
-        
-        $('#repeat-eve-time').html('EVE Time: ' + eveTimeString + ' EVE');
-    }
-
-    
-    // Convert local time input to EVE time (UTC) on form submission
-    $('form').submit(function(e) {
-        const scheduledInput = $('#scheduled_at');
-        const repeatInput = $('#repeat_until');
-        
-        if (scheduledInput.val()) {
-            // User entered local time, convert to UTC for backend
-            const localDate = new Date(scheduledInput.val());
-            const utcString = localDate.toISOString().slice(0, 16);
-            
-            // Create a hidden input with the UTC time
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'scheduled_at_utc',
-                value: utcString
-            }).appendTo($(this));
-            
-            // Keep original for display
-            scheduledInput.attr('name', 'scheduled_at_local');
-        }
-        
-        if (repeatInput.val()) {
-            const localDate = new Date(repeatInput.val());
-            const utcString = localDate.toISOString().slice(0, 16);
-            
-            $('<input>').attr({
-                type: 'hidden',
-                name: 'repeat_until_utc',
-                value: utcString
-            }).appendTo($(this));
-            
-            repeatInput.attr('name', 'repeat_until_local');
+        if (repeatInput) {
+            const utcDate = parseAsUTC(repeatInput);
+            if (utcDate) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'repeat_until_utc',
+                    value: utcDate.toISOString()
+                }).appendTo($(this));
+            }
         }
     });
-    
-    $('#scheduled_at').on('change input', updateTimeDisplays);
-    $('#repeat_until').on('change input', updateRepeatTimeDisplay);
-    
-    // Initial update
-    updateTimeDisplays();
 });
 </script>
 @endpush

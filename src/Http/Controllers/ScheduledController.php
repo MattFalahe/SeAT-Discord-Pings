@@ -86,10 +86,7 @@ class ScheduledController extends Controller
     public function store(Request $request)
     {
         try {
-            // Use the UTC times if provided (from JavaScript conversion), otherwise use the raw input
-            $scheduledAt = $request->input('scheduled_at_utc') ?? $request->input('scheduled_at');
-            $repeatUntil = $request->input('repeat_until_utc') ?? $request->input('repeat_until');
-            
+            // First validate the basic fields
             $validated = $request->validate([
                 'webhook_id' => 'required|exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
@@ -108,13 +105,46 @@ class ScheduledController extends Controller
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             ]);
             
-            // Validate the times separately since they're not in the normal validation
-            if (!$scheduledAt || Carbon::parse($scheduledAt)->isPast()) {
-                return redirect()->back()->with('error', 'Scheduled time must be in the future.');
+            // Handle the UTC time from JavaScript
+            $scheduledAtUtc = $request->input('scheduled_at_utc');
+            $repeatUntilUtc = $request->input('repeat_until_utc');
+            
+            // If no UTC time provided (JavaScript disabled), fall back to direct input as local time
+            if (!$scheduledAtUtc) {
+                $scheduledAtUtc = $request->input('scheduled_at');
             }
             
-            if ($repeatUntil && Carbon::parse($repeatUntil)->lte(Carbon::parse($scheduledAt))) {
-                return redirect()->back()->with('error', 'Repeat until time must be after scheduled time.');
+            // Parse and validate the scheduled time
+            try {
+                $scheduledAt = Carbon::parse($scheduledAtUtc);
+                
+                // Make sure it's in the future (check in UTC)
+                if ($scheduledAt->isPast()) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'Scheduled time must be in the future.');
+                }
+            } catch (\Exception $e) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Invalid scheduled date/time format.');
+            }
+            
+            // Parse repeat until if provided
+            $repeatUntil = null;
+            if ($repeatUntilUtc) {
+                try {
+                    $repeatUntil = Carbon::parse($repeatUntilUtc);
+                    
+                    if ($repeatUntil->lte($scheduledAt)) {
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'Repeat until time must be after scheduled time.');
+                    }
+                } catch (\Exception $e) {
+                    // If parsing fails, set to null (no repeat end)
+                    $repeatUntil = null;
+                }
             }
             
             // Check webhook exists and is active
@@ -195,24 +225,30 @@ class ScheduledController extends Controller
                 }
             }
             
-            // Create scheduled ping with UTC times
+            // Create scheduled ping - times are already in Carbon format
             ScheduledPing::create([
                 'webhook_id' => $validated['webhook_id'],
                 'user_id' => auth()->id(),
                 'message' => $validated['message'],
                 'fields' => $fields,
-                'scheduled_at' => Carbon::parse($scheduledAt)->utc(),
+                'scheduled_at' => $scheduledAt,  // Already a Carbon instance in UTC
                 'repeat_interval' => $validated['repeat_interval'] ?? null,
-                'repeat_until' => $repeatUntil ? Carbon::parse($repeatUntil)->utc() : null,
+                'repeat_until' => $repeatUntil,  // Already a Carbon instance in UTC or null
                 'is_active' => true,
             ]);
             
+            // Success message showing EVE time
             return redirect()->route('discordpings.scheduled')
-                ->with('success', 'Ping scheduled successfully for ' . Carbon::parse($scheduledAt)->utc()->format('Y-m-d H:i:s') . ' EVE!');
+                ->with('success', sprintf(
+                    'Ping scheduled successfully for %s EVE!',
+                    $scheduledAt->format('Y-m-d H:i:s')
+                ));
                 
         } catch (\Exception $e) {
-            Log::error('Discord Pings scheduled store error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to schedule ping. Please check logs.');
+            Log::error('Discord Pings scheduled store error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to schedule ping. Error: ' . $e->getMessage());
         }
     }
     

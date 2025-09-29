@@ -406,6 +406,11 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 
 ## Changelog
 
+### Version 1.0.3 (2025-09-29)
+- Reworked time handling:
+  - EVE time is now the primary input.
+  - Added a timezone selector to confirm local time.
+
 ### Version 1.0.2 (2025-09-27)
 - Added staging locations management with quick dropdown selection
 - Fixed embed color not being applied correctly

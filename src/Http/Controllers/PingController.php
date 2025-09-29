@@ -36,7 +36,7 @@ class PingController extends Controller
             $doctrines = [];
             $hasFittingPlugin = false;
             
-            // Try CryptaTech namespace first (based on your database tables)
+            // Try CryptaTech namespace first
             if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
                 $hasFittingPlugin = true;
                 try {
@@ -81,6 +81,7 @@ class PingController extends Controller
             $validated = $request->validate([
                 'webhook_id' => 'required|exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
+                'embed_type' => 'nullable|string|in:fleet,announcement,message',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
                 'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
@@ -122,13 +123,11 @@ class PingController extends Controller
                 }
                 
                 if ($doctrine) {
-                    // Build doctrine link - we know the correct route
                     try {
                         $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
                         $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
                         $validated['doctrine_url'] = $doctrineUrl;
                     } catch (\Exception $e) {
-                        // If route fails for any reason, just use the name
                         Log::info('Could not generate doctrine URL: ' . $e->getMessage());
                         $validated['doctrine'] = $doctrine->name;
                     }
@@ -157,9 +156,9 @@ class PingController extends Controller
             $result = $helper->sendPing($webhook, $validated, auth()->user());
             
             if ($result['success']) {
-                return redirect()->back()->with('success', 'Ping sent successfully!');
+                return redirect()->back()->with('success', 'Broadcast sent successfully!');
             } else {
-                return redirect()->back()->with('error', 'Failed to send ping: ' . $result['error']);
+                return redirect()->back()->with('error', 'Failed to send broadcast: ' . $result['error']);
             }
             
         } catch (\Exception $e) {
@@ -168,7 +167,7 @@ class PingController extends Controller
                 'user' => auth()->id()
             ]);
             
-            return redirect()->back()->with('error', 'Failed to send ping. Please check logs.');
+            return redirect()->back()->with('error', 'Failed to send broadcast. Please check logs.');
         }
     }
     
@@ -182,6 +181,7 @@ class PingController extends Controller
                 'webhook_ids' => 'required|array',
                 'webhook_ids.*' => 'exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
+                'embed_type' => 'nullable|string|in:fleet,announcement,message',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
                 'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
@@ -217,13 +217,11 @@ class PingController extends Controller
                 }
                 
                 if ($doctrine) {
-                    // Build doctrine link - we know the correct route
                     try {
                         $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
                         $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
                         $validated['doctrine_url'] = $doctrineUrl;
                     } catch (\Exception $e) {
-                        // If route fails for any reason, just use the name
                         Log::info('Could not generate doctrine URL: ' . $e->getMessage());
                         $validated['doctrine'] = $doctrine->name;
                     }
@@ -232,7 +230,7 @@ class PingController extends Controller
             }
             
             // Handle role mention
-            if ($validated['mention_type'] === 'role' && !empty($validated['role_mention'])) {
+            if (($validated['mention_type'] ?? 'none') === 'role' && !empty($validated['role_mention'])) {
                 $role = DiscordRole::find($validated['role_mention']);
                 if ($role) {
                     $validated['custom_mention'] = $role->getMentionString();
@@ -285,7 +283,7 @@ class PingController extends Controller
                 'user' => auth()->id()
             ]);
             
-            return redirect()->back()->with('error', 'Failed to send pings. Please check logs.');
+            return redirect()->back()->with('error', 'Failed to send broadcasts. Please check logs.');
         }
     }
 }

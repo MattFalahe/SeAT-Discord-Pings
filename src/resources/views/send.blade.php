@@ -130,7 +130,20 @@
                         </div>
                     @endforeach
                 </div>
-
+                
+                {{-- Broadcast Type Selection --}}
+                <div class="form-group">
+                    <label>Broadcast Type</label>
+                    <select name="embed_type" class="form-control" id="embedType">
+                        <option value="fleet">📢 Fleet Broadcast</option>
+                        <option value="announcement">📣 Announcement</option>
+                        <option value="message">💬 Message</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        Choose the type of broadcast to display in Discord
+                    </small>
+                </div>
+                
                 <div class="form-group">
                     <label>Message <span class="text-danger">*</span></label>
                     <textarea name="message" class="form-control" rows="3" required 
@@ -327,6 +340,7 @@
                     <i class="fas fa-eye"></i> Preview
                 </button>
             </div>
+            
             <!-- Preview Modal -->
             <div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog modal-lg" role="document">
@@ -340,7 +354,7 @@
                         <div class="modal-body">
                             <div style="background-color: #36393f; padding: 20px; border-radius: 8px;">
                                 <div style="background-color: #2f3136; border-left: 4px solid #5865F2; padding: 16px; border-radius: 4px;" id="embedPreview">
-                                    <div style="color: #fff; font-weight: bold; margin-bottom: 8px;">📢 Fleet Broadcast</div>
+                                    <div style="color: #fff; font-weight: bold; margin-bottom: 8px;" id="previewTitle">📢 Fleet Broadcast</div>
                                     <div style="color: #dcddde; margin-bottom: 12px;" id="previewMessage"></div>
                                     <div id="previewFields" style="margin-top: 12px;"></div>
                                     <div style="color: #72767d; font-size: 12px; margin-top: 12px;" id="previewFooter"></div>
@@ -505,6 +519,7 @@ $(document).ready(function() {
         
         // Get form values
         const message = $('textarea[name="message"]').val();
+        const embedType = $('#embedType').val();
         const fcName = $('input[name="fc_name"]').val();
         const formup = $('input[name="formup_location"]').val();
         const papType = $('select[name="pap_type"]').val();
@@ -513,7 +528,16 @@ $(document).ready(function() {
         const embedColor = $('#embedColor').val();
         const channelName = $('select[name="channel_link"] option:selected').text();
         
+        // Determine embed title based on type
+        let embedTitle = '📢 Fleet Broadcast';
+        if (embedType === 'announcement') {
+            embedTitle = '📣 Announcement';
+        } else if (embedType === 'message') {
+            embedTitle = '💬 Message';
+        }
+        
         // Update preview modal
+        $('#previewTitle').text(embedTitle);
         $('#previewMessage').text(message || 'No message entered');
         $('#embedPreview').css('border-left-color', embedColor);
         
@@ -537,10 +561,11 @@ $(document).ready(function() {
                 <span style="color: #dcddde;">${papType}</span>
             </div>`;
         }
-        if (comms) {
+        if (comms || (channelName && channelName !== 'No Discord Channel...')) {
+            const channelValue = (channelName && channelName !== 'No Discord Channel...') ? channelName : comms;
             fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">🎧 Comms</span><br>
-                <span style="color: #dcddde;">${comms}</span>
+                <span style="color: #8e9297; font-weight: bold;">🎧 Comms / Channel</span><br>
+                <span style="color: #dcddde;">${channelValue}</span>
             </div>`;
         }
         if (doctrine && doctrine !== 'Select Doctrine...') {
@@ -549,19 +574,13 @@ $(document).ready(function() {
                 <span style="color: #dcddde;">${doctrine}</span>
             </div>`;
         }
-        if (channelName && channelName !== 'No Channel Link...') {
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">💬 Channel</span><br>
-                <span style="color: #5865F2;">${channelName}</span>
-            </div>`;
-        }
         
         $('#previewFields').html(fieldsHtml);
         
         // Update footer
         const userName = '{{ auth()->user()->name }}';
         const currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        $('#previewFooter').text(`This was a coord broadcast from ${userName} to discord at ${currentTime} EVE`);
+        $('#previewFooter').text(`This was a broadcast from ${userName} to discord at ${currentTime} EVE`);
         
         // Show modal
         $('#previewModal').modal('show');

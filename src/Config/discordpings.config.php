@@ -1,11 +1,14 @@
 <?php
 
 return [
-    'version' => '1.0.2',
+    'version' => '1.0.3',
+    
+    // App name for Discord webhooks
+    'app_name' => 'SeAT Broadcast',
     
     // Default webhook settings
     'default_embed_color' => '#5865F2',
-    'default_username' => 'SeAT Fleet Pings',
+    'default_username' => 'SeAT Broadcast',
     'default_avatar' => null,
     
     // Rate limiting
@@ -24,8 +27,8 @@ return [
     // Integrations
     'integrations' => [
         'seat_fitting' => [
-            'enabled' => true, // Set to false to disable seat-fitting integration
-            'link_doctrines' => true, // Create clickable links to doctrine fittings
+            'enabled' => true,
+            'link_doctrines' => true,
         ],
     ],
     

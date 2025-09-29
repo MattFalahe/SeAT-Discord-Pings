@@ -161,6 +161,19 @@
                         <span id="charCount">0</span>/2000 characters
                     </small>
                 </div>
+                
+                {{-- Broadcast Type Selection --}}
+                <div class="form-group">
+                    <label>Broadcast Type</label>
+                    <select name="embed_type" class="form-control" id="embedType">
+                        <option value="fleet">📢 Fleet Broadcast</option>
+                        <option value="announcement">📣 Announcement</option>
+                        <option value="message">💬 Message</option>
+                    </select>
+                    <small class="form-text text-muted">
+                        Choose the type of broadcast to display in Discord
+                    </small>
+                </div>
 
                 <div class="form-group">
                     <label>Mentions</label>
@@ -415,15 +428,28 @@ $(document).ready(function() {
             return;
         }
         
-        // Display EVE time (which is what was entered)
+        // Display EVE time (exactly what was entered)
         $('#eve-time-display').text(formatDateTimeUTC(eveDate) + ' EVE');
         
         // Calculate local time based on selected timezone
         const offsetHours = parseFloat($('#timezone-offset').val());
-        const localDate = new Date(eveDate.getTime() + (offsetHours * 60 * 60 * 1000));
+        const offsetMs = offsetHours * 60 * 60 * 1000;
+        
+        // Create local date by adding offset to the EVE time
+        const localDate = new Date(eveDate.getTime() + offsetMs);
+        
+        // Format the local date using UTC methods (since we manually applied the offset)
+        const localYear = localDate.getUTCFullYear();
+        const localMonth = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+        const localDay = String(localDate.getUTCDate()).padStart(2, '0');
+        const localHours = String(localDate.getUTCHours()).padStart(2, '0');
+        const localMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
         
         const offsetString = offsetHours >= 0 ? `UTC+${offsetHours}` : `UTC${offsetHours}`;
-        $('#local-time-display').text(formatDateTime(localDate) + ' (' + offsetString + ')');
+        
+        $('#local-time-display').text(
+            `${localYear}-${localMonth}-${localDay} ${localHours}:${localMinutes} (${offsetString})`
+        );
     }
     
     // Update repeat until display
@@ -451,10 +477,23 @@ $(document).ready(function() {
         
         // Calculate local time based on selected timezone
         const offsetHours = parseFloat($('#timezone-offset').val());
-        const localDate = new Date(eveDate.getTime() + (offsetHours * 60 * 60 * 1000));
+        const offsetMs = offsetHours * 60 * 60 * 1000;
+        
+        // Create local date by adding offset to the EVE time
+        const localDate = new Date(eveDate.getTime() + offsetMs);
+        
+        // Format using UTC methods
+        const localYear = localDate.getUTCFullYear();
+        const localMonth = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+        const localDay = String(localDate.getUTCDate()).padStart(2, '0');
+        const localHours = String(localDate.getUTCHours()).padStart(2, '0');
+        const localMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
         
         const offsetString = offsetHours >= 0 ? `UTC+${offsetHours}` : `UTC${offsetHours}`;
-        $('#repeat-local-display').text(formatDateTime(localDate) + ' (' + offsetString + ')');
+        
+        $('#repeat-local-display').text(
+            `${localYear}-${localMonth}-${localDay} ${localHours}:${localMinutes} (${offsetString})`
+        );
     }
     
     // Event listeners for time updates

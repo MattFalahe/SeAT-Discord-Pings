@@ -3,16 +3,20 @@
 @section('title', 'Ping History')
 @section('page_header', 'Discord Ping History')
 
+@push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+@endpush
+
 @section('full')
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Ping History</h3>
         </div>
         <div class="card-body">
-            <table class="table table-striped table-hover">
+            <table id="historyTable" class="table table-striped table-hover" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Time</th>
+                        <th>Time (EVE)</th>
                         <th>Webhook</th>
                         <th>Message</th>
                         <th>User</th>
@@ -21,9 +25,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($histories as $history)
+                    @foreach($histories as $history)
                         <tr>
-                            <td>{{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE</td>
+                            <td data-order="{{ $history->created_at->timestamp }}">
+                                {{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE
+                            </td>
                             <td>
                                 @if($history->webhook)
                                     <span class="badge" style="background-color: {{ $history->webhook->embed_color }}">
@@ -44,12 +50,12 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('discordpings.history.show', $history->id) }}" 
+                                    <a href="{{ route('discordpings.history.show', $history->id) }}"
                                        class="btn btn-info">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if($history->webhook && $history->webhook->is_active)
-                                        <form method="POST" action="{{ route('discordpings.history.resend', $history->id) }}" 
+                                        <form method="POST" action="{{ route('discordpings.history.resend', $history->id) }}"
                                               style="display: inline;">
                                             @csrf
                                             <button type="submit" class="btn btn-warning">
@@ -60,19 +66,34 @@
                                 </div>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center">No ping history found</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
-            
-            @if($histories->hasPages())
-                <div class="d-flex justify-content-center">
-                    {{ $histories->links() }}
-                </div>
-            @endif
         </div>
     </div>
 @stop
+
+@push('javascript')
+<script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
+<script>
+$(document).ready(function() {
+    $('#historyTable').DataTable({
+        order: [[0, 'desc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        columnDefs: [
+            { orderable: false, targets: 5 }
+        ],
+        language: {
+            search: '_INPUT_',
+            searchPlaceholder: 'Search history...',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ broadcasts',
+            infoEmpty: 'No broadcast history found',
+            emptyTable: 'No broadcast history found'
+        }
+    });
+});
+</script>
+@endpush

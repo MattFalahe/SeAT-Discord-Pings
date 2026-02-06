@@ -6,7 +6,45 @@ Route::group([
     'middleware' => ['web', 'auth', 'locale'],
     'prefix' => 'discord-pings',
 ], function () {
-    
+
+    // Help & Documentation
+    Route::get('/help', 'HelpController@index')
+        ->name('discordpings.help')
+        ->middleware('can:discordpings.view');
+
+    // Templates
+    Route::get('/templates', 'TemplateController@index')
+        ->name('discordpings.templates')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::get('/templates/create', 'TemplateController@create')
+        ->name('discordpings.templates.create')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::post('/templates/quick-save', 'TemplateController@quickSave')
+        ->name('discordpings.templates.quicksave')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::post('/templates', 'TemplateController@store')
+        ->name('discordpings.templates.store')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::get('/templates/{id}/edit', 'TemplateController@edit')
+        ->name('discordpings.templates.edit')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::put('/templates/{id}', 'TemplateController@update')
+        ->name('discordpings.templates.update')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::delete('/templates/{id}', 'TemplateController@destroy')
+        ->name('discordpings.templates.destroy')
+        ->middleware('can:discordpings.manage_templates');
+
+    Route::post('/templates/{id}/toggle-global', 'TemplateController@toggleGlobal')
+        ->name('discordpings.templates.toggle-global')
+        ->middleware('can:discordpings.manage_global_templates');
+
     // Main send ping page
     Route::get('/send', 'PingController@index')
         ->name('discordpings.send')
@@ -110,6 +148,15 @@ Route::group([
         ->name('discordpings.history.resend')
         ->middleware('can:discordpings.send');
     
+    // Calendar view & API (must be before /scheduled/{id} routes)
+    Route::get('/scheduled/calendar', 'ScheduledController@calendar')
+        ->name('discordpings.scheduled.calendar')
+        ->middleware('can:discordpings.manage_scheduled');
+
+    Route::get('/api/scheduled-events', 'ScheduledController@calendarEvents')
+        ->name('discordpings.api.scheduled-events')
+        ->middleware('can:discordpings.manage_scheduled');
+
     // Scheduled pings
     Route::get('/scheduled', 'ScheduledController@index')
         ->name('discordpings.scheduled')

@@ -3,18 +3,25 @@
 @section('title', 'Scheduled Pings')
 @section('page_header', 'Scheduled Discord Pings')
 
+@push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+@endpush
+
 @section('full')
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Scheduled Pings</h3>
             <div class="card-tools">
+                <a href="{{ route('discordpings.scheduled.calendar') }}" class="btn btn-sm btn-info mr-1">
+                    <i class="fas fa-calendar-alt"></i> Calendar View
+                </a>
                 <a href="{{ route('discordpings.scheduled.create') }}" class="btn btn-sm btn-success">
                     <i class="fas fa-plus"></i> Schedule New Ping
                 </a>
             </div>
         </div>
         <div class="card-body">
-            <table class="table table-striped">
+            <table id="scheduledTable" class="table table-striped table-hover" style="width:100%">
                 <thead>
                     <tr>
                         <th>Scheduled For</th>
@@ -26,9 +33,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($scheduledPings as $ping)
+                    @foreach($scheduledPings as $ping)
                         <tr>
-                            <td>{{ $ping->scheduled_at->format('Y-m-d H:i') }}</td>
+                            <td data-order="{{ $ping->scheduled_at->timestamp }}">
+                                {{ $ping->scheduled_at->format('Y-m-d H:i') }} EVE
+                            </td>
                             <td>
                                 @if($ping->webhook)
                                     <span class="badge" style="background-color: {{ $ping->webhook->embed_color }}">
@@ -70,19 +79,34 @@
                                 </form>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center">No scheduled pings</td>
-                        </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
-            
-            @if($scheduledPings->hasPages())
-                <div class="d-flex justify-content-center">
-                    {{ $scheduledPings->links() }}
-                </div>
-            @endif
         </div>
     </div>
 @stop
+
+@push('javascript')
+<script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
+<script>
+$(document).ready(function() {
+    $('#scheduledTable').DataTable({
+        order: [[0, 'asc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        columnDefs: [
+            { orderable: false, targets: 5 }
+        ],
+        language: {
+            search: '_INPUT_',
+            searchPlaceholder: 'Search scheduled pings...',
+            lengthMenu: 'Show _MENU_ entries',
+            info: 'Showing _START_ to _END_ of _TOTAL_ scheduled pings',
+            infoEmpty: 'No scheduled pings found',
+            emptyTable: 'No scheduled pings'
+        }
+    });
+});
+</script>
+@endpush

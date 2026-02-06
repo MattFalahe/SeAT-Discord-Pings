@@ -29,4 +29,12 @@ return [
         'label' => 'discordpings::permissions.manage_scheduled_label',
         'description' => 'discordpings::permissions.manage_scheduled_description',
     ],
+    'manage_templates' => [
+        'label' => 'discordpings::permissions.manage_templates_label',
+        'description' => 'discordpings::permissions.manage_templates_description',
+    ],
+    'manage_global_templates' => [
+        'label' => 'discordpings::permissions.manage_global_templates_label',
+        'description' => 'discordpings::permissions.manage_global_templates_description',
+    ],
 ];

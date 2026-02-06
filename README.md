@@ -33,6 +33,7 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 
 ### Advanced Features
 - 📅 **Scheduled Pings** - Schedule pings with EVE time and recurring options
+- 📆 **Calendar View** - Visual calendar for scheduled broadcasts with week/month/list views
 - 🚀 **Doctrine Integration** - Automatic integration with seat-fitting plugins
 - 📍 **Staging Management** - Configure and manage staging locations
 - 📜 **History Tracking** - Complete history of all sent pings with resend capability
@@ -42,6 +43,7 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 - 🧪 **Webhook Testing** - Test webhooks before using them
 - 🗑️ **Automatic Cleanup** - Scheduled cleanup of old ping history
 - ⚙️ **Discord Configuration** - Unified interface for managing webhooks, roles, channels, and stagings
+- 📚 **Personal Templates** - Create and manage custom templates with full field support
 
 ## Requirements
 
@@ -53,59 +55,11 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 
 ## Installation
 
-### 1. Install the Package
-
 ```bash
-cd /var/www/seat
 composer require mattfalahe/seat-discord-pings
 ```
 
-### 2. Run Migrations
-
-```bash
-php artisan migrate
-```
-
-### 3. Setup Permissions (Optional but Recommended)
-
-Grant all Discord Pings permissions to your admin role:
-
-```bash
-php artisan discordpings:setup --grant-admin
-```
-
-Or manually set up permissions without granting to admin:
-
-```bash
-php artisan discordpings:setup
-```
-
-### 4. Clear and Rebuild Caches
-
-```bash
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
-
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-### 5. Ensure Queue Worker is Running
-
-```bash
-php artisan queue:work
-```
-
-### 6. Verify Scheduler is Running
-
-Add to your crontab if not already configured:
-
-```bash
-* * * * * cd /var/www/seat && php artisan schedule:run >> /dev/null 2>&1
-```
+SeAT will automatically run migrations and publish assets on restart.
 
 ## Configuration
 
@@ -162,22 +116,8 @@ Configure permissions through SeAT's Access Management system:
 | `discordpings.view_history` | View own ping history |
 | `discordpings.view_all_history` | View all users' ping history |
 | `discordpings.manage_scheduled` | Create and manage scheduled pings |
-
-### Configuration File
-
-After installation, publish the configuration file:
-
-```bash
-php artisan vendor:publish --tag=seat --force
-```
-
-Edit `config/discordpings.php` to customize:
-- Default embed colors
-- Rate limiting settings
-- History retention period (default: 90 days)
-- Maximum scheduled pings per user (default: 50)
-- Default templates
-- Seat-fitting integration settings
+| `discordpings.manage_templates` | Create, edit, and delete your own broadcast templates |
+| `discordpings.manage_global_templates` | Create and manage global templates visible to all users |
 
 ## Usage
 
@@ -288,34 +228,6 @@ The plugin includes two automated jobs:
 
 These are automatically registered in SeAT's schedule when you run migrations.
 
-## Console Commands
-
-### Setup Permissions
-
-```bash
-# Basic setup
-php artisan discordpings:setup
-
-# Reset and recreate all permissions
-php artisan discordpings:setup --reset
-
-# Grant all permissions to admin role
-php artisan discordpings:setup --grant-admin
-
-# Full reset and grant to admin
-php artisan discordpings:setup --reset --grant-admin
-```
-
-### Manual Job Execution (for testing)
-
-```bash
-# Process scheduled pings manually
-php artisan discordpings:process-scheduled
-
-# Clean up old history manually
-php artisan discordpings:cleanup-history
-```
-
 ## Troubleshooting
 
 ### Webhook Test Fails
@@ -359,28 +271,6 @@ php artisan discordpings:cleanup-history
 - Space out bulk broadcasts
 - Use scheduled pings for better timing
 
-## Upgrading
-
-When upgrading to a new version:
-
-```bash
-# Update the package
-composer update mattfalahe/seat-discord-pings
-
-# Run new migrations
-php artisan migrate
-
-# Clear and rebuild caches
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
-
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/MattFalahe/seat-discord-pings/issues)
@@ -409,52 +299,4 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 
 ## Changelog
 
-### Version 1.0.4 (2025-09-29)
-- Rename the plugin** from "Discord Pings" to "SeAT Broadcast" throughout the interface
-- **Add broadcast type selector** with three options:
-   - :loudspeaker: Fleet Broadcast (for fleet operations)
-   - :mega: Announcement (for general announcements)
-   - :speech_balloon: Message (for simple messages)
-- Update Discord embeds to show the appropriate title based on the selected type
-- Make the plugin more versatile for different types of communications
-
-The plugin will now be more universal and can be used for any type of broadcast, not just fleet pings. The Discord embed will clearly show what type of message it is with the appropriate icon and title.
-
-### Version 1.0.3 (2025-09-29)
-- Reworked time handling:
-  - EVE time is now the primary input.
-  - Added a timezone selector to confirm local time.
-
-### Version 1.0.2 (2025-09-27)
-- Added staging locations management with quick dropdown selection
-- Fixed embed color not being applied correctly
-- Fixed doctrine links not showing in Discord embeds
-- Combined Comms and Channel fields into single embed field
-- Added seat-fitting integration for both CryptaTech and Denngarr versions
-- Enhanced scheduled pings with all features from send ping (roles, channels, doctrines, stagings)
-- Added EVE time display with local time reference
-- Fixed webhook testing functionality
-- Added working preview modal for Discord embeds
-- Improved error handling and logging
-- Updated Discord Configuration interface with tabbed layout
-- Added support for default staging locations
-
-### Version 1.0.1 (2025-09-26)
-- Added Discord role management and mentions
-- Added Discord channel linking functionality
-- Implemented unified Discord Configuration interface
-- Added scheduled ping recurring options
-- Added automatic history cleanup job
-- Improved permission setup command with --grant-admin option
-- Added role-based webhook restrictions
-- Enhanced UI with role and channel dropdowns
-- Fixed database migration issues
-- Improved error handling and logging
-
-### Version 1.0.0 (2025-09-01)
-- Initial release
-- Core ping functionality
-- Webhook management
-- Scheduled pings
-- History tracking
-- Role-based access control
+See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes in each version.

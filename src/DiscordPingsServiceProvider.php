@@ -44,6 +44,10 @@ class DiscordPingsServiceProvider extends AbstractSeatPlugin
         $this->publishes([
             __DIR__ . '/Config/discordpings.config.php' => config_path('discordpings.php'),
         ], ['config', 'seat']);
+
+        $this->publishes([
+            __DIR__ . '/resources/assets' => public_path('vendor/discordpings'),
+        ], ['public', 'seat']);
     }
 
     /**

@@ -9,6 +9,7 @@ use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\PingHistory;
 use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
+use MattFalahe\Seat\DiscordPings\Models\PingTemplate;
 use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
 
 class PingController extends Controller
@@ -24,7 +25,7 @@ class PingController extends Controller
             $channels = DiscordChannel::active()->get();
             $stagings = StagingLocation::active()->get();
             
-            $templates = config('discordpings.default_templates', []);
+            $templates = PingTemplate::forUser(auth()->id())->get();
             
             $recentPings = PingHistory::where('user_id', auth()->id())
                 ->with('webhook')

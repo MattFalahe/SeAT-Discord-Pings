@@ -10,6 +10,7 @@ use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class ScheduledController extends Controller
 {
@@ -24,7 +25,7 @@ class ScheduledController extends Controller
             // Only show user's own scheduled pings
             $query->where('user_id', auth()->id());
             
-            $scheduledPings = $query->orderBy('scheduled_at')->paginate(20);
+            $scheduledPings = $query->orderBy('scheduled_at')->get();
             
             return view('discordpings::scheduled.index', compact('scheduledPings'));
             
@@ -274,5 +275,113 @@ class ScheduledController extends Controller
             Log::error('Discord Pings scheduled delete error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete scheduled ping. Please check logs.');
         }
+    }
+
+    /**
+     * Display calendar view
+     */
+    public function calendar()
+    {
+        try {
+            $webhooks = DiscordWebhook::active()->get();
+
+            return view('discordpings::scheduled.calendar', compact('webhooks'));
+        } catch (\Exception $e) {
+            Log::error('Discord Pings calendar view error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Unable to load calendar. Please check logs.');
+        }
+    }
+
+    /**
+     * Return scheduled events as JSON for FullCalendar
+     */
+    public function calendarEvents(Request $request)
+    {
+        try {
+            $start = Carbon::parse($request->input('start'));
+            $end = Carbon::parse($request->input('end'));
+
+            $pings = ScheduledPing::with('webhook')
+                ->where('user_id', auth()->id())
+                ->where('is_active', true)
+                ->where(function ($q) use ($end) {
+                    $q->where('scheduled_at', '<=', $end);
+                })
+                ->get();
+
+            $events = [];
+
+            foreach ($pings as $ping) {
+                $color = $ping->webhook ? $ping->webhook->embed_color : '#6c757d';
+                $webhookName = $ping->webhook ? $ping->webhook->name : 'Deleted';
+
+                if (!$ping->repeat_interval) {
+                    // One-time ping: only show if within range
+                    if ($ping->scheduled_at->gte($start) && $ping->scheduled_at->lte($end)) {
+                        $events[] = $this->buildCalendarEvent($ping, $color, $webhookName);
+                    }
+                } else {
+                    // Recurring ping: expand occurrences within the range
+                    $current = $ping->scheduled_at->copy();
+                    $repeatEnd = $ping->repeat_until ?? $end;
+                    $limit = 200; // Safety limit
+                    $count = 0;
+
+                    while ($current->lte($end) && $current->lte($repeatEnd) && $count < $limit) {
+                        if ($current->gte($start)) {
+                            $events[] = $this->buildCalendarEvent($ping, $color, $webhookName, $current->copy());
+                        }
+
+                        switch ($ping->repeat_interval) {
+                            case 'hourly':
+                                $current->addHour();
+                                break;
+                            case 'daily':
+                                $current->addDay();
+                                break;
+                            case 'weekly':
+                                $current->addWeek();
+                                break;
+                            case 'monthly':
+                                $current->addMonth();
+                                break;
+                            default:
+                                $count = $limit; // break the loop
+                        }
+                        $count++;
+                    }
+                }
+            }
+
+            return response()->json($events);
+        } catch (\Exception $e) {
+            Log::error('Discord Pings calendar events error: ' . $e->getMessage());
+            return response()->json([], 500);
+        }
+    }
+
+    /**
+     * Build a single calendar event array
+     */
+    private function buildCalendarEvent(ScheduledPing $ping, string $color, string $webhookName, ?Carbon $overrideTime = null)
+    {
+        $time = $overrideTime ?? $ping->scheduled_at;
+
+        return [
+            'id' => $ping->id . '_' . $time->timestamp,
+            'title' => Str::limit($ping->message, 40),
+            'start' => $time->toIso8601String(),
+            'color' => $color,
+            'extendedProps' => [
+                'ping_id' => $ping->id,
+                'message' => $ping->message,
+                'webhook' => $webhookName,
+                'webhookColor' => $color,
+                'repeat' => $ping->repeat_interval ? ucfirst($ping->repeat_interval) : 'Once',
+                'repeatUntil' => $ping->repeat_until ? $ping->repeat_until->format('Y-m-d H:i') . ' EVE' : null,
+                'timesSent' => $ping->times_sent,
+                'fields' => $ping->fields,
+            ],
+        ];
     }
 }

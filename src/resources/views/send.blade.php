@@ -30,19 +30,56 @@
 @endpush
 
 @section('left')
+    {{-- Global Templates --}}
+    @php
+        $globalTemplates = ($templates ?? collect())->where('is_global', true);
+        $myTemplates = ($templates ?? collect())->where('is_global', false)->where('created_by', auth()->id());
+    @endphp
+
+    @if($globalTemplates->count() > 0)
     <div class="card mb-3">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-file-alt"></i> Quick Templates
+                <i class="fas fa-globe"></i> Global Templates
             </h3>
         </div>
         <div class="card-body p-2">
-            @foreach(config('discordpings.default_templates', []) as $key => $template)
-                <button class="btn btn-sm btn-block btn-outline-primary template-btn" 
-                        data-template="{{ $template }}">
-                    {{ ucwords(str_replace('_', ' ', $key)) }}
+            @foreach($globalTemplates as $tpl)
+                <button class="btn btn-sm btn-block btn-outline-primary template-btn"
+                        data-template="{{ $tpl->template }}"
+                        data-fields='@json($tpl->fields ?? [])'>
+                    {{ $tpl->name }}
                 </button>
             @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- My Templates --}}
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-file-alt"></i> My Templates
+            </h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#saveTemplateModal" title="Save current form as template">
+                    <i class="fas fa-save"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-2">
+            @forelse($myTemplates as $tpl)
+                <button class="btn btn-sm btn-block btn-outline-info template-btn"
+                        data-template="{{ $tpl->template }}"
+                        data-fields='@json($tpl->fields ?? [])'>
+                    {{ $tpl->name }}
+                </button>
+            @empty
+                <small class="text-muted d-block text-center py-2">No personal templates yet</small>
+            @endforelse
+            <a href="{{ route('discordpings.templates') }}" class="btn btn-sm btn-block btn-outline-secondary mt-2">
+                <i class="fas fa-cog"></i> Manage Templates
+            </a>
         </div>
     </div>
 
@@ -369,6 +406,32 @@
             </div>
         </div>
     </form>
+
+    {{-- Save as Template Modal --}}
+    <div class="modal fade" id="saveTemplateModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-save"></i> Save as Template</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Template Name <span class="text-danger">*</span></label>
+                        <input type="text" id="templateName" class="form-control" maxlength="100"
+                               placeholder="e.g., My Fleet CTA">
+                    </div>
+                    <div id="saveTemplateAlert" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveTemplateBtn">
+                        <i class="fas fa-save"></i> Save Template
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @stop
 
 @push('javascript')
@@ -379,9 +442,65 @@ $(document).ready(function() {
         $('#charCount').text($(this).val().length);
     });
 
-    // Template buttons
+    // Template buttons - populate message + fields
     $('.template-btn').click(function() {
         $('textarea[name="message"]').val($(this).data('template')).trigger('input');
+        var fields = $(this).data('fields');
+        if (fields && typeof fields === 'object') {
+            $.each(fields, function(key, value) {
+                // Map template field names to send form field names
+                var fieldName = key;
+
+                // Handle mention_role_id -> role_mention mapping
+                if (key === 'mention_role_id') {
+                    fieldName = 'role_mention';
+                }
+
+                var $el = $('[name="' + fieldName + '"]');
+                if ($el.length) {
+                    $el.val(value).trigger('change');
+                }
+
+                // Special handling for formup_location (ensure it updates the input)
+                if (key === 'formup_location') {
+                    $('#formupLocation').val(value);
+                }
+
+                // Special handling for doctrine - check if dropdown exists
+                if (key === 'doctrine' && value) {
+                    if ($('#doctrineSelect').length) {
+                        // Try to find matching option in dropdown
+                        var found = false;
+                        $('#doctrineSelect option').each(function() {
+                            if ($(this).text().trim() === value) {
+                                $('#doctrineSelect').val($(this).val()).trigger('change');
+                                found = true;
+                                return false;
+                            }
+                        });
+                        // If not found in dropdown, switch to manual and fill
+                        if (!found) {
+                            $('#doctrineSelect').val('custom').trigger('change');
+                            $('#doctrineManual').val(value);
+                        }
+                    } else {
+                        // No dropdown, just fill the text input
+                        $('input[name="doctrine"]').val(value);
+                    }
+                }
+
+                // Handle mention_type and show/hide role dropdown
+                if (key === 'mention_type') {
+                    $('#mentionType').val(value).trigger('change');
+                }
+            });
+
+            // After setting mention_type, also set the role if present
+            if (fields.mention_type === 'role' && fields.mention_role_id) {
+                $('#roleMentionDiv').show();
+                $('select[name="role_mention"]').val(fields.mention_role_id);
+            }
+        }
     });
 
     // Recent ping click - populate form
@@ -584,6 +703,63 @@ $(document).ready(function() {
         
         // Show modal
         $('#previewModal').modal('show');
+    });
+
+    // Save as Template AJAX
+    $('#saveTemplateBtn').click(function() {
+        var name = $('#templateName').val().trim();
+        if (!name) {
+            $('#saveTemplateAlert').html('<div class="alert alert-danger">Please enter a template name.</div>').show();
+            return;
+        }
+
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+        var formData = {
+            _token: '{{ csrf_token() }}',
+            name: name,
+            message: $('textarea[name="message"]').val(),
+            embed_type: $('select[name="embed_type"]').val(),
+            fc_name: $('input[name="fc_name"]').val(),
+            formup_location: $('#formupLocation').val(),
+            pap_type: $('select[name="pap_type"]').val(),
+            comms: $('input[name="comms"]').val(),
+            mention_type: $('select[name="mention_type"]').val(),
+            mention_role_id: $('select[name="role_mention"]').val() || null,
+            embed_color: $('#embedColor').val()
+        };
+
+        // Handle doctrine - get from dropdown or manual input
+        if ($('#doctrineSelect').length && $('#doctrineSelect').val() && $('#doctrineSelect').val() !== 'custom') {
+            formData.doctrine = $('#doctrineSelect option:selected').text().trim();
+        } else if ($('#doctrineManual').length && $('#doctrineManual').val()) {
+            formData.doctrine = $('#doctrineManual').val();
+        } else {
+            formData.doctrine = $('input[name="doctrine"]').val();
+        }
+
+        $.post('{{ route("discordpings.templates.quicksave") }}', formData)
+        .done(function(response) {
+            $('#saveTemplateAlert').html('<div class="alert alert-success">Template saved!</div>').show();
+            setTimeout(function() {
+                $('#saveTemplateModal').modal('hide');
+                location.reload();
+            }, 1000);
+        })
+        .fail(function(xhr) {
+            var msg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to save template.';
+            $('#saveTemplateAlert').html('<div class="alert alert-danger">' + msg + '</div>').show();
+        })
+        .always(function() {
+            $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Template');
+        });
+    });
+
+    // Reset modal on close
+    $('#saveTemplateModal').on('hidden.bs.modal', function() {
+        $('#templateName').val('');
+        $('#saveTemplateAlert').hide().html('');
     });
 
     @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)

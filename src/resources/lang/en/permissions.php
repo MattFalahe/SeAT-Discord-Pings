@@ -21,4 +21,10 @@ return [
     
     'manage_scheduled_label' => 'Manage Scheduled Pings',
     'manage_scheduled_description' => 'Create and manage scheduled Discord pings',
+
+    'manage_templates_label' => 'Manage Templates',
+    'manage_templates_description' => 'Create, edit, and delete your own broadcast templates',
+
+    'manage_global_templates_label' => 'Manage Global Templates',
+    'manage_global_templates_description' => 'Create and manage global broadcast templates visible to all users',
 ];

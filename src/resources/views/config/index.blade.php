@@ -4,6 +4,7 @@
 @section('page_header', 'Discord Configuration')
 
 @push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
 <style>
     .nav-tabs .nav-link {
         color: #6c757d;
@@ -62,7 +63,7 @@
                         </a>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="configWebhooksTable" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -73,7 +74,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($webhooks as $webhook)
+                                @foreach($webhooks as $webhook)
                                     <tr>
                                         <td>{{ $webhook->name }}</td>
                                         <td>{{ $webhook->channel_type ?? 'General' }}</td>
@@ -93,11 +94,11 @@
                                                 <button class="btn btn-info test-webhook" data-id="{{ $webhook->id }}" title="Test">
                                                     <i class="fas fa-vial"></i>
                                                 </button>
-                                                <a href="{{ route('discordpings.webhooks.edit', $webhook->id) }}" 
+                                                <a href="{{ route('discordpings.webhooks.edit', $webhook->id) }}"
                                                    class="btn btn-warning" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <form method="POST" action="{{ route('discordpings.webhooks.destroy', $webhook->id) }}" 
+                                                <form method="POST" action="{{ route('discordpings.webhooks.destroy', $webhook->id) }}"
                                                       style="display: inline;">
                                                     @csrf
                                                     @method('DELETE')
@@ -109,11 +110,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-center">No webhooks configured</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -128,7 +125,7 @@
                         </button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="configRolesTable" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -140,19 +137,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($roles as $role)
+                                @foreach($roles as $role)
                                     <tr>
                                         <td>{{ $role->name }}</td>
                                         <td>
                                             <code>{{ $role->role_id }}</code>
-                                            <i class="fas fa-copy copy-btn ml-1" 
-                                               data-copy="{{ $role->role_id }}" 
+                                            <i class="fas fa-copy copy-btn ml-1"
+                                               data-copy="{{ $role->role_id }}"
                                                title="Copy ID"></i>
                                         </td>
                                         <td>
                                             <code>{{ $role->getMentionString() }}</code>
-                                            <i class="fas fa-copy copy-btn ml-1" 
-                                               data-copy="{{ $role->getMentionString() }}" 
+                                            <i class="fas fa-copy copy-btn ml-1"
+                                               data-copy="{{ $role->getMentionString() }}"
                                                title="Copy mention"></i>
                                         </td>
                                         <td>
@@ -172,12 +169,12 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-info toggle-role" 
-                                                        data-id="{{ $role->id }}" 
+                                                <button class="btn btn-info toggle-role"
+                                                        data-id="{{ $role->id }}"
                                                         title="Toggle Status">
                                                     <i class="fas fa-power-off"></i>
                                                 </button>
-                                                <form method="POST" action="{{ route('discordpings.config.roles.destroy', $role->id) }}" 
+                                                <form method="POST" action="{{ route('discordpings.config.roles.destroy', $role->id) }}"
                                                       style="display: inline;">
                                                     @csrf
                                                     @method('DELETE')
@@ -189,11 +186,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">No Discord roles configured</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -208,7 +201,7 @@
                         </button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="configChannelsTable" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -220,7 +213,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($channels as $channel)
+                                @foreach($channels as $channel)
                                     <tr>
                                         <td>{{ $channel->name }}</td>
                                         <td>
@@ -233,8 +226,8 @@
                                         </td>
                                         <td>
                                             <code>{{ $channel->getMentionString() }}</code>
-                                            <i class="fas fa-copy copy-btn ml-1" 
-                                               data-copy="{{ $channel->getMentionString() }}" 
+                                            <i class="fas fa-copy copy-btn ml-1"
+                                               data-copy="{{ $channel->getMentionString() }}"
                                                title="Copy mention"></i>
                                         </td>
                                         <td>
@@ -246,12 +239,12 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-info toggle-channel" 
-                                                        data-id="{{ $channel->id }}" 
+                                                <button class="btn btn-info toggle-channel"
+                                                        data-id="{{ $channel->id }}"
                                                         title="Toggle Status">
                                                     <i class="fas fa-power-off"></i>
                                                 </button>
-                                                <form method="POST" action="{{ route('discordpings.config.channels.destroy', $channel->id) }}" 
+                                                <form method="POST" action="{{ route('discordpings.config.channels.destroy', $channel->id) }}"
                                                       style="display: inline;">
                                                     @csrf
                                                     @method('DELETE')
@@ -263,11 +256,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">No Discord channels configured</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -282,7 +271,7 @@
                         </button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="configStagingsTable" class="table table-striped table-hover" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Name</th>
@@ -294,7 +283,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($stagings ?? [] as $staging)
+                                @foreach($stagings ?? [] as $staging)
                                     <tr>
                                         <td>{{ $staging->name }}</td>
                                         <td>{{ $staging->system_name }}</td>
@@ -303,7 +292,7 @@
                                             @if($staging->is_default)
                                                 <span class="badge badge-primary">Default</span>
                                             @else
-                                                <button class="btn btn-sm btn-outline-secondary set-default-staging" 
+                                                <button class="btn btn-sm btn-outline-secondary set-default-staging"
                                                         data-id="{{ $staging->id }}">
                                                     Set Default
                                                 </button>
@@ -318,12 +307,12 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-info toggle-staging" 
-                                                        data-id="{{ $staging->id }}" 
+                                                <button class="btn btn-info toggle-staging"
+                                                        data-id="{{ $staging->id }}"
                                                         title="Toggle Status">
                                                     <i class="fas fa-power-off"></i>
                                                 </button>
-                                                <form method="POST" action="{{ route('discordpings.config.stagings.destroy', $staging->id) }}" 
+                                                <form method="POST" action="{{ route('discordpings.config.stagings.destroy', $staging->id) }}"
                                                       style="display: inline;">
                                                     @csrf
                                                     @method('DELETE')
@@ -335,11 +324,7 @@
                                             </div>
                                         </td>
                                     </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">No staging locations configured</td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -512,8 +497,28 @@
 @stop
 
 @push('javascript')
+<script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
 <script>
 $(document).ready(function() {
+    // Initialize DataTables on all config tables
+    var dtOptions = {
+        pageLength: 25,
+        language: {
+            search: '_INPUT_',
+            searchPlaceholder: 'Search...',
+            emptyTable: 'No entries configured'
+        },
+        columnDefs: [
+            { orderable: false, targets: -1 }
+        ]
+    };
+
+    $('#configWebhooksTable').DataTable(dtOptions);
+    $('#configRolesTable').DataTable(dtOptions);
+    $('#configChannelsTable').DataTable(dtOptions);
+    $('#configStagingsTable').DataTable(dtOptions);
+
     // Copy to clipboard functionality
     $('.copy-btn').click(function() {
         const textToCopy = $(this).data('copy');

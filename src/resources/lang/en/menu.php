@@ -7,4 +7,7 @@ return [
     'webhooks' => 'Webhooks',
     'history' => 'Broadcast History',
     'scheduled' => 'Scheduled Broadcasts',
+    'templates' => 'Templates',
+    'calendar' => 'Calendar',
+    'help' => 'Help & Documentation',
 ];

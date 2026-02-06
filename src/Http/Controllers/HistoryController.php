@@ -37,7 +37,7 @@ class HistoryController extends Controller
                 $query->where('message', 'like', '%' . $request->search . '%');
             }
             
-            $histories = $query->latest()->paginate(20);
+            $histories = $query->latest()->get();
             $webhooks = DiscordWebhook::all();
             
             return view('discordpings::history.index', compact('histories', 'webhooks'));

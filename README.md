@@ -11,9 +11,16 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 ### Core Features
 - 📢 **Fleet Pings** - Send formatted fleet broadcasts to Discord with rich embeds
 - 🎯 **Multiple Webhooks** - Manage unlimited Discord webhooks for different channels
-- 📝 **Templates** - Quick templates for common ping types (CTA, Mining, Strategic, etc.)
+- 📝 **Templates** - Personal and global templates for common ping types
 - 📊 **Rich Embeds** - Beautiful Discord embeds with customizable colors and fields
+- 🎨 **Visual Color Picker** - Pick embed colours visually or enter hex code directly
 - ⏰ **EVE Time** - Automatic EVE time stamps with local time display
+
+### Broadcast Types
+- 📢 **Fleet Broadcast** - For active fleet operations
+- 📣 **Announcement** - For general announcements
+- 💬 **Message** - For simple messages
+- ‼️ **PREPING** - For staging fleets before ops begin
 
 ### Discord Integration
 - 👥 **Discord Roles** - Manage and mention Discord roles in your pings
@@ -25,7 +32,7 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 ### Fleet Information Fields
 - FC Name
 - Formup Location (with staging dropdown)
-- PAP Type (Strategic/Peacetime/CTA)
+- PAP Type (configurable — admin-managed, defaults: Strategic / Peacetime / CTA)
 - Comms Information
 - Doctrine Details (with seat-fitting integration)
 - Discord Channel Links
@@ -33,17 +40,18 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 
 ### Advanced Features
 - 📅 **Scheduled Pings** - Schedule pings with EVE time and recurring options
-- 📆 **Calendar View** - Visual calendar for scheduled broadcasts with week/month/list views
+- ✏️ **Edit Scheduled Pings** - Edit any scheduled broadcast; recurring series changes apply from the new time onwards
+- 📆 **Broadcasts Calendar** - Visual calendar showing both scheduled pings and manual broadcast history
 - 🚀 **Doctrine Integration** - Automatic integration with seat-fitting plugins
 - 📍 **Staging Management** - Configure and manage staging locations
 - 📜 **History Tracking** - Complete history of all sent pings with resend capability
-- 👥 **Role Restrictions** - Limit webhook access to specific SeAT roles
+- 👥 **Shared Visibility** - Directors with Manage Scheduled Pings see all users' scheduled pings and can edit/delete any
 - 🔄 **Multiple Recipients** - Send to multiple Discord channels simultaneously
-- 🎨 **Custom Colors** - Per-webhook and per-ping embed color customization
+- 🧹 **Bulk Clear** - Bulk delete inactive scheduled pings older than 7 or 30 days
 - 🧪 **Webhook Testing** - Test webhooks before using them
 - 🗑️ **Automatic Cleanup** - Scheduled cleanup of old ping history
-- ⚙️ **Discord Configuration** - Unified interface for managing webhooks, roles, channels, and stagings
-- 📚 **Personal Templates** - Create and manage custom templates with full field support
+- ⚙️ **Settings** - Unified settings page for webhooks, roles, channels, stagings, and PAP types
+- 📚 **Personal & Global Templates** - Create and manage templates with full field support
 
 ## Requirements
 
@@ -72,12 +80,12 @@ SeAT will automatically run migrations and publish assets on restart.
 3. Click **New Webhook**
 4. Give it a name (e.g., "SeAT Fleet Pings")
 5. Click **Copy Webhook URL**
-6. In SeAT, navigate to **Discord Pings** → **Discord Config** → **Webhooks tab**
+6. In SeAT, navigate to **Discord Pings** → **Settings** → **Webhooks tab**
 7. Click **Add Webhook** and paste your URL
 
 #### Adding Discord Roles
 
-1. Navigate to **Discord Pings** → **Discord Config** → **Discord Roles tab**
+1. Navigate to **Discord Pings** → **Settings** → **Discord Roles tab**
 2. Click **Add Role**
 3. Enter a friendly name for the role
 4. Enter the Discord Role ID (right-click role in Discord with Developer Mode enabled → Copy ID)
@@ -86,7 +94,7 @@ SeAT will automatically run migrations and publish assets on restart.
 
 #### Adding Discord Channels
 
-1. Navigate to **Discord Pings** → **Discord Config** → **Discord Channels tab**
+1. Navigate to **Discord Pings** → **Settings** → **Discord Channels tab**
 2. Click **Add Channel**
 3. Enter a friendly name for the channel
 4. Paste the Discord channel URL (right-click channel → Copy Link)
@@ -95,7 +103,7 @@ SeAT will automatically run migrations and publish assets on restart.
 
 #### Configuring Staging Locations
 
-1. Navigate to **Discord Pings** → **Discord Config** → **Staging Locations tab**
+1. Navigate to **Discord Pings** → **Settings** → **Staging Locations tab**
 2. Click **Add Staging**
 3. Enter a name for the staging (e.g., "Home Staging")
 4. Enter the system name (e.g., "Jita")
@@ -112,7 +120,7 @@ Configure permissions through SeAT's Access Management system:
 | `discordpings.view` | Access to Discord Pings plugin menu |
 | `discordpings.send` | Send pings to Discord |
 | `discordpings.send_multiple` | Send to multiple webhooks at once |
-| `discordpings.manage_webhooks` | Manage webhooks, roles, channels, and stagings |
+| `discordpings.manage_webhooks` | Manage webhooks, roles, channels, stagings, and PAP types |
 | `discordpings.view_history` | View own ping history |
 | `discordpings.view_all_history` | View all users' ping history |
 | `discordpings.manage_scheduled` | Create and manage scheduled pings |
@@ -178,12 +186,13 @@ Click any template button to quickly fill the message field:
 
 ### Managing Discord Configuration
 
-Access **Discord Pings** → **Discord Config** to manage:
+Access **Discord Pings** → **Settings** to manage:
 
 - **Webhooks Tab**: Add, edit, test, and delete webhook configurations
 - **Discord Roles Tab**: Configure Discord roles for mentions
 - **Discord Channels Tab**: Add Discord channels for quick linking
 - **Staging Locations Tab**: Manage staging locations for quick selection
+- **PAP Types Tab**: Add, reorder, and deactivate PAP types (Strategic, Peacetime, CTA seeded by default)
 
 ## Integration with Seat-Fitting
 
@@ -197,10 +206,11 @@ The plugin automatically detects and integrates with seat-fitting plugins (Crypt
 ## Discord Embed Format
 
 Pings are sent as rich Discord embeds with:
-- **Title**:  
-   - :loudspeaker: Fleet Broadcast (for fleet operations)
-   - :mega: Announcement (for general announcements)
-   - :speech_balloon: Message (for simple messages)
+- **Title**:
+   - 📢 Fleet Broadcast (for fleet operations)
+   - 📣 Announcement (for general announcements)
+   - 💬 Message (for simple messages)
+   - ‼️ PREPING ‼️ (for staging fleets before ops)
 - **Message**: Your custom message
 - **Fields**: 
   - 👤 FC Name

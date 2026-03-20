@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
-@section('title', 'Discord Configuration')
-@section('page_header', 'Discord Configuration')
+@section('title', 'Settings')
+@section('page_header', 'Settings')
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
@@ -48,6 +48,11 @@
                 <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#stagings-tab">
                         <i class="fas fa-map-marker-alt"></i> Staging Locations
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#pap-types-tab">
+                        <i class="fas fa-tag"></i> PAP Types
                     </a>
                 </li>
             </ul>
@@ -329,6 +334,99 @@
                         </table>
                     </div>
                 </div>
+
+                {{-- PAP Types Tab --}}
+                <div class="tab-pane fade" id="pap-types-tab">
+                    <div class="d-flex justify-content-between mb-3">
+                        <h4>PAP Types</h4>
+                        <button class="btn btn-success" data-toggle="modal" data-target="#addPapTypeModal">
+                            <i class="fas fa-plus"></i> Add PAP Type
+                        </button>
+                    </div>
+                    <p class="text-muted">Manage the PAP type options available when composing broadcasts. These will appear in the PAP Type dropdown across all broadcast forms.</p>
+                    <div class="table-responsive">
+                        <table id="configPapTypesTable" class="table table-striped table-hover" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Sort Order</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($papTypes as $papType)
+                                    <tr>
+                                        <td>{{ $papType->name }}</td>
+                                        <td>{{ $papType->sort_order }}</td>
+                                        <td>
+                                            @if($papType->is_active)
+                                                <span class="badge badge-success">Active</span>
+                                            @else
+                                                <span class="badge badge-danger">Inactive</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-info toggle-pap-type"
+                                                        data-id="{{ $papType->id }}"
+                                                        title="Toggle Status">
+                                                    <i class="fas fa-power-off"></i>
+                                                </button>
+                                                <form method="POST" action="{{ route('discordpings.config.pap-types.destroy', $papType->id) }}"
+                                                      style="display: inline;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger" title="Delete"
+                                                            onclick="return confirm('Delete this PAP type?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    {{-- Add PAP Type Modal --}}
+    <div class="modal fade" id="addPapTypeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('discordpings.config.pap-types.store') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add PAP Type</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>PAP Type Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   placeholder="e.g., Roam, Deployment, Home Defence">
+                            <small class="form-text text-muted">Must be unique. This name will appear in the PAP Type dropdown.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Sort Order</label>
+                            <input type="number" name="sort_order" class="form-control" value="0" min="0">
+                            <small class="form-text text-muted">Lower numbers appear first in the dropdown.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add PAP Type
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -518,6 +616,7 @@ $(document).ready(function() {
     $('#configRolesTable').DataTable(dtOptions);
     $('#configChannelsTable').DataTable(dtOptions);
     $('#configStagingsTable').DataTable(dtOptions);
+    $('#configPapTypesTable').DataTable(dtOptions);
 
     // Copy to clipboard functionality
     $('.copy-btn').click(function() {
@@ -591,6 +690,21 @@ $(document).ready(function() {
         })
         .fail(function() {
             alert('Failed to set default staging');
+        });
+    });
+
+    // Toggle PAP type status
+    $('.toggle-pap-type').click(function() {
+        const papTypeId = $(this).data('id');
+
+        $.post(`{{ url('discord-pings/config/pap-types') }}/${papTypeId}/toggle`, {
+            _token: '{{ csrf_token() }}'
+        })
+        .done(function(response) {
+            location.reload();
+        })
+        .fail(function() {
+            alert('Failed to toggle PAP type status');
         });
     });
 

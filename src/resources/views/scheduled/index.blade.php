@@ -12,6 +12,24 @@
         <div class="card-header">
             <h3 class="card-title">Scheduled Pings</h3>
             <div class="card-tools">
+                @if($canSeeAll ?? false)
+                    <form method="POST" action="{{ route('discordpings.scheduled.bulk-clear') }}" style="display:inline;"
+                          onsubmit="return confirm('Delete all inactive scheduled pings older than 7 days from ALL users? This cannot be undone.')">
+                        @csrf
+                        <input type="hidden" name="days" value="7">
+                        <button type="submit" class="btn btn-sm btn-warning mr-1">
+                            <i class="fas fa-broom"></i> Clear Inactive &gt;7 Days
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('discordpings.scheduled.bulk-clear') }}" style="display:inline;"
+                          onsubmit="return confirm('Delete all inactive scheduled pings older than 30 days from ALL users? This cannot be undone.')">
+                        @csrf
+                        <input type="hidden" name="days" value="30">
+                        <button type="submit" class="btn btn-sm btn-danger mr-1">
+                            <i class="fas fa-broom"></i> Clear Inactive &gt;30 Days
+                        </button>
+                    </form>
+                @endif
                 <a href="{{ route('discordpings.scheduled.calendar') }}" class="btn btn-sm btn-info mr-1">
                     <i class="fas fa-calendar-alt"></i> Calendar View
                 </a>
@@ -27,6 +45,9 @@
                         <th>Scheduled For</th>
                         <th>Webhook</th>
                         <th>Message</th>
+                        @if($canSeeAll ?? false)
+                            <th>Created By</th>
+                        @endif
                         <th>Repeat</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -48,6 +69,9 @@
                                 @endif
                             </td>
                             <td>{{ Str::limit($ping->message, 80) }}</td>
+                            @if($canSeeAll ?? false)
+                                <td>{{ $ping->user->name ?? 'Unknown' }}</td>
+                            @endif
                             <td>
                                 @if($ping->repeat_interval)
                                     <span class="badge badge-info">{{ ucfirst($ping->repeat_interval) }}</span>
@@ -68,8 +92,14 @@
                                     <br><small>Sent {{ $ping->times_sent }} time(s)</small>
                                 @endif
                             </td>
-                            <td>
-                                <form method="POST" action="{{ route('discordpings.scheduled.destroy', $ping->id) }}">
+                            <td style="white-space: nowrap;">
+                                @if($ping->is_active)
+                                    <a href="{{ route('discordpings.scheduled.edit', $ping->id) }}"
+                                       class="btn btn-sm btn-info mr-1">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                @endif
+                                <form method="POST" action="{{ route('discordpings.scheduled.destroy', $ping->id) }}" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger"
@@ -96,7 +126,7 @@ $(document).ready(function() {
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
         columnDefs: [
-            { orderable: false, targets: 5 }
+            { orderable: false, targets: -1 }
         ],
         language: {
             search: '_INPUT_',

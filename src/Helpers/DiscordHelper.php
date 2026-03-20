@@ -108,6 +108,9 @@ class DiscordHelper
             case 'message':
                 $embedTitle = '💬 Message';
                 break;
+            case 'prepping':
+                $embedTitle = '‼️ PREPING ‼️';
+                break;
             case 'fleet':
             default:
                 $embedTitle = '📢 Fleet Broadcast';

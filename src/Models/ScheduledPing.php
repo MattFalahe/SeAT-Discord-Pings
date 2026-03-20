@@ -31,6 +31,14 @@ class ScheduledPing extends Model
     }
 
     /**
+     * Get the user who created this scheduled ping
+     */
+    public function user()
+    {
+        return $this->belongsTo(\Seat\Web\Models\User::class, 'user_id');
+    }
+
+    /**
      * Scope for due pings
      */
     public function scopeDue($query)

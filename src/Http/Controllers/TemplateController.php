@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use MattFalahe\Seat\DiscordPings\Models\PingTemplate;
 use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
+use MattFalahe\Seat\DiscordPings\Models\PapType;
 
 class TemplateController extends Controller
 {
@@ -33,6 +34,7 @@ class TemplateController extends Controller
     {
         $roles = DiscordRole::active()->get();
         $stagings = StagingLocation::active()->get();
+        $papTypes = PapType::active()->ordered()->get();
 
         // Check if seat-fitting plugin is installed and get doctrines
         $doctrines = [];
@@ -57,7 +59,7 @@ class TemplateController extends Controller
             }
         }
 
-        return view('discordpings::templates.create', compact('roles', 'stagings', 'doctrines', 'hasFittingPlugin'));
+        return view('discordpings::templates.create', compact('roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
     }
 
     /**
@@ -72,7 +74,7 @@ class TemplateController extends Controller
                 'embed_type' => 'nullable|string|in:fleet,announcement,message',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
+                'pap_type' => 'nullable|string|max:100',
                 'comms' => 'nullable|string|max:200',
                 'doctrine' => 'nullable|string|max:200',
                 'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
@@ -123,6 +125,7 @@ class TemplateController extends Controller
 
             $roles = DiscordRole::active()->get();
             $stagings = StagingLocation::active()->get();
+            $papTypes = PapType::active()->ordered()->get();
 
             // Check if seat-fitting plugin is installed and get doctrines
             $doctrines = [];
@@ -147,7 +150,7 @@ class TemplateController extends Controller
                 }
             }
 
-            return view('discordpings::templates.edit', compact('template', 'roles', 'stagings', 'doctrines', 'hasFittingPlugin'));
+            return view('discordpings::templates.edit', compact('template', 'roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
         } catch (\Exception $e) {
             Log::error('Discord Pings template edit error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load template.');
@@ -173,7 +176,7 @@ class TemplateController extends Controller
                 'embed_type' => 'nullable|string|in:fleet,announcement,message',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
+                'pap_type' => 'nullable|string|max:100',
                 'comms' => 'nullable|string|max:200',
                 'doctrine' => 'nullable|string|max:200',
                 'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',

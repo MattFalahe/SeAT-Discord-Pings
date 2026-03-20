@@ -154,9 +154,9 @@
                                     <label><i class="fas fa-tag"></i> PAP Type</label>
                                     <select name="pap_type" class="form-control">
                                         <option value="">None</option>
-                                        <option value="Strategic" {{ old('pap_type') == 'Strategic' ? 'selected' : '' }}>Strategic</option>
-                                        <option value="Peacetime" {{ old('pap_type') == 'Peacetime' ? 'selected' : '' }}>Peacetime</option>
-                                        <option value="CTA" {{ old('pap_type') == 'CTA' ? 'selected' : '' }}>CTA</option>
+                                        @foreach($papTypes as $pap)
+                                            <option value="{{ $pap->name }}" {{ old('pap_type') == $pap->name ? 'selected' : '' }}>{{ $pap->name }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                             </div>

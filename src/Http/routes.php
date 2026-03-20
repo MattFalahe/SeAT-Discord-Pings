@@ -106,6 +106,19 @@ Route::group([
         ->name('discordpings.config.stagings.default')
         ->middleware('can:discordpings.manage_webhooks');
     
+    // PAP Types
+    Route::post('/config/pap-types', 'DiscordConfigController@storePapType')
+        ->name('discordpings.config.pap-types.store')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::delete('/config/pap-types/{id}', 'DiscordConfigController@destroyPapType')
+        ->name('discordpings.config.pap-types.destroy')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::post('/config/pap-types/{id}/toggle', 'DiscordConfigController@togglePapType')
+        ->name('discordpings.config.pap-types.toggle')
+        ->middleware('can:discordpings.manage_webhooks');
+
     // Webhook management (keeping existing routes)
     Route::get('/webhooks', 'WebhookController@index')
         ->name('discordpings.webhooks')
@@ -170,7 +183,19 @@ Route::group([
         ->name('discordpings.scheduled.store')
         ->middleware('can:discordpings.manage_scheduled');
     
+    Route::get('/scheduled/{id}/edit', 'ScheduledController@edit')
+        ->name('discordpings.scheduled.edit')
+        ->middleware('can:discordpings.manage_scheduled');
+
+    Route::put('/scheduled/{id}', 'ScheduledController@update')
+        ->name('discordpings.scheduled.update')
+        ->middleware('can:discordpings.manage_scheduled');
+
     Route::delete('/scheduled/{id}', 'ScheduledController@destroy')
         ->name('discordpings.scheduled.destroy')
+        ->middleware('can:discordpings.manage_scheduled');
+
+    Route::post('/scheduled/bulk-clear', 'ScheduledController@bulkDestroyInactive')
+        ->name('discordpings.scheduled.bulk-clear')
         ->middleware('can:discordpings.manage_scheduled');
 });

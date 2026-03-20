@@ -5,15 +5,6 @@
 
 @push('head')
 <style>
-    .color-preview {
-        width: 30px;
-        height: 30px;
-        border-radius: 4px;
-        display: inline-block;
-        vertical-align: middle;
-        margin-left: 10px;
-        border: 1px solid #dee2e6;
-    }
     .time-display {
         font-size: 0.9em;
         color: #6c757d;
@@ -169,6 +160,7 @@
                         <option value="fleet">📢 Fleet Broadcast</option>
                         <option value="announcement">📣 Announcement</option>
                         <option value="message">💬 Message</option>
+                        <option value="prepping">‼️ PREPING ‼️</option>
                     </select>
                     <small class="form-text text-muted">
                         Choose the type of broadcast to display in Discord
@@ -227,10 +219,16 @@
                 <div class="form-group">
                     <label>Embed Color</label>
                     <div class="input-group">
-                        <input type="text" name="embed_color" class="form-control" 
-                               id="embedColor" value="#5865F2" pattern="^#[0-9A-Fa-f]{6}$">
-                        <div class="color-preview" id="colorPreview"></div>
+                        <div class="input-group-prepend">
+                            <span class="input-group-text p-1">
+                                <input type="color" id="colorPicker" value="#5865F2"
+                                       style="width:34px;height:34px;padding:2px;border:none;cursor:pointer;background:none;">
+                            </span>
+                        </div>
+                        <input type="text" name="embed_color" class="form-control"
+                               id="embedColor" value="#5865F2" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB">
                     </div>
+                    <small class="form-text text-muted">Use the color picker or type a hex code directly</small>
                 </div>
             </div>
         </div>
@@ -287,9 +285,9 @@
                             <label><i class="fas fa-tag"></i> PAP Type</label>
                             <select name="pap_type" class="form-control">
                                 <option value="">None</option>
-                                <option value="Strategic">Strategic</option>
-                                <option value="Peacetime">Peacetime</option>
-                                <option value="CTA">CTA</option>
+                                @foreach($papTypes as $pap)
+                                    <option value="{{ $pap->name }}">{{ $pap->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -578,22 +576,25 @@ $(document).ready(function() {
         }
     });
 
-    // Color preview
-    function updateColorPreview() {
-        $('#colorPreview').css('background-color', $('#embedColor').val());
-    }
-    
-    $('#embedColor').on('input', updateColorPreview);
-    
+    // Color picker sync
+    $('#colorPicker').on('input change', function() {
+        $('#embedColor').val($(this).val());
+    });
+
+    $('#embedColor').on('input', function() {
+        const val = $(this).val();
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            $('#colorPicker').val(val);
+        }
+    });
+
     $('#webhookSelect').change(function() {
         const color = $(this).find(':selected').data('color');
         if (color) {
             $('#embedColor').val(color);
-            updateColorPreview();
+            $('#colorPicker').val(color);
         }
     });
-    
-    updateColorPreview();
 
     @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)
     // Handle doctrine dropdown

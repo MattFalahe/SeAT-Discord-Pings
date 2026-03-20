@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
-@section('title', 'Scheduled Pings Calendar')
-@section('page_header', 'Scheduled Broadcasts Calendar')
+@section('title', 'Broadcasts Calendar')
+@section('page_header', 'Broadcasts Calendar')
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/fullcalendar.min.css') }}">
@@ -197,6 +197,9 @@
                     <div id="eventFieldsContainer"></div>
                 </div>
                 <div class="modal-footer">
+                    <a id="editPingBtn" href="#" class="btn btn-info" style="display:none;">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -223,6 +226,89 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Failed to load scheduled events.');
             }
         },
+        eventContent: function(arg) {
+            var props = arg.event.extendedProps;
+
+            var typeIcons = {
+                'fleet':        '📢',
+                'announcement': '📣',
+                'message':      '💬',
+                'prepping':     '‼️ PREPING ‼️',
+            };
+            var embedType = (props.fields && props.fields.embed_type) ? props.fields.embed_type : '';
+            var typeIcon = typeIcons[embedType] || '📡';
+
+            var d = arg.event.start;
+            var hh = String(d.getUTCHours()).padStart(2,'0');
+            var mm = String(d.getUTCMinutes()).padStart(2,'0');
+            var timeStr = hh + ':' + mm;
+
+            var el = document.createElement('div');
+            el.style.display = 'flex';
+            el.style.alignItems = 'center';
+            el.style.gap = '4px';
+            el.style.padding = '1px 4px';
+            el.style.overflow = 'hidden';
+            el.style.width = '100%';
+
+            if (props.isHistory) {
+                // Manual broadcast: coloured dot + type icon + time + message
+                var dot = document.createElement('span');
+                dot.style.display = 'inline-block';
+                dot.style.width = '8px';
+                dot.style.height = '8px';
+                dot.style.borderRadius = '50%';
+                dot.style.background = props.webhookColor;
+                dot.style.flexShrink = '0';
+                el.appendChild(dot);
+            } else {
+                // Scheduled broadcast: calendar icon to mark it as scheduled
+                var calIcon = document.createElement('span');
+                calIcon.style.fontSize = '0.7rem';
+                calIcon.style.flexShrink = '0';
+                calIcon.textContent = '📅';
+                el.appendChild(calIcon);
+            }
+
+            var iconEl = document.createElement('span');
+            iconEl.style.fontSize = '0.75rem';
+            iconEl.style.flexShrink = '0';
+            iconEl.textContent = typeIcon;
+
+            var timeEl = document.createElement('span');
+            timeEl.style.fontSize = '0.7rem';
+            timeEl.style.flexShrink = '0';
+            timeEl.style.opacity = '0.8';
+            timeEl.textContent = timeStr;
+
+            var text = document.createElement('span');
+            text.style.fontSize = '0.78rem';
+            text.style.overflow = 'hidden';
+            text.style.textOverflow = 'ellipsis';
+            text.style.whiteSpace = 'nowrap';
+            text.textContent = arg.event.title;
+
+            el.appendChild(iconEl);
+            el.appendChild(timeEl);
+            el.appendChild(text);
+
+            return { domNodes: [el] };
+        },
+        eventDidMount: function(info) {
+            var props = info.event.extendedProps;
+            if (!props.isActive && !props.isHistory) {
+                // Sent scheduled ping: dim and strikethrough
+                info.el.style.opacity = '0.5';
+                info.el.style.textDecoration = 'line-through';
+            }
+            if (props.isHistory) {
+                // Manual broadcast: no background bar
+                info.el.style.backgroundColor = 'transparent';
+                info.el.style.borderColor = 'transparent';
+                info.el.style.boxShadow = 'none';
+                info.el.style.opacity = '0.75';
+            }
+        },
         eventClick: function(info) {
             var props = info.event.extendedProps;
             var startDate = info.event.start;
@@ -237,7 +323,9 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#eventTime').text(timeStr);
             $('#eventWebhook').html(
                 '<span class="badge" style="background-color: ' + props.webhookColor + '">' +
-                props.webhook + '</span>'
+                props.webhook + '</span>' +
+                (props.isHistory ? ' <span class="badge badge-info">Manual Broadcast</span>' : '') +
+                (!props.isActive && !props.isHistory ? ' <span class="badge badge-secondary">Sent</span>' : '')
             );
             $('#eventRepeat').text(props.repeat);
             $('#eventMessage').text(props.message);
@@ -271,6 +359,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             $('#eventFieldsContainer').html(fieldsHtml);
+
+            // Show Edit button only for active scheduled pings (not history, not already sent)
+            if (!props.isHistory && props.isActive && props.ping_id) {
+                // Pass the clicked occurrence time so the edit form can pre-fill it
+                var occurrenceTime = info.event.start
+                    ? info.event.start.toISOString()
+                    : null;
+                var editUrl = '{{ url("discordpings/scheduled") }}/' + props.ping_id + '/edit';
+                if (occurrenceTime) editUrl += '?from=' + encodeURIComponent(occurrenceTime);
+                $('#editPingBtn').attr('href', editUrl).show();
+            } else {
+                $('#editPingBtn').hide();
+            }
 
             $('#eventDetailModal').modal('show');
         },

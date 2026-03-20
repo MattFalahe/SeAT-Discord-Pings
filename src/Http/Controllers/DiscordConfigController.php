@@ -9,6 +9,7 @@ use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
 use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
 use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
+use MattFalahe\Seat\DiscordPings\Models\PapType;
 
 class DiscordConfigController extends Controller
 {
@@ -21,8 +22,9 @@ class DiscordConfigController extends Controller
         $roles = DiscordRole::all();
         $channels = DiscordChannel::all();
         $stagings = StagingLocation::all();
-        
-        return view('discordpings::config.index', compact('webhooks', 'roles', 'channels', 'stagings'));
+        $papTypes = PapType::ordered()->get();
+
+        return view('discordpings::config.index', compact('webhooks', 'roles', 'channels', 'stagings', 'papTypes'));
     }
     
     /**
@@ -244,6 +246,62 @@ class DiscordConfigController extends Controller
         }
     }
     
+    /**
+     * Store new PAP type
+     */
+    public function storePapType(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100|unique:discord_pap_types,name',
+                'sort_order' => 'nullable|integer|min:0',
+            ]);
+
+            PapType::create([
+                'name'       => $validated['name'],
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active'  => true,
+            ]);
+
+            return redirect()->back()->with('success', 'PAP type added successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('PAP type creation error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to add PAP type: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete PAP type
+     */
+    public function destroyPapType($id)
+    {
+        try {
+            PapType::findOrFail($id)->delete();
+            return redirect()->back()->with('success', 'PAP type removed successfully!');
+        } catch (\Exception $e) {
+            Log::error('PAP type deletion error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to remove PAP type.');
+        }
+    }
+
+    /**
+     * Toggle PAP type active status
+     */
+    public function togglePapType($id)
+    {
+        try {
+            $papType = PapType::findOrFail($id);
+            $papType->is_active = !$papType->is_active;
+            $papType->save();
+
+            $status = $papType->is_active ? 'activated' : 'deactivated';
+            return response()->json(['success' => true, 'message' => "PAP type {$status} successfully"]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to toggle PAP type'], 500);
+        }
+    }
+
     /**
      * Set default staging location
      */

@@ -42,14 +42,14 @@ return [
     'feature_calendar_desc' => 'Visual calendar showing all your scheduled broadcasts with color-coded webhook indicators.',
     'feature_history_title' => 'Broadcast History',
     'feature_history_desc' => 'Full audit trail of all sent broadcasts with status tracking and resend capability.',
-    'feature_config_title' => 'Discord Configuration',
-    'feature_config_desc' => 'Manage webhooks, Discord roles, channels, and fleet staging locations in one place.',
+    'feature_config_title' => 'Settings',
+    'feature_config_desc' => 'Manage webhooks, Discord roles, channels, staging locations, and PAP types from the Settings page.',
 
     // Getting Started
     'getting_started' => 'Getting Started',
     'getting_started_intro' => 'SeAT Broadcast (Discord Pings) is a plugin for SeAT that allows fleet commanders and directors to send formatted broadcasts to Discord via webhooks. It supports scheduled pings, templates, history tracking, and rich embed formatting.',
     'quick_start_guide' => 'Quick Start Guide',
-    'getting_started_step1' => 'Configure at least one Discord webhook in Discord Configuration.',
+    'getting_started_step1' => 'Configure at least one Discord webhook in Settings > Webhooks.',
     'getting_started_step2' => 'Optionally set up Discord roles, channels, and staging locations.',
     'getting_started_step3' => 'Navigate to Send Broadcast to compose and send your first ping.',
     'getting_started_step4' => 'Use Templates to save frequently used broadcast formats.',
@@ -72,7 +72,7 @@ return [
     'sending_mentions' => 'Mentions',
     'sending_mentions_desc' => 'Choose a mention type to ping users in Discord: @everyone pings all server members, @here pings online members, or select a specific Discord role. Custom mentions allow free-text input.',
     'sending_embed_types' => 'Broadcast Types',
-    'sending_embed_types_desc' => 'Choose between Fleet Broadcast, Announcement, or Message. Each type changes the embed title and icon displayed in Discord.',
+    'sending_embed_types_desc' => 'Choose between Fleet Broadcast, Announcement, Message, or ‼️ PREPING ‼️. Each type changes the embed title displayed in Discord. Use "‼️ PREPING ‼️" when staging a fleet before ops begin.',
     'sending_preview' => 'Preview',
     'sending_preview_desc' => 'Click the Preview button to see how your broadcast will appear in Discord before sending. The preview shows the embed with all fields, colors, and formatting.',
     'sending_schedule_redirect' => 'Schedule for Later',
@@ -86,7 +86,7 @@ return [
     'webhooks_creating_step2' => 'Click "New Webhook" and give it a name.',
     'webhooks_creating_step3' => 'Select the channel where messages should be sent.',
     'webhooks_creating_step4' => 'Copy the webhook URL.',
-    'webhooks_creating_step5' => 'In SeAT, go to Discord Configuration > Webhooks and click "Create Webhook".',
+    'webhooks_creating_step5' => 'In SeAT, go to Settings > Webhooks and click "Create Webhook".',
     'webhooks_creating_step6' => 'Paste the webhook URL and configure the name, embed color, and mention settings.',
     'webhooks_testing' => 'Testing a Webhook',
     'webhooks_testing_desc' => 'Click the test button (flask icon) on any webhook to send a test message. This verifies the webhook URL is valid and the bot can post to the channel.',
@@ -113,7 +113,11 @@ return [
     'scheduled_repeat' => 'Repeat Intervals',
     'scheduled_repeat_desc' => 'Choose from Hourly, Daily, Weekly, or Monthly repeats. Set a "Repeat Until" date to automatically stop the recurring broadcast. Leave it empty for indefinite repeating.',
     'scheduled_managing' => 'Managing Scheduled Broadcasts',
-    'scheduled_managing_desc' => 'View all your scheduled broadcasts in the list or calendar view. You can delete scheduled broadcasts that are no longer needed. Each entry shows how many times it has been sent.',
+    'scheduled_managing_desc' => 'View scheduled broadcasts in the list or calendar view. Users with the Manage Scheduled Pings permission see broadcasts from all users, not just their own — a "Created By" column identifies each ping\'s author. They can edit or delete any scheduled broadcast to prevent overlaps. Users without this permission see only their own.',
+    'scheduled_editing' => 'Editing a Scheduled Broadcast',
+    'scheduled_editing_desc' => 'Click the edit (pencil) button on any active ping in the list, or click "Edit" in the calendar event modal. All fields can be changed including time, webhook, message, and repeat settings. For recurring pings that have already sent, a notice explains that changes apply to all future occurrences from the new scheduled time — past occurrences in history are never affected.',
+    'scheduled_bulk_clear' => 'Bulk Clear Inactive Pings',
+    'scheduled_bulk_clear_desc' => 'Users with the Manage Scheduled Pings permission can bulk delete sent (inactive) scheduled broadcasts using the "Clear Older Than 7 Days" and "Clear Older Than 30 Days" buttons on the Scheduled Broadcasts page. Only inactive pings are removed — active upcoming pings are never affected.',
     'scheduled_limit' => 'Limits',
     'scheduled_limit_desc' => 'Each user can have up to 50 active scheduled broadcasts at a time. This limit is configured by your SeAT administrator.',
 
@@ -123,9 +127,11 @@ return [
     'calendar_navigation' => 'Navigation',
     'calendar_navigation_desc' => 'Use the navigation buttons to switch between months, or switch between month, week, and day views using the toolbar buttons.',
     'calendar_events' => 'Events',
-    'calendar_events_desc' => 'Each scheduled broadcast appears as a color-coded event matching its webhook color. Recurring broadcasts are expanded to show each individual occurrence.',
+    'calendar_events_desc' => 'Each scheduled broadcast appears as a color-coded event matching its webhook color. Recurring broadcasts are expanded to show each individual occurrence. Users with the Manage Scheduled Pings permission see events from all users on the calendar. Sent (inactive) scheduled pings remain visible but are dimmed with a strikethrough — they disappear only when deleted.',
+    'calendar_history' => 'Manual Broadcast History on Calendar',
+    'calendar_history_desc' => 'Manually sent broadcasts from the Send Broadcast page also appear on the calendar. They render as a small coloured dot (matching the webhook colour), a broadcast type icon, and the message — no full bar. Users with View Ping History see their own sent pings; users with View All History see sent pings from all users.',
     'calendar_click' => 'Interacting with Events',
-    'calendar_click_desc' => 'Click on any event to see its full details including message, webhook, fields, and repeat information. Click on an empty date to schedule a new broadcast for that day.',
+    'calendar_click_desc' => 'Click on any event to see its full details including message, webhook, fields, and repeat information. Manual broadcast history events are marked with a "Manual Broadcast" badge in the detail popup. Click on an empty date to schedule a new broadcast for that day.',
 
     // History
     'history' => 'Broadcast History',
@@ -140,14 +146,16 @@ return [
     'history_retention_desc' => 'Broadcast history is automatically cleaned up after 90 days (configurable). This keeps the database clean while preserving recent records.',
 
     // Configuration
-    'configuration' => 'Discord Configuration',
-    'configuration_intro' => 'The Discord Configuration page lets you manage all Discord-related settings: webhooks, roles, channels, and staging locations.',
+    'configuration' => 'Settings',
+    'configuration_intro' => 'The Settings page lets you manage all plugin configuration across five tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, and PAP Types.',
     'configuration_roles' => 'Discord Roles',
     'configuration_roles_desc' => 'Add Discord role IDs to enable role-specific mentions in broadcasts. Each role needs its Discord ID (available from Discord Developer Mode) and a name for identification.',
     'configuration_channels' => 'Discord Channels',
     'configuration_channels_desc' => 'Register Discord channels that can be linked in broadcasts. Paste the Discord channel URL and the plugin will automatically extract the server and channel IDs.',
     'configuration_stagings' => 'Staging Locations',
     'configuration_stagings_desc' => 'Pre-configure fleet staging locations (system name and optionally structure name) for quick selection when composing broadcasts. Set one as default to have it pre-filled.',
+    'configuration_pap_types' => 'PAP Types',
+    'configuration_pap_types_desc' => 'Manage the PAP type options available in all broadcast forms. Three defaults are provided out of the box (Strategic, Peacetime, CTA). Add custom types, set their sort order, or deactivate ones you do not use. Deactivated types are hidden from dropdowns but not deleted.',
 
     // Pages Guide
     'pages_guide' => 'Pages Guide',
@@ -164,8 +172,8 @@ return [
     'page_templates_desc' => 'Manage your personal and global broadcast templates. Create, edit, and delete templates.',
     'page_webhooks' => 'Webhooks',
     'page_webhooks_desc' => 'Manage Discord webhooks including creating, editing, testing, and deleting webhook configurations.',
-    'page_config' => 'Discord Configuration',
-    'page_config_desc' => 'Central configuration page for webhooks, Discord roles, channels, and staging locations.',
+    'page_config' => 'Settings',
+    'page_config_desc' => 'Central settings page with five tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, and PAP Types.',
 
     // Commands
     'commands' => 'Commands',
@@ -188,7 +196,7 @@ return [
     'perm_manage_webhooks' => 'Manage Webhooks - Create, edit, and delete Discord webhooks and configuration.',
     'perm_view_history' => 'View Ping History - View your own broadcast history.',
     'perm_view_all_history' => 'View All History - View broadcast history from all users.',
-    'perm_manage_scheduled' => 'Manage Scheduled Pings - Create and manage scheduled broadcasts.',
+    'perm_manage_scheduled' => 'Manage Scheduled Pings - Create and manage scheduled broadcasts. Also grants visibility of all users\' scheduled pings in the list and calendar views, with the ability to delete any.',
     'perm_manage_templates' => 'Manage Templates - Create, edit, and delete your own broadcast templates.',
     'perm_manage_global_templates' => 'Manage Global Templates - Manage global templates visible to all users.',
 
@@ -201,7 +209,7 @@ return [
     'faq_q3' => 'Can I send to multiple Discord servers?',
     'faq_a3' => 'Yes. Create webhooks for channels in different Discord servers and use the "Multiple Webhooks" feature to send to all of them at once.',
     'faq_q4' => 'How do I mention a specific Discord role?',
-    'faq_a4' => 'First, add the role in Discord Configuration > Discord Roles with its role ID. Then when composing a broadcast, select "Discord Role" as the mention type and choose the role from the dropdown.',
+    'faq_a4' => 'First, add the role in Settings > Discord Roles with its role ID. Then when composing a broadcast, select "Discord Role" as the mention type and choose the role from the dropdown.',
     'faq_q5' => 'What happens when a scheduled broadcast fails?',
     'faq_a5' => 'Failed broadcasts are logged in the history with the error message. Recurring broadcasts will continue to fire at their next scheduled time regardless of individual failures.',
     'faq_q6' => 'Can other users see my templates?',
@@ -213,7 +221,7 @@ return [
     'faq_q9' => 'How do I find my Discord role/channel IDs?',
     'faq_a9' => 'Enable Developer Mode in Discord (Settings > Advanced > Developer Mode). Then right-click any role or channel and select "Copy ID". For channels, you can also copy the channel URL directly.',
     'faq_q10' => 'Can I edit a scheduled broadcast?',
-    'faq_a10' => 'Currently, scheduled broadcasts cannot be edited after creation. Delete the existing one and create a new one with the updated settings.',
+    'faq_a10' => 'Yes. Click the edit (pencil) button on any active scheduled ping in the list, or use the Edit button in the calendar event popup. For recurring pings that have already fired, editing applies to all future occurrences from the new scheduled time — past sends are preserved in history.',
 
     // Troubleshooting
     'troubleshooting' => 'Troubleshooting',
@@ -233,6 +241,24 @@ return [
     'issue_mentions_not_working_solution1' => 'Ensure "Enable Mentions" is turned on for the webhook.',
     'issue_mentions_not_working_solution2' => 'For role mentions, verify the role ID is correct and the role is mentionable in Discord server settings.',
     'issue_mentions_not_working_solution3' => 'Check that the webhook bot has permission to mention @everyone/@here in the target channel.',
+
+    // What's New
+    'whats_new' => 'What\'s New',
+    'whats_new_intro' => 'Recent updates and new features added to SeAT Broadcast.',
+    'whats_new_prepping_title' => '‼️ PREPING ‼️ Broadcast Type',
+    'whats_new_prepping_desc' => 'A new "‼️ PREPING ‼️" broadcast type is now available alongside Fleet Broadcast, Announcement, and Message. Use it to notify members that a fleet is being staged and is not yet ready to undock. The title appears in Discord exactly as "‼️ PREPING ‼️". Select it from the Broadcast Type dropdown on both the Send and Schedule forms.',
+    'whats_new_pap_config_title' => '🏷️ Configurable PAP Types',
+    'whats_new_pap_config_desc' => 'PAP types are no longer hardcoded. Admins can now manage them in Settings > PAP Types — add custom types, set sort order, or deactivate ones you do not use. Three defaults (Strategic, Peacetime, CTA) are created automatically on install/update. Active PAP types populate the dropdown on all broadcast forms.',
+    'whats_new_colorpicker_title' => '🎨 Visual Color Picker',
+    'whats_new_colorpicker_desc' => 'The Embed Color field now includes a colour swatch you can click to open the browser\'s native colour picker. Select a colour visually or continue typing a hex code — both stay in sync at all times. Selecting a different webhook still auto-fills the colour from that webhook\'s default.',
+    'whats_new_scheduled_visibility_title' => '👥 Scheduled Pings — Shared Visibility',
+    'whats_new_scheduled_visibility_desc' => 'Users with the Manage Scheduled Pings permission now see all users\' scheduled broadcasts in both the list view and the calendar, not just their own. A "Created By" column in the list identifies each ping\'s author. These users can also delete any scheduled broadcast, making it easy to resolve conflicts or prevent overlapping pings. Users without this permission continue to see only their own scheduled pings.',
+    'whats_new_calendar_history_title' => '📅 Manual Broadcasts on Calendar',
+    'whats_new_calendar_history_desc' => 'The calendar now shows manually sent broadcasts from the Send Broadcast page alongside scheduled ones. History pings render as a coloured dot + broadcast type icon + message — no full bar — so they are easy to distinguish. Sent scheduled pings also remain on the calendar dimmed with a strikethrough until deleted. Visibility follows your history permissions: View Ping History shows your own, View All History shows everyone\'s.',
+    'whats_new_bulk_clear_title' => '🧹 Bulk Clear Inactive Scheduled Pings',
+    'whats_new_bulk_clear_desc' => 'Directors and admins with the Manage Scheduled Pings permission can now bulk delete sent (inactive) scheduled broadcasts directly from the Scheduled Broadcasts page. Two buttons let you clear pings older than 7 days or older than 30 days in one click — keeping the list clean without touching any upcoming active pings.',
+    'whats_new_edit_scheduled_title' => '✏️ Edit Scheduled Broadcasts',
+    'whats_new_edit_scheduled_desc' => 'Scheduled broadcasts can now be edited after creation. Use the pencil button in the list or the Edit button in the calendar event popup. All fields are editable. For recurring series that have already fired, a clear notice explains that changes apply from the new scheduled time onwards — past occurrences are never modified. Clicking Edit on a specific future occurrence in the calendar pre-fills the time picker with that occurrence\'s time.',
 
     // Plugin info (legacy)
     'plugin_version' => 'Plugin Version',

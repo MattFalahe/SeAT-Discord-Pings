@@ -10,6 +10,7 @@ use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
 use MattFalahe\Seat\DiscordPings\Models\PingHistory;
 use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
 use MattFalahe\Seat\DiscordPings\Models\PingTemplate;
+use MattFalahe\Seat\DiscordPings\Models\PapType;
 use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
 
 class PingController extends Controller
@@ -24,7 +25,8 @@ class PingController extends Controller
             $roles = DiscordRole::active()->get();
             $channels = DiscordChannel::active()->get();
             $stagings = StagingLocation::active()->get();
-            
+            $papTypes = PapType::active()->ordered()->get();
+
             $templates = PingTemplate::forUser(auth()->id())->get();
             
             $recentPings = PingHistory::where('user_id', auth()->id())
@@ -57,13 +59,14 @@ class PingController extends Controller
             }
             
             return view('discordpings::send', compact(
-                'webhooks', 
-                'roles', 
-                'channels', 
+                'webhooks',
+                'roles',
+                'channels',
                 'stagings',
-                'templates', 
-                'recentPings', 
-                'doctrines', 
+                'papTypes',
+                'templates',
+                'recentPings',
+                'doctrines',
                 'hasFittingPlugin'
             ));
             
@@ -82,10 +85,10 @@ class PingController extends Controller
             $validated = $request->validate([
                 'webhook_id' => 'required|exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
-                'embed_type' => 'nullable|string|in:fleet,announcement,message',
+                'embed_type' => 'nullable|string|in:fleet,announcement,message,prepping',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
+                'pap_type' => 'nullable|string|max:100',
                 'comms' => 'nullable|string|max:200',
                 'doctrine' => 'nullable|string|max:200',
                 'doctrine_id' => 'nullable|integer',
@@ -95,7 +98,7 @@ class PingController extends Controller
                 'custom_mention' => 'nullable|string|max:100',
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             ]);
-            
+
             $webhook = DiscordWebhook::find($validated['webhook_id']);
             
             if (!$webhook || !$webhook->is_active) {
@@ -182,10 +185,10 @@ class PingController extends Controller
                 'webhook_ids' => 'required|array',
                 'webhook_ids.*' => 'exists:discord_webhooks,id',
                 'message' => 'required|string|max:2000',
-                'embed_type' => 'nullable|string|in:fleet,announcement,message',
+                'embed_type' => 'nullable|string|in:fleet,announcement,message,prepping',
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|in:Strategic,Peacetime,CTA',
+                'pap_type' => 'nullable|string|max:100',
                 'comms' => 'nullable|string|max:200',
                 'doctrine' => 'nullable|string|max:200',
                 'doctrine_id' => 'nullable|integer',

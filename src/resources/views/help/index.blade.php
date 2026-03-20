@@ -433,6 +433,9 @@
                     <a href="#" class="nav-link active" data-section="overview">
                         <i class="fas fa-home"></i> {{ trans('discordpings::help.overview') }}
                     </a>
+                    <a href="#" class="nav-link" data-section="whats-new">
+                        <i class="fas fa-star"></i> {{ trans('discordpings::help.whats_new') }}
+                    </a>
                     <a href="#" class="nav-link" data-section="getting-started">
                         <i class="fas fa-rocket"></i> {{ trans('discordpings::help.getting_started') }}
                     </a>
@@ -452,7 +455,7 @@
                         <i class="fas fa-calendar-alt"></i> {{ trans('discordpings::help.calendar') }}
                     </a>
                     <a href="#" class="nav-link" data-section="configuration">
-                        <i class="fab fa-discord"></i> {{ trans('discordpings::help.configuration') }}
+                        <i class="fas fa-cog"></i> {{ trans('discordpings::help.configuration') }}
                     </a>
                     <a href="#" class="nav-link" data-section="pages">
                         <i class="fas fa-th-large"></i> {{ trans('discordpings::help.pages_guide') }}
@@ -561,7 +564,7 @@
                         <p>{{ trans('discordpings::help.feature_history_desc') }}</p>
                     </div>
                     <div class="feature-item">
-                        <h5><i class="fab fa-discord"></i> {{ trans('discordpings::help.feature_config_title') }}</h5>
+                        <h5><i class="fas fa-cog"></i> {{ trans('discordpings::help.feature_config_title') }}</h5>
                         <p>{{ trans('discordpings::help.feature_config_desc') }}</p>
                     </div>
                 </div>
@@ -584,6 +587,41 @@
                         {{ trans('discordpings::help.view_calendar') }}
                     </a>
                 </div>
+            </div>
+        </div>
+
+        {{-- What's New --}}
+        <div class="help-section" id="whats-new">
+            <div class="help-card">
+                <h3><i class="fas fa-star"></i> {{ trans('discordpings::help.whats_new') }}</h3>
+                <p>{{ trans('discordpings::help.whats_new_intro') }}</p>
+
+                <h4>{{ trans('discordpings::help.whats_new_prepping_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_prepping_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> The four broadcast types are now: <strong>📢 Fleet Broadcast</strong>, <strong>📣 Announcement</strong>, <strong>💬 Message</strong>, and <strong>‼️ PREPING ‼️</strong>.</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.whats_new_colorpicker_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_colorpicker_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.whats_new_pap_config_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_pap_config_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.whats_new_scheduled_visibility_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_scheduled_visibility_desc') }}</p>
+                <div class="warning-box">
+                    <p><i class="fas fa-shield-alt"></i> <strong>Permission required:</strong> You must have the <strong>Manage Scheduled Pings</strong> permission assigned to your SeAT role to see and manage other users' scheduled broadcasts.</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.whats_new_calendar_history_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_calendar_history_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.whats_new_bulk_clear_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_bulk_clear_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.whats_new_edit_scheduled_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_edit_scheduled_desc') }}</p>
             </div>
         </div>
 
@@ -709,6 +747,18 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <h4>{{ trans('discordpings::help.scheduled_managing') }}</h4>
                 <p>{{ trans('discordpings::help.scheduled_managing_desc') }}</p>
 
+                <h4>{{ trans('discordpings::help.scheduled_editing') }}</h4>
+                <p>{{ trans('discordpings::help.scheduled_editing_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>Recurring series:</strong> Editing a recurring ping that has already fired updates all future occurrences from the new scheduled time. Past sends remain in broadcast history untouched.</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.scheduled_bulk_clear') }}</h4>
+                <p>{{ trans('discordpings::help.scheduled_bulk_clear_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage Scheduled Pings permission. Active upcoming pings are never touched by the bulk clear.</p>
+                </div>
+
                 <div class="warning-box">
                     <p><i class="fas fa-exclamation-triangle"></i> <strong>{{ trans('discordpings::help.scheduled_limit') }}:</strong> {{ trans('discordpings::help.scheduled_limit_desc') }}</p>
                 </div>
@@ -727,6 +777,12 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <h4>{{ trans('discordpings::help.calendar_events') }}</h4>
                 <p>{{ trans('discordpings::help.calendar_events_desc') }}</p>
 
+                <h4>{{ trans('discordpings::help.calendar_history') }}</h4>
+                <p>{{ trans('discordpings::help.calendar_history_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>Permissions:</strong> <strong>View Ping History</strong> shows your own sent broadcasts on the calendar. <strong>View All History</strong> shows sent broadcasts from all users.</p>
+                </div>
+
                 <h4>{{ trans('discordpings::help.calendar_click') }}</h4>
                 <p>{{ trans('discordpings::help.calendar_click_desc') }}</p>
             </div>
@@ -735,7 +791,7 @@ php artisan vendor:publish --tag=public --force</code></pre>
         {{-- Configuration --}}
         <div class="help-section" id="configuration">
             <div class="help-card">
-                <h3><i class="fab fa-discord"></i> {{ trans('discordpings::help.configuration') }}</h3>
+                <h3><i class="fas fa-cog"></i> {{ trans('discordpings::help.configuration') }}</h3>
                 <p>{{ trans('discordpings::help.configuration_intro') }}</p>
 
                 <h4>{{ trans('discordpings::help.configuration_roles') }}</h4>
@@ -746,6 +802,9 @@ php artisan vendor:publish --tag=public --force</code></pre>
 
                 <h4>{{ trans('discordpings::help.configuration_stagings') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_stagings_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.configuration_pap_types') }}</h4>
+                <p>{{ trans('discordpings::help.configuration_pap_types_desc') }}</p>
             </div>
         </div>
 
@@ -775,6 +834,9 @@ php artisan vendor:publish --tag=public --force</code></pre>
 
                 <h4><i class="fas fa-cog"></i> {{ trans('discordpings::help.page_config') }}</h4>
                 <p>{{ trans('discordpings::help.page_config_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage Webhooks permission to access the Settings page.</p>
+                </div>
             </div>
         </div>
 

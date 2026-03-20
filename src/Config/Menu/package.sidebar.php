@@ -17,13 +17,6 @@ return [
                 'permission' => 'discordpings.send',
             ],
             [
-                'name'  => 'Discord Config',
-                'label' => 'discordpings::menu.discord_config',
-                'icon'  => 'fab fa-discord',
-                'route' => 'discordpings.config',
-                'permission' => 'discordpings.manage_webhooks',
-            ],
-            [
                 'name'  => 'History',
                 'label' => 'discordpings::menu.history',
                 'icon'  => 'fas fa-history',
@@ -50,6 +43,13 @@ return [
                 'icon'  => 'fas fa-file-alt',
                 'route' => 'discordpings.templates',
                 'permission' => 'discordpings.manage_templates',
+            ],
+            [
+                'name'  => 'Settings',
+                'label' => 'discordpings::menu.discord_config',
+                'icon'  => 'fas fa-cog',
+                'route' => 'discordpings.config',
+                'permission' => 'discordpings.manage_webhooks',
             ],
             [
                 'name'  => 'Help',

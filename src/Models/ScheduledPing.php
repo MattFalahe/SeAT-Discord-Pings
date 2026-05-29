@@ -1,6 +1,6 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Models;
+namespace DiscordPings\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
@@ -10,7 +10,7 @@ class ScheduledPing extends Model
     protected $table = 'discord_scheduled_pings';
 
     protected $fillable = [
-        'webhook_id', 'user_id', 'message', 'fields', 'scheduled_at',
+        'webhook_id', 'user_id', 'tactical_event_id', 'message', 'fields', 'scheduled_at',
         'repeat_interval', 'repeat_until', 'is_active', 'last_sent_at', 'times_sent'
     ];
 
@@ -36,6 +36,16 @@ class ScheduledPing extends Model
     public function user()
     {
         return $this->belongsTo(\Seat\Web\Models\User::class, 'user_id');
+    }
+
+    /**
+     * The tactical event (structure timer) this ping was formed up for,
+     * if any. Set when an FC creates the ping from the Calendar or FC
+     * Opportunities surface.
+     */
+    public function tacticalEvent()
+    {
+        return $this->belongsTo(TacticalEvent::class, 'tactical_event_id');
     }
 
     /**

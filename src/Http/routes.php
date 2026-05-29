@@ -2,7 +2,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::group([
-    'namespace' => 'MattFalahe\Seat\DiscordPings\Http\Controllers',
+    'namespace' => 'DiscordPings\Http\Controllers',
     'middleware' => ['web', 'auth', 'locale'],
     'prefix' => 'discord-pings',
 ], function () {
@@ -119,6 +119,11 @@ Route::group([
         ->name('discordpings.config.pap-types.toggle')
         ->middleware('can:discordpings.manage_webhooks');
 
+    // Structure Timer integration settings
+    Route::post('/config/structure-timers', 'DiscordConfigController@updateStructureTimerSettings')
+        ->name('discordpings.config.structure-timers')
+        ->middleware('can:discordpings.manage_webhooks');
+
     // Webhook management (keeping existing routes)
     Route::get('/webhooks', 'WebhookController@index')
         ->name('discordpings.webhooks')
@@ -161,40 +166,72 @@ Route::group([
         ->name('discordpings.history.resend')
         ->middleware('can:discordpings.send');
     
+    // ===== Scheduled-broadcast surfaces =====
+    //
+    // Two-tier permission model:
+    //   - discordpings.send        : the FC tier. Can list / create / edit /
+    //                                delete their OWN scheduled pings, view
+    //                                the calendar (own pings only), and use
+    //                                the FC Opportunities planner. Controllers
+    //                                enforce per-ping ownership for edit /
+    //                                update / destroy (see ScheduledController
+    //                                lines 271/306/416).
+    //   - discordpings.manage_scheduled : the Fleet Coordinator tier. Adds
+    //                                the ability to see / edit / delete
+    //                                OTHER users' pings + the bulk-clear
+    //                                operations that touch everyone's data.
+    //
+    // The route gate enforces baseline access; the controller's
+    // $canSeeAll = $user->can('discordpings.manage_scheduled') decides
+    // whether the list/calendar query is filtered to user_id = me.
+
     // Calendar view & API (must be before /scheduled/{id} routes)
     Route::get('/scheduled/calendar', 'ScheduledController@calendar')
         ->name('discordpings.scheduled.calendar')
-        ->middleware('can:discordpings.manage_scheduled');
+        ->middleware('can:discordpings.send');
 
     Route::get('/api/scheduled-events', 'ScheduledController@calendarEvents')
         ->name('discordpings.api.scheduled-events')
-        ->middleware('can:discordpings.manage_scheduled');
+        ->middleware('can:discordpings.send');
 
-    // Scheduled pings
+    // FC Opportunities — upcoming structure timers and ops needing FC action
+    Route::get('/opportunities', 'OpportunitiesController@index')
+        ->name('discordpings.opportunities')
+        ->middleware('can:discordpings.send');
+
+    // Diagnostic — admin-only, intentionally NOT in sidebar (reach via /discord-pings/diagnostic)
+    Route::get('/diagnostic', 'DiagnosticController@index')
+        ->name('discordpings.diagnostic')
+        ->middleware('can:discordpings.admin');
+
+    // Scheduled pings — FC tier (own pings) or Fleet Coordinator (all pings)
     Route::get('/scheduled', 'ScheduledController@index')
         ->name('discordpings.scheduled')
-        ->middleware('can:discordpings.manage_scheduled');
-    
+        ->middleware('can:discordpings.send');
+
     Route::get('/scheduled/create', 'ScheduledController@create')
         ->name('discordpings.scheduled.create')
-        ->middleware('can:discordpings.manage_scheduled');
-    
+        ->middleware('can:discordpings.send');
+
     Route::post('/scheduled', 'ScheduledController@store')
         ->name('discordpings.scheduled.store')
-        ->middleware('can:discordpings.manage_scheduled');
-    
+        ->middleware('can:discordpings.send');
+
     Route::get('/scheduled/{id}/edit', 'ScheduledController@edit')
         ->name('discordpings.scheduled.edit')
-        ->middleware('can:discordpings.manage_scheduled');
+        ->middleware('can:discordpings.send');
 
     Route::put('/scheduled/{id}', 'ScheduledController@update')
         ->name('discordpings.scheduled.update')
-        ->middleware('can:discordpings.manage_scheduled');
+        ->middleware('can:discordpings.send');
 
     Route::delete('/scheduled/{id}', 'ScheduledController@destroy')
         ->name('discordpings.scheduled.destroy')
-        ->middleware('can:discordpings.manage_scheduled');
+        ->middleware('can:discordpings.send');
 
+    // Bulk-clear stays at manage_scheduled — it touches OTHER users' inactive
+    // pings, not just the caller's. Tier 1 FCs can still delete their own
+    // pings one at a time via the per-row destroy button above.
     Route::post('/scheduled/bulk-clear', 'ScheduledController@bulkDestroyInactive')
         ->name('discordpings.scheduled.bulk-clear')
         ->middleware('can:discordpings.manage_scheduled');

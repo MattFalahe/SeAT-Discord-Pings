@@ -1,6 +1,6 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Models;
+namespace DiscordPings\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Seat\Web\Models\Acl\Role;
@@ -11,12 +11,15 @@ class DiscordWebhook extends Model
 
     protected $fillable = [
         'name', 'webhook_url', 'channel_type', 'embed_color',
-        'enable_mentions', 'default_mention', 'is_active', 'created_by'
+        'is_active', 'receives_structure_alerts', 'receives_mining_alerts',
+        'corporation_id', 'created_by'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'enable_mentions' => 'boolean',
+        'receives_structure_alerts' => 'boolean',
+        'receives_mining_alerts' => 'boolean',
+        'webhook_url' => 'encrypted',
     ];
 
     /**

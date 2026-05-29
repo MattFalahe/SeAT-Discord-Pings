@@ -5,13 +5,9 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
-    .nav-tabs .nav-link {
-        color: #6c757d;
-    }
-    .nav-tabs .nav-link.active {
-        font-weight: bold;
-    }
+    /* Page-specific only — chrome lives in canonical CSS */
     .color-badge {
         display: inline-block;
         width: 20px;
@@ -27,7 +23,8 @@
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
                 <li class="nav-item">
@@ -53,6 +50,16 @@
                 <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#pap-types-tab">
                         <i class="fas fa-tag"></i> PAP Types
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#structure-timers-tab">
+                        <i class="fas fa-satellite-dish"></i> Structure Timers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#routing-map-tab">
+                        <i class="fas fa-route"></i> Routing Map
                     </a>
                 </li>
             </ul>
@@ -391,6 +398,371 @@
                     </div>
                 </div>
 
+                {{-- Structure Timers Tab --}}
+                <div class="tab-pane fade" id="structure-timers-tab">
+                    <h4>Structure Timer Integration</h4>
+                    <p class="text-muted">
+                        When Manager Core and Structure Manager are installed, structure timers and
+                        fleet ops appear automatically on the Broadcasts Calendar, and flagged webhooks
+                        can send pre-timer reminder pings. This integration is optional.
+                    </p>
+
+                    {{-- Integration status --}}
+                    <div class="mb-3">
+                        <span class="badge {{ $managerCoreInstalled ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ $managerCoreInstalled ? 'check' : 'times' }}"></i>
+                            Manager Core {{ $managerCoreInstalled ? 'detected' : 'not installed' }}
+                        </span>
+                        <span class="badge {{ $structureManagerInstalled ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ $structureManagerInstalled ? 'check' : 'times' }}"></i>
+                            Structure Manager {{ $structureManagerInstalled ? 'detected' : 'not installed' }}
+                        </span>
+                        <span class="badge {{ ($miningManagerInstalled ?? false) ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ ($miningManagerInstalled ?? false) ? 'check' : 'times' }}"></i>
+                            Mining Manager {{ ($miningManagerInstalled ?? false) ? 'detected' : 'not installed' }}
+                        </span>
+                    </div>
+
+                    @if(! ($managerCoreInstalled ?? false) || ! ($structureManagerInstalled ?? false))
+                        <div class="alert-pings-styled alert-pings-info">
+                            <i class="fas fa-info-circle"></i>
+                            Install Manager Core and Structure Manager to activate this integration.
+                            Structure timers will then flow onto the calendar automatically.
+                            Install Mining Manager (v2.0.1+) too to also surface moon extractions.
+                        </div>
+                    @endif
+
+                    {{-- Settings form --}}
+                    <form method="POST" action="{{ route('discordpings.config.structure-timers') }}">
+                        @csrf
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="structure_alerts_enabled"
+                                       name="structure_alerts_enabled" value="1"
+                                       {{ ($structureAlertsEnabled ?? true) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="structure_alerts_enabled">
+                                    Send pre-timer reminder pings (structure timers)
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                When enabled, webhooks flagged with "Receive structure timer alerts" (on the
+                                Webhooks tab) get an automatic Discord reminder at T-24h and T-1h before each
+                                structure timer. Turn this off to stop all pre-timer pings without un-flagging
+                                individual webhooks. The calendar keeps showing timers either way.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="mining_alerts_enabled"
+                                       name="mining_alerts_enabled" value="1"
+                                       {{ ($miningAlertsEnabled ?? true) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="mining_alerts_enabled">
+                                    Send pre-expiry alerts (mining extractions)
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                When enabled, webhooks flagged with "Receive mining extraction alerts" get a
+                                single Discord alert at T-2h before the fleet-able window closes on each moon
+                                extraction. Requires Mining Manager v2.0.1+. Turn off to silence mining alerts
+                                without un-flagging webhooks; mining extractions still appear on the calendar.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="formup_offset_minutes">Default form-up lead time (minutes)</label>
+                            <input type="number" class="form-control" id="formup_offset_minutes"
+                                   name="formup_offset_minutes" min="5" max="720" step="5"
+                                   value="{{ $formupOffsetMinutes ?? 30 }}"
+                                   style="max-width: 200px;">
+                            <small class="text-muted">
+                                When an FC clicks "Schedule formup ping" from a tactical event (Calendar modal
+                                or FC Opportunities board), the broadcast is pre-scheduled this many minutes
+                                before the timer. Defaults to 30. Range: 5 minutes to 12 hours.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-pings-primary">
+                            <i class="fas fa-save"></i> Save
+                        </button>
+                    </form>
+                </div>
+
+                {{-- Routing Map Tab --}}
+                <div class="tab-pane fade" id="routing-map-tab">
+                    <h4>Notification Routing Map</h4>
+                    <p class="text-muted">
+                        Read-only snapshot of where each event the plugin reacts to fires. Use this
+                        to confirm "what pings where" at a glance without clicking through every
+                        webhook. Updates live as you flag webhooks or change scope.
+                    </p>
+
+                    {{-- Integration status pills --}}
+                    <div class="mb-3">
+                        <span class="badge {{ ($managerCoreInstalled ?? false) ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ ($managerCoreInstalled ?? false) ? 'check' : 'times' }}"></i>
+                            Manager Core {{ ($managerCoreInstalled ?? false) ? 'detected' : 'not installed' }}
+                        </span>
+                        <span class="badge {{ ($structureManagerInstalled ?? false) ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ ($structureManagerInstalled ?? false) ? 'check' : 'times' }}"></i>
+                            Structure Manager {{ ($structureManagerInstalled ?? false) ? 'detected' : 'not installed' }}
+                        </span>
+                        <span class="badge {{ ($miningManagerInstalled ?? false) ? 'badge-success' : 'badge-secondary' }}">
+                            <i class="fas fa-{{ ($miningManagerInstalled ?? false) ? 'check' : 'times' }}"></i>
+                            Mining Manager {{ ($miningManagerInstalled ?? false) ? 'detected' : 'not installed' }}
+                        </span>
+                        <span class="badge {{ ($structureAlertsEnabled ?? true) ? 'badge-success' : 'badge-warning' }}">
+                            <i class="fas fa-{{ ($structureAlertsEnabled ?? true) ? 'check' : 'pause' }}"></i>
+                            Pre-timer pings master switch {{ ($structureAlertsEnabled ?? true) ? 'ON' : 'OFF' }}
+                        </span>
+                        <span class="badge {{ ($miningAlertsEnabled ?? true) ? 'badge-success' : 'badge-warning' }}">
+                            <i class="fas fa-{{ ($miningAlertsEnabled ?? true) ? 'check' : 'pause' }}"></i>
+                            Mining alerts master switch {{ ($miningAlertsEnabled ?? true) ? 'ON' : 'OFF' }}
+                        </span>
+                    </div>
+
+                    {{-- Pre-Timer Reminder Pings --}}
+                    <h5 class="mt-4"><i class="fas fa-bell"></i> Pre-Timer Reminder Pings</h5>
+                    <p class="text-muted">
+                        Webhooks flagged with "Receive structure timer alerts" fire automatically at
+                        T-24h and T-1h before each Structure Manager timer event. Corp-scoped webhooks
+                        only receive alerts for their corporation; "Any corporation" webhooks receive
+                        everything.
+                    </p>
+
+                    @if(($alertWebhooks ?? collect())->isEmpty())
+                        <div class="alert-pings-styled alert-pings-info">
+                            <i class="fas fa-info-circle"></i>
+                            No webhooks are flagged to receive structure timer alerts. Edit a webhook
+                            on the Webhooks tab and tick "Receive structure timer alerts" to route
+                            pre-timer reminders here.
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Webhook</th>
+                                        <th>Corporation Scope</th>
+                                        <th>State</th>
+                                        <th>Receives pre-timer pings?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach($alertWebhooks as $w)
+                                    @php
+                                        $masterOn  = (bool) ($structureAlertsEnabled ?? true);
+                                        $mcOk      = (bool) ($managerCoreInstalled ?? false);
+                                        $smOk      = (bool) ($structureManagerInstalled ?? false);
+                                        $active    = (bool) $w->is_active;
+                                        $effective = $masterOn && $active && $mcOk && $smOk;
+                                        $corpName  = $w->corporation_id
+                                            ? (($routingCorpNames ?? [])[$w->corporation_id] ?? null)
+                                            : null;
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <span class="color-badge" style="background-color: {{ $w->embed_color }}"></span>
+                                            <strong>{{ $w->name }}</strong>
+                                            @if($w->channel_type)
+                                                <br><small class="text-muted">{{ $w->channel_type }}</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($w->corporation_id)
+                                                <span class="badge badge-info">
+                                                    {{ $corpName ?: 'Corp #' . $w->corporation_id }}
+                                                </span>
+                                                <br><small class="text-muted">only this corp's events</small>
+                                            @else
+                                                <span class="badge badge-secondary">Any corporation</span>
+                                                <br><small class="text-muted">receives all events</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if(! $active)
+                                                <span class="badge badge-danger">Webhook disabled</span>
+                                            @elseif(! $masterOn)
+                                                <span class="badge badge-warning">Master switch OFF</span>
+                                            @elseif(! $mcOk || ! $smOk)
+                                                <span class="badge badge-secondary">Integration dormant</span>
+                                            @else
+                                                <span class="badge badge-success">Active</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($effective)
+                                                <span class="badge badge-success">Yes</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @php
+                            $deliveringCount = $alertWebhooks->filter(function ($w) use ($structureAlertsEnabled, $managerCoreInstalled, $structureManagerInstalled) {
+                                return $w->is_active
+                                    && ($structureAlertsEnabled ?? true)
+                                    && ($managerCoreInstalled ?? false)
+                                    && ($structureManagerInstalled ?? false);
+                            })->count();
+                        @endphp
+                        <p class="text-muted mt-3" style="font-size: 0.9rem;">
+                            <strong>Summary:</strong>
+                            {{ $alertWebhooks->count() }} webhook{{ $alertWebhooks->count() === 1 ? '' : 's' }}
+                            flagged for structure alerts;
+                            {{ $deliveringCount }} actively delivering right now.
+                            @if($deliveringCount === 0 && $alertWebhooks->count() > 0)
+                                <span class="text-warning">No pings will fire until the issues in the State column are resolved.</span>
+                            @endif
+                        </p>
+                    @endif
+
+                    {{-- Pre-Expiry Mining Alerts --}}
+                    <h5 class="mt-4"><i class="fas fa-gem"></i> Pre-Expiry Mining Alerts</h5>
+                    <p class="text-muted">
+                        Webhooks flagged with "Receive mining extraction alerts" fire a single
+                        T-2h Discord embed before each moon extraction's fleet-able window closes.
+                        Corp-scoped webhooks only receive alerts for their corporation; "Any
+                        corporation" webhooks receive everything.
+                    </p>
+
+                    @if(($miningAlertWebhooks ?? collect())->isEmpty())
+                        <div class="alert-pings-styled alert-pings-info">
+                            <i class="fas fa-info-circle"></i>
+                            No webhooks are flagged to receive mining extraction alerts. Edit a
+                            webhook on the Webhooks tab and tick "Receive mining extraction alerts"
+                            to route pre-expiry reminders here.
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Webhook</th>
+                                        <th>Corporation Scope</th>
+                                        <th>State</th>
+                                        <th>Receives mining alerts?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach($miningAlertWebhooks as $w)
+                                    @php
+                                        $masterOn  = (bool) ($miningAlertsEnabled ?? true);
+                                        $mcOk      = (bool) ($managerCoreInstalled ?? false);
+                                        $mmOk      = (bool) ($miningManagerInstalled ?? false);
+                                        $active    = (bool) $w->is_active;
+                                        $effective = $masterOn && $active && $mcOk && $mmOk;
+                                        $corpName  = $w->corporation_id
+                                            ? (($routingCorpNames ?? [])[$w->corporation_id] ?? null)
+                                            : null;
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <span class="color-badge" style="background-color: {{ $w->embed_color }}"></span>
+                                            <strong>{{ $w->name }}</strong>
+                                            @if($w->channel_type)
+                                                <br><small class="text-muted">{{ $w->channel_type }}</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($w->corporation_id)
+                                                <span class="badge badge-info">
+                                                    {{ $corpName ?: 'Corp #' . $w->corporation_id }}
+                                                </span>
+                                                <br><small class="text-muted">only this corp's extractions</small>
+                                            @else
+                                                <span class="badge badge-secondary">Any corporation</span>
+                                                <br><small class="text-muted">receives all extractions</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if(! $active)
+                                                <span class="badge badge-danger">Webhook disabled</span>
+                                            @elseif(! $masterOn)
+                                                <span class="badge badge-warning">Master switch OFF</span>
+                                            @elseif(! $mcOk || ! $mmOk)
+                                                <span class="badge badge-secondary">Integration dormant</span>
+                                            @else
+                                                <span class="badge badge-success">Active</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($effective)
+                                                <span class="badge badge-success">Yes</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @php
+                            $miningDeliveringCount = $miningAlertWebhooks->filter(function ($w) use ($miningAlertsEnabled, $managerCoreInstalled, $miningManagerInstalled) {
+                                return $w->is_active
+                                    && ($miningAlertsEnabled ?? true)
+                                    && ($managerCoreInstalled ?? false)
+                                    && ($miningManagerInstalled ?? false);
+                            })->count();
+                        @endphp
+                        <p class="text-muted mt-3" style="font-size: 0.9rem;">
+                            <strong>Summary:</strong>
+                            {{ $miningAlertWebhooks->count() }} webhook{{ $miningAlertWebhooks->count() === 1 ? '' : 's' }}
+                            flagged for mining alerts;
+                            {{ $miningDeliveringCount }} actively delivering right now.
+                            @if($miningDeliveringCount === 0 && $miningAlertWebhooks->count() > 0)
+                                <span class="text-warning">No alerts will fire until the issues in the State column are resolved.</span>
+                            @endif
+                        </p>
+                    @endif
+
+                    {{-- Planning Data Ingest (informational) --}}
+                    <h5 class="mt-4"><i class="fas fa-satellite-dish"></i> Planning Data Ingest <small class="text-muted">(informational)</small></h5>
+                    <p class="text-muted">
+                        Structure timer and mining extraction events ingest into the local
+                        <code>discord_tactical_events</code> table and surface on the
+                        <strong>FC Opportunities</strong> board (the planning surface). They are
+                        not displayed on the Broadcasts Calendar, which stays focused on actual
+                        broadcasts. Not a notification (no Discord delivery); listed here for
+                        completeness of the event routing surface.
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge badge-secondary">
+                            <i class="fas fa-arrow-right"></i>
+                            Source: <code>structure_manager.timer.*</code> via Manager Core EventBus
+                        </span>
+                        <span class="badge badge-secondary">
+                            <i class="fas fa-arrow-right"></i>
+                            Destination: FC Opportunities (<code>discord_tactical_events</code>)
+                        </span>
+                        <span class="badge {{ ($managerCoreInstalled ?? false) && ($structureManagerInstalled ?? false) ? 'badge-success' : 'badge-warning' }}">
+                            <i class="fas fa-{{ ($managerCoreInstalled ?? false) && ($structureManagerInstalled ?? false) ? 'check' : 'pause' }}"></i>
+                            {{ ($managerCoreInstalled ?? false) && ($structureManagerInstalled ?? false) ? 'Active' : 'Inactive — needs Manager Core + Structure Manager' }}
+                        </span>
+                    </div>
+                    <div class="mb-3">
+                        <span class="badge badge-secondary">
+                            <i class="fas fa-arrow-right"></i>
+                            Source: <code>mining.extraction_*</code> via Manager Core EventBus
+                        </span>
+                        <span class="badge badge-secondary">
+                            <i class="fas fa-arrow-right"></i>
+                            Destination: FC Opportunities (<code>discord_tactical_events</code>, category=mining)
+                        </span>
+                        <span class="badge {{ ($managerCoreInstalled ?? false) && ($miningManagerInstalled ?? false) ? 'badge-success' : 'badge-warning' }}">
+                            <i class="fas fa-{{ ($managerCoreInstalled ?? false) && ($miningManagerInstalled ?? false) ? 'check' : 'pause' }}"></i>
+                            {{ ($managerCoreInstalled ?? false) && ($miningManagerInstalled ?? false) ? 'Active' : 'Inactive — needs Manager Core + Mining Manager v2.0.1+' }}
+                        </span>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -422,7 +794,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-pings-primary">
                             <i class="fas fa-plus"></i> Add PAP Type
                         </button>
                     </div>
@@ -444,18 +816,51 @@
                         </button>
                     </div>
                     <div class="modal-body">
+                        @if(($connectorAvailable ?? false) && count($connectorRoles ?? []) > 0)
+                            {{-- Connector-sourced picker: lets operators short-circuit the
+                                 Discord Developer-Mode round-trip when warlof/seat-connector
+                                 or the legacy connector is installed alongside SeAT Broadcast.
+                                 The resolver only lists roles NOT already added, so picking
+                                 one won't create duplicates. --}}
+                            <div class="form-group">
+                                <label>
+                                    <i class="fas fa-bolt"></i> Quick-pick from
+                                    <span class="text-muted">{{ $connectorProviderLabel }}</span>
+                                </label>
+                                <select id="rolePickerSelect" class="form-control">
+                                    <option value="">— Pick a role to pre-fill, or leave blank and type manually below —</option>
+                                    @foreach($connectorRoles as $r)
+                                        <option
+                                            value="{{ $r['id'] }}"
+                                            data-name="{{ $r['name'] }}"
+                                            data-source="{{ $r['source'] }}">
+                                            {{ $r['name'] }}
+                                            ({{ $r['id'] }})
+                                            — {{ \DiscordPings\Services\DiscordRoleResolver::providerShortLabel($r['source']) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="form-text text-muted">
+                                    {{ count($connectorRoles) }} role{{ count($connectorRoles) === 1 ? '' : 's' }} available from your connector plugin. Already-added roles are hidden so you do not create duplicates.
+                                </small>
+                            </div>
+                        @endif
+
                         <div class="form-group">
                             <label>Role Name <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control" required 
+                            <input type="text" name="name" id="addRoleName" class="form-control" required
                                    placeholder="e.g., Fleet Commanders">
                             <small class="form-text text-muted">A friendly name for this role</small>
                         </div>
                         <div class="form-group">
                             <label>Role ID or Mention <span class="text-danger">*</span></label>
-                            <input type="text" name="role_id" class="form-control" required 
+                            <input type="text" name="role_id" id="addRoleSnowflake" class="form-control" required
                                    placeholder="e.g., 123456789 or <@&123456789>">
                             <small class="form-text text-muted">
-                                Copy from Discord: Right-click role → Copy ID, or copy a role mention
+                                Copy from Discord: Right-click role → Copy ID, or copy a role mention.
+                                @if(($connectorAvailable ?? false))
+                                    Or use the quick-pick dropdown above.
+                                @endif
                             </small>
                         </div>
                         <div class="form-group">
@@ -473,7 +878,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-pings-primary">
                             <i class="fas fa-plus"></i> Add Role
                         </button>
                     </div>
@@ -527,7 +932,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-pings-primary">
                             <i class="fas fa-plus"></i> Add Channel
                         </button>
                     </div>
@@ -584,7 +989,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-pings-primary">
                             <i class="fas fa-plus"></i> Add Staging
                         </button>
                     </div>
@@ -592,6 +997,7 @@
             </div>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')
@@ -617,6 +1023,22 @@ $(document).ready(function() {
     $('#configChannelsTable').DataTable(dtOptions);
     $('#configStagingsTable').DataTable(dtOptions);
     $('#configPapTypesTable').DataTable(dtOptions);
+
+    // Add Role modal: connector quick-pick pre-fills name + snowflake when
+    // the operator selects one of the suggested roles. Manual entry still
+    // works as the always-available fallback (just don't pick from the
+    // dropdown).
+    $('#rolePickerSelect').on('change', function() {
+        var $option = $(this).find(':selected');
+        var snowflake = $option.val();
+        var name = $option.data('name');
+        if (snowflake) {
+            $('#addRoleSnowflake').val(snowflake);
+            if (name && !$('#addRoleName').val()) {
+                $('#addRoleName').val(name);
+            }
+        }
+    });
 
     // Copy to clipboard functionality
     $('.copy-btn').click(function() {

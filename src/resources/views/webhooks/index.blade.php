@@ -5,14 +5,18 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title">Manage Webhooks</h3>
+            <h3 class="card-title">
+                <i class="fas fa-link"></i> Manage Webhooks
+            </h3>
             <div class="card-tools">
-                <a href="{{ route('discordpings.webhooks.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('discordpings.webhooks.create') }}" class="btn btn-sm btn-pings-primary">
                     <i class="fas fa-plus"></i> Add Webhook
                 </a>
             </div>
@@ -73,6 +77,7 @@
             </table>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')

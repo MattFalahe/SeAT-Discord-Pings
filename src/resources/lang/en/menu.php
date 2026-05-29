@@ -9,5 +9,6 @@ return [
     'scheduled' => 'Scheduled Broadcasts',
     'templates' => 'Templates',
     'calendar' => 'Calendar',
+    'opportunities' => 'FC Opportunities',
     'help' => 'Help & Documentation',
 ];

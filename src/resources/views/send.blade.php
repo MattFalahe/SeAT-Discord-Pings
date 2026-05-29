@@ -4,7 +4,11 @@
 @section('page_header', 'Discord Pings')
 
 @push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
+    /* Page-specific only — chrome lives in canonical CSS.
+       Note: the Discord embed preview modal uses Discord's actual UI colors
+       (#36393f, #2f3136, #dcddde, etc.) intentionally and must NOT be changed. */
     .template-btn {
         margin-bottom: 5px;
         white-space: normal;
@@ -15,12 +19,13 @@
         transition: background-color 0.2s;
     }
     .recent-ping:hover {
-        background-color: rgba(0,123,255,0.1);
+        background-color: rgba(102, 126, 234, 0.1);
     }
 </style>
 @endpush
 
 @section('left')
+<div class="discord-pings-wrapper">
     {{-- Global Templates --}}
     @php
         $globalTemplates = ($templates ?? collect())->where('is_global', true);
@@ -28,7 +33,7 @@
     @endphp
 
     @if($globalTemplates->count() > 0)
-    <div class="card mb-3">
+    <div class="card card-dark mb-3">
         <div class="card-header">
             <h3 class="card-title">
                 <i class="fas fa-globe"></i> Global Templates
@@ -47,7 +52,7 @@
     @endif
 
     {{-- My Templates --}}
-    <div class="card mb-3">
+    <div class="card card-dark mb-3">
         <div class="card-header">
             <h3 class="card-title">
                 <i class="fas fa-file-alt"></i> My Templates
@@ -68,13 +73,13 @@
             @empty
                 <small class="text-muted d-block text-center py-2">No personal templates yet</small>
             @endforelse
-            <a href="{{ route('discordpings.templates') }}" class="btn btn-sm btn-block btn-outline-secondary mt-2">
+            <a href="{{ route('discordpings.templates') }}" class="btn btn-sm btn-block btn-pings-secondary mt-2">
                 <i class="fas fa-cog"></i> Manage Templates
             </a>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card card-dark">
         <div class="card-header">
             <h3 class="card-title">
                 <i class="fas fa-history"></i> Recent Pings
@@ -100,19 +105,42 @@
         </div>
         @if(($recentPings ?? collect())->count() > 0)
             <div class="card-footer p-2">
-                <a href="{{ route('discordpings.history') }}" class="btn btn-sm btn-block btn-outline-secondary">
+                <a href="{{ route('discordpings.history') }}" class="btn btn-sm btn-block btn-pings-secondary">
                     View All History
                 </a>
             </div>
         @endif
     </div>
+</div>
 @stop
 
 @section('right')
+<div class="discord-pings-wrapper">
     <form method="POST" action="{{ route('discordpings.send.post') }}" id="pingForm">
         @csrf
-        
-        <div class="card">
+
+        @if(! empty($tacticalEvent))
+            <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
+                <i class="fas fa-satellite-dish"></i>
+                <strong>Form-up for:</strong>
+                {{ $tacticalEvent->title }}
+                @if($tacticalEvent->system_name)
+                    in <strong>{{ $tacticalEvent->system_name }}</strong>
+                @endif
+                @if($tacticalEvent->eve_time)
+                    ,
+                    {{ $tacticalEvent->category_group === 'mining' ? 'window closes at' : 'timer at' }}
+                    <strong>
+                        <span class="eve-time" data-eve-time="{{ $tacticalEvent->eve_time->toIso8601String() }}" data-show-local>
+                            {{ $tacticalEvent->eve_time->format('Y-m-d H:i') }} EVE
+                        </span>
+                    </strong>
+                @endif
+                . The form below has been pre-filled for an immediate broadcast; review and adjust before sending.
+            </div>
+        @endif
+
+        <div class="card card-dark">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-paper-plane"></i> Send Ping
@@ -162,21 +190,21 @@
                 {{-- Broadcast Type Selection --}}
                 <div class="form-group">
                     <label>Broadcast Type</label>
+                    @php($embedDefault = old('embed_type', $prefill['embed_type'] ?? 'fleet'))
                     <select name="embed_type" class="form-control" id="embedType">
-                        <option value="fleet">📢 Fleet Broadcast</option>
-                        <option value="announcement">📣 Announcement</option>
-                        <option value="message">💬 Message</option>
-                        <option value="prepping">‼️ PREPING ‼️</option>
+                        @foreach(['fleet' => '📢 Fleet Broadcast', 'announcement' => '📣 Announcement', 'message' => '💬 Message', 'prepping' => '‼️ PREPING ‼️'] as $embedVal => $embedLabel)
+                            <option value="{{ $embedVal }}" {{ $embedDefault === $embedVal ? 'selected' : '' }}>{{ $embedLabel }}</option>
+                        @endforeach
                     </select>
                     <small class="form-text text-muted">
                         Choose the type of broadcast to display in Discord
                     </small>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Message <span class="text-danger">*</span></label>
-                    <textarea name="message" class="form-control" rows="3" required 
-                              maxlength="2000">{{ old('message') }}</textarea>
+                    <textarea name="message" class="form-control" rows="3" required
+                              maxlength="2000">{{ old('message', $prefill['message'] ?? '') }}</textarea>
                     <small class="form-text text-muted">
                         <span id="charCount">0</span>/2000 characters
                     </small>
@@ -251,7 +279,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card card-dark">
             <div class="card-header">
                 <h3 class="card-title">
                     <i class="fas fa-list"></i> Optional Fields
@@ -267,16 +295,16 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label><i class="fas fa-user"></i> FC Name</label>
-                            <input type="text" name="fc_name" class="form-control" 
-                                   value="{{ old('fc_name') }}">
+                            <input type="text" name="fc_name" class="form-control"
+                                   value="{{ old('fc_name', $prefill['fc_name'] ?? '') }}">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label><i class="fas fa-map-marker-alt"></i> Formup Location</label>
                             <div class="input-group">
-                                <input type="text" name="formup_location" id="formupLocation" class="form-control" 
-                                       placeholder="e.g., Jita 4-4" value="{{ old('formup_location') }}">
+                                <input type="text" name="formup_location" id="formupLocation" class="form-control"
+                                       placeholder="e.g., Jita 4-4" value="{{ old('formup_location', $prefill['formup_location'] ?? '') }}">
                                 <div class="input-group-append">
                                     <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
                                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -365,13 +393,13 @@
                 </div>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-pings-primary">
                     <i class="fas fa-paper-plane"></i> Send Ping
                 </button>
                 <button type="button" class="btn btn-warning" id="scheduleBtn">
                     <i class="fas fa-clock"></i> Schedule
                 </button>
-                <button type="button" class="btn btn-secondary float-right" id="previewBtn">
+                <button type="button" class="btn btn-pings-secondary float-right" id="previewBtn">
                     <i class="fas fa-eye"></i> Preview
                 </button>
             </div>
@@ -423,13 +451,14 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveTemplateBtn">
+                    <button type="button" class="btn btn-pings-primary" id="saveTemplateBtn">
                         <i class="fas fa-save"></i> Save Template
                     </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')

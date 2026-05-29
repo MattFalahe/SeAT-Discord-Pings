@@ -1,11 +1,13 @@
 <?php
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
-use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
+use Illuminate\Support\Facades\Schema;
+use DiscordPings\Models\DiscordWebhook;
+use DiscordPings\Helpers\DiscordHelper;
 use Seat\Web\Models\Acl\Role;
 
 class WebhookController extends Controller
@@ -31,10 +33,34 @@ class WebhookController extends Controller
     {
         try {
             $roles = Role::all();
-            return view('discordpings::webhooks.create', compact('roles'));
+            $corporations = $this->loadCorporations();
+            return view('discordpings::webhooks.create', compact('roles', 'corporations'));
         } catch (\Exception $e) {
             Log::error('Discord Pings webhook create error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load create form. Please check logs.');
+        }
+    }
+
+    /**
+     * Load the list of corporations known to SeAT for the corp-scope dropdown
+     * on the webhook create/edit forms. Used so an operator on a multi-corp
+     * install can scope a webhook to a specific corp (NULL = any corp).
+     * Defensive: returns an empty collection if corporation_infos is missing
+     * (fresh install / non-standard schema).
+     */
+    private function loadCorporations()
+    {
+        try {
+            if (! Schema::hasTable('corporation_infos')) {
+                return collect();
+            }
+
+            return DB::table('corporation_infos')
+                ->select('corporation_id', 'name', 'ticker')
+                ->orderBy('name')
+                ->get();
+        } catch (\Throwable $e) {
+            return collect();
         }
     }
 
@@ -49,8 +75,9 @@ class WebhookController extends Controller
                 'webhook_url' => 'required|url|starts_with:https://discord.com/api/webhooks/',
                 'channel_type' => 'nullable|string|max:50',
                 'embed_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-                'enable_mentions' => 'boolean',
-                'default_mention' => 'nullable|string|max:100',
+                'receives_structure_alerts' => 'nullable|boolean',
+                'receives_mining_alerts' => 'nullable|boolean',
+                'corporation_id' => 'nullable|integer',
                 'role_ids' => 'nullable|array',
                 'role_ids.*' => 'exists:roles,id',
             ]);
@@ -60,9 +87,10 @@ class WebhookController extends Controller
                 'webhook_url' => $validated['webhook_url'],
                 'channel_type' => $validated['channel_type'] ?? null,
                 'embed_color' => $validated['embed_color'],
-                'enable_mentions' => $validated['enable_mentions'] ?? false,
-                'default_mention' => $validated['default_mention'] ?? null,
                 'is_active' => true,
+                'receives_structure_alerts' => $request->boolean('receives_structure_alerts'),
+                'receives_mining_alerts' => $request->boolean('receives_mining_alerts'),
+                'corporation_id' => $request->filled('corporation_id') ? (int) $request->input('corporation_id') : null,
                 'created_by' => auth()->id(),
             ]);
 
@@ -87,7 +115,8 @@ class WebhookController extends Controller
         try {
             $webhook = DiscordWebhook::with('roles')->findOrFail($id);
             $roles = Role::all();
-            return view('discordpings::webhooks.edit', compact('webhook', 'roles'));
+            $corporations = $this->loadCorporations();
+            return view('discordpings::webhooks.edit', compact('webhook', 'roles', 'corporations'));
         } catch (\Exception $e) {
             Log::error('Discord Pings webhook edit error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load webhook. Please check logs.');
@@ -107,9 +136,10 @@ class WebhookController extends Controller
                 'webhook_url' => 'required|url|starts_with:https://discord.com/api/webhooks/',
                 'channel_type' => 'nullable|string|max:50',
                 'embed_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/',
-                'enable_mentions' => 'boolean',
-                'default_mention' => 'nullable|string|max:100',
                 'is_active' => 'boolean',
+                'receives_structure_alerts' => 'nullable|boolean',
+                'receives_mining_alerts' => 'nullable|boolean',
+                'corporation_id' => 'nullable|integer',
                 'role_ids' => 'nullable|array',
                 'role_ids.*' => 'exists:roles,id',
             ]);
@@ -119,9 +149,10 @@ class WebhookController extends Controller
                 'webhook_url' => $validated['webhook_url'],
                 'channel_type' => $validated['channel_type'] ?? null,
                 'embed_color' => $validated['embed_color'],
-                'enable_mentions' => $validated['enable_mentions'] ?? false,
-                'default_mention' => $validated['default_mention'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
+                'receives_structure_alerts' => $request->boolean('receives_structure_alerts'),
+                'receives_mining_alerts' => $request->boolean('receives_mining_alerts'),
+                'corporation_id' => $request->filled('corporation_id') ? (int) $request->input('corporation_id') : null,
             ]);
 
             $webhook->roles()->sync($validated['role_ids'] ?? []);
@@ -161,7 +192,7 @@ class WebhookController extends Controller
             
             // Create test data
             $testData = [
-                'message' => 'This is a test ping from SeAT Discord Pings plugin.',
+                'message' => 'This is a test broadcast from SeAT Broadcast plugin.',
                 'fc_name' => 'Test FC',
                 'formup_location' => 'Test System',
                 'pap_type' => 'Strategic',

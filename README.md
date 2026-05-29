@@ -1,65 +1,77 @@
-# SeAT Discord Pings
+# SeAT Broadcast
 
-A comprehensive Discord ping and broadcast management plugin for [SeAT](https://github.com/eveseat/seat) - Send fleet notifications to Discord channels with rich embeds, role mentions, channel links, staging locations, and advanced scheduling features.
+> Formerly *SeAT Discord Pings*. The Composer package name (`mattfalahe/seat-discord-pings`), route prefix (`/discord-pings`), database tables and PluginBridge capabilities are unchanged.
+
+The **Planning HUB** for fleet commanders running on [SeAT](https://github.com/eveseat/seat). Send fleet broadcasts to Discord with rich embeds, schedule pings for later, and (with **Manager Core** + **Structure Manager** + optionally **Mining Manager** installed) surface every upcoming structure timer, manual fleet op, and moon extraction on a dedicated **FC Opportunities** board — turn any opportunity into a pre-filled form-up broadcast in one click.
 
 [![Latest Version](https://img.shields.io/github/v/release/MattFalahe/seat-discord-pings)](https://github.com/MattFalahe/seat-discord-pings/releases)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](https://github.com/MattFalahe/seat-discord-pings/blob/master/LICENSE)
 [![SeAT 5.0](https://img.shields.io/badge/SeAT-5.0-blue)](https://github.com/eveseat/seat)
 
+## Mental model
+
+Two surfaces with clearly separated jobs:
+
+- **Broadcasts Calendar** — *what is being broadcast and when*. Shows your scheduled pings and manual broadcast history. Nothing else.
+- **FC Opportunities** — *what is coming up that an FC might want to broadcast about*. Shows structure timers, mining extractions, and manual fleet ops ingested from other plugins via Manager Core's EventBus. Plan from here; the broadcasts you create from this board land on the Calendar.
+
+SeAT Broadcast works perfectly fine standalone — without Manager Core installed it's a pure Discord webhook sender. Every cross-plugin integration is `class_exists`-guarded and optional.
+
 ## Features
 
-### Core Features
-- 📢 **Fleet Pings** - Send formatted fleet broadcasts to Discord with rich embeds
-- 🎯 **Multiple Webhooks** - Manage unlimited Discord webhooks for different channels
-- 📝 **Templates** - Personal and global templates for common ping types
-- 📊 **Rich Embeds** - Beautiful Discord embeds with customizable colors and fields
-- 🎨 **Visual Color Picker** - Pick embed colours visually or enter hex code directly
-- ⏰ **EVE Time** - Automatic EVE time stamps with local time display
+### Core (works standalone)
 
-### Broadcast Types
-- 📢 **Fleet Broadcast** - For active fleet operations
-- 📣 **Announcement** - For general announcements
-- 💬 **Message** - For simple messages
-- ‼️ **PREPING** - For staging fleets before ops begin
+- 📢 **Send broadcasts to Discord** with rich embeds, role mentions, channel links, doctrine integration
+- 📅 **Schedule pings** for any future EVE time, one-off or recurring (hourly/daily/weekly/monthly)
+- ✏️ **Edit / delete scheduled pings** — recurring series changes apply from the new time onwards
+- 🕒 **EVE → local time auto-conversion**: every EVE timestamp gains a hover tooltip showing your browser-local time; high-priority surfaces (Calendar, FC Opportunities, Scheduled list) also show an inline `· HH:MM local` pill. Browser-detected via `Intl.DateTimeFormat()` — DST-safe, no per-user configuration
+- 🔀 **Enter In: [EVE/UTC | My local]** toggle on the schedule form. Default is EVE/UTC (FC convention); switch to local and the form converts to UTC on submit
+- 📆 **Broadcasts Calendar** — scheduled pings + manual broadcast history, color-coded by webhook
+- 📜 **Broadcast History** with resend capability
+- 📝 **Personal + global templates** with full field support
+- 🧪 **Webhook testing** before going live
+- 🧹 **Bulk-clear** inactive scheduled pings older than 7 or 30 days (Fleet Coordinator tier only)
+- 🔐 **Webhook URLs encrypted at rest** + TLS verification on every Discord send
+- 🚦 **Per-webhook rate limiting** (configurable per-minute and per-hour caps)
+- ‼️ **PREPING ‼️** broadcast type alongside Fleet / Announcement / Message
+- 🎨 **Visual color picker** for embed colours
+- 📡 **Multi-webhook send** to fan out a single broadcast across channels
 
-### Discord Integration
-- 👥 **Discord Roles** - Manage and mention Discord roles in your pings
-- 💬 **Discord Channels** - Link to specific Discord channels in messages
-- 🎨 **Custom Mentions** - Support for @everyone, @here, role mentions, and custom mentions
-- 🔗 **Channel Links** - Add clickable channel references to guide users
-- 📍 **Staging Locations** - Pre-configure staging locations with quick dropdown selection
+### With Manager Core + Structure Manager
 
-### Fleet Information Fields
-- FC Name
-- Formup Location (with staging dropdown)
-- PAP Type (configurable — admin-managed, defaults: Strategic / Peacetime / CTA)
-- Comms Information
-- Doctrine Details (with seat-fitting integration)
-- Discord Channel Links
-- Custom Messages
+- 🎯 **FC Opportunities board** — focused planning surface listing upcoming structure timers and manual fleet ops with live countdowns
+- 🛰️ **Structure timer ingest** — auto-detected reinforce / anchor / fuel timers + manually entered ops flow in via the `structure_manager.timer.*` event family
+- ⚔️ / 🛡️ / 📌 op-type icons for hostile / defense / generic ops
+- 📨 **Pre-timer reminder pings** at T-24h and T-1h (per-webhook opt-in via `Receive structure timer alerts` flag)
+- 🏢 **Corp-scoped webhook routing** — a webhook can be scoped to one corporation so alerts only fire for that corp's events
+- 📡 **Live coordination badge** — every FC Opportunities row shows `📡 N scheduled` (global count of formup broadcasts already planned for that op) so FCs don't duplicate effort
 
-### Advanced Features
-- 📅 **Scheduled Pings** - Schedule pings with EVE time and recurring options
-- ✏️ **Edit Scheduled Pings** - Edit any scheduled broadcast; recurring series changes apply from the new time onwards
-- 📆 **Broadcasts Calendar** - Visual calendar showing both scheduled pings and manual broadcast history
-- 🚀 **Doctrine Integration** - Automatic integration with seat-fitting plugins
-- 📍 **Staging Management** - Configure and manage staging locations
-- 📜 **History Tracking** - Complete history of all sent pings with resend capability
-- 👥 **Shared Visibility** - Directors with Manage Scheduled Pings see all users' scheduled pings and can edit/delete any
-- 🔄 **Multiple Recipients** - Send to multiple Discord channels simultaneously
-- 🧹 **Bulk Clear** - Bulk delete inactive scheduled pings older than 7 or 30 days
-- 🧪 **Webhook Testing** - Test webhooks before using them
-- 🗑️ **Automatic Cleanup** - Scheduled cleanup of old ping history
-- ⚙️ **Settings** - Unified settings page for webhooks, roles, channels, stagings, and PAP types
-- 📚 **Personal & Global Templates** - Create and manage templates with full field support
+### With Manager Core + Mining Manager (v2.0.1+)
+
+- ⛏️ **Mining extractions on FC Opportunities** — moon extractions appear as a distinct mining category with the 48h fleet-able window
+- 🏞️ **Multi-FC friendly** — mining ops welcome multiple formup pings (different timezones, fleet sizes, drops across the window); the badge stays informational
+- 📨 **T-2h pre-expiry alerts** (per-webhook opt-in via `Receive mining extraction alerts` flag)
+- 🔗 **Deep link** from any mining row to the Mining Manager extraction detail page (ore composition, jackpot status, countdowns)
+
+### Publishes events to Manager Core (HR Manager + future subscribers)
+
+- 📡 **`pings.broadcast.sent`** — fired after every successful Discord broadcast (manual, scheduled, test, pre-event alert)
+- 📡 **`pings.formup.scheduled`** — fired when an FC schedules a broadcast correlated with a tactical event (the strongest "this user is acting as an active FC" signal)
+
+### Diagnostic & operational
+
+- 🩺 **Admin-only Diagnostic page** at `/discord-pings/diagnostic` (NOT in sidebar) with 6 tabs: Health Checks, Master Test, System Validation, Settings Health, Data Integrity, Broadcast Trace
+- 🗺️ **Notification Routing Map** (7th Settings tab) — read-only snapshot showing which webhooks fire for each event, with corp scope + active/dormant state
+- 📚 **In-plugin Help & Documentation** with scenario-driven permissions docs, EVE→local time explanation, full feature reference
 
 ## Requirements
 
-- SeAT 5.0 or higher
-- PHP 8.0 or higher
-- Laravel 10.0 or higher
-- Discord webhook URLs
-- Queue worker running for scheduled pings
+- **SeAT** 5.0+
+- **PHP** 8.0+
+- **Laravel** 10.0+
+- **Discord webhook URLs**
+- **Queue worker + scheduler** running for scheduled pings and EventBus delivery
+- *Optional* — Manager Core, Structure Manager, Mining Manager (for the cross-plugin integrations described above)
 
 ## Installation
 
@@ -67,239 +79,112 @@ A comprehensive Discord ping and broadcast management plugin for [SeAT](https://
 composer require mattfalahe/seat-discord-pings
 ```
 
-SeAT will automatically run migrations and publish assets on restart.
+SeAT auto-runs migrations and publishes assets on container restart. For Docker installs:
 
-## Configuration
+```bash
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml down
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml up -d
+```
 
-### Discord Setup
+## Permissions
 
-#### Setting Up Discord Webhooks
+Two-tier model for scheduled-broadcast surfaces (Calendar, FC Opportunities, scheduled list):
 
-1. In Discord, right-click on your channel and select **Edit Channel**
-2. Navigate to **Integrations** → **Webhooks**
-3. Click **New Webhook**
-4. Give it a name (e.g., "SeAT Fleet Pings")
-5. Click **Copy Webhook URL**
-6. In SeAT, navigate to **Discord Pings** → **Settings** → **Webhooks tab**
-7. Click **Add Webhook** and paste your URL
+| Permission | Tier | What it grants |
+|---|---|---|
+| `discordpings.view` | baseline | Sidebar entry visibility |
+| `discordpings.send` | **FC** | Send manual broadcasts. Schedule + see + manage own scheduled pings. Use FC Opportunities planner. See own pings on the Calendar |
+| `discordpings.send_multiple` | extra | Send a single broadcast to multiple webhooks at once |
+| `discordpings.view_history` | baseline | See own broadcast history (Calendar + History page) |
+| `discordpings.view_all_history` | extra | See every user's broadcast history |
+| `discordpings.manage_webhooks` | admin | Manage Settings page (webhooks / roles / channels / staging / PAP types / structure-timer + mining-alert toggles / routing map) |
+| `discordpings.manage_scheduled` | **Fleet Coordinator** | Adds visibility + control over OTHER users' scheduled pings, plus the bulk-clear of inactive pings (stacks ON TOP of the FC tier) |
+| `discordpings.manage_templates` | baseline | Manage own broadcast templates |
+| `discordpings.manage_global_templates` | admin | Manage global broadcast templates visible to everyone |
+| `discordpings.admin` | admin | Access the `/discord-pings/diagnostic` admin page |
 
-#### Adding Discord Roles
+The Help & Documentation page inside the plugin has a **Permissions** section with five role recipes (Solo FC / Regular FC / Fleet Coordinator / Auditor / Plugin Admin) showing the exact permission combinations to assign — start there.
 
-1. Navigate to **Discord Pings** → **Settings** → **Discord Roles tab**
-2. Click **Add Role**
-3. Enter a friendly name for the role
-4. Enter the Discord Role ID (right-click role in Discord with Developer Mode enabled → Copy ID)
-5. Optionally set a color for visual identification
-6. Click **Add Role**
+## Settings page (7 tabs)
 
-#### Adding Discord Channels
+| Tab | What lives here |
+|---|---|
+| Webhooks | Create / edit / delete / test Discord webhooks. Per-webhook flags for structure + mining alerts, corp scope, embed colour |
+| Discord Roles | Roles available for `@role` mentions in broadcasts |
+| Discord Channels | Pre-registered channels for inline `#channel` links |
+| Staging Locations | Pre-registered staging spots for quick formup-location selection |
+| PAP Types | Configurable PAP categories (Strategic / Peacetime / CTA seeded by default) |
+| Structure Timers | Master toggles for pre-event alerts (structure + mining), default formup lead time, MC / SM / MM detection badges |
+| Routing Map | Read-only snapshot of which webhooks will fire for each event right now, with corp scope + master switch state |
 
-1. Navigate to **Discord Pings** → **Settings** → **Discord Channels tab**
-2. Click **Add Channel**
-3. Enter a friendly name for the channel
-4. Paste the Discord channel URL (right-click channel → Copy Link)
-5. Select the channel type (text, voice, announcement, etc.)
-6. Click **Add Channel**
+## Form-up workflow
 
-#### Configuring Staging Locations
+1. Open **FC Opportunities** (sidebar; only visible when MC + SM are installed)
+2. Pick a row (structure timer, fleet op, or mining extraction)
+3. Click one of the action buttons:
+   - **📤 Form-up** — opens the Send Broadcast page pre-filled with urgent "forming up NOW" copy + PREPING embed type. Use when staging right now
+   - **🕒 Schedule** — opens the Scheduled Broadcast form pre-filled, defaulting to the timer minus your configured formup lead time (5–720 min, set on Settings > Structure Timers)
+   - **ℹ️ Details** — deep-links to the source plugin's detail page (Structure Manager structure board or Mining Manager extraction view)
+4. Review, adjust, submit
+5. The resulting scheduled or sent broadcast naturally appears on the Calendar via the standard broadcast pipeline
 
-1. Navigate to **Discord Pings** → **Settings** → **Staging Locations tab**
-2. Click **Add Staging**
-3. Enter a name for the staging (e.g., "Home Staging")
-4. Enter the system name (e.g., "Jita")
-5. Optionally enter the structure name (e.g., "4-4 CNAP")
-6. Optionally set as default staging
-7. Click **Add Staging**
+## Integration with seat-fitting
 
-### Permissions
+Auto-detects both `CryptaTech/seat-fitting` and `Denngarr/seat-fitting`. Doctrine dropdown appears on the broadcast forms with clickable links in Discord embeds. Falls back to plain-text doctrine field if no fitting plugin is installed.
 
-Configure permissions through SeAT's Access Management system:
+## Time zones
 
-| Permission | Description |
-|------------|-------------|
-| `discordpings.view` | Access to Discord Pings plugin menu |
-| `discordpings.send` | Send pings to Discord |
-| `discordpings.send_multiple` | Send to multiple webhooks at once |
-| `discordpings.manage_webhooks` | Manage webhooks, roles, channels, stagings, and PAP types |
-| `discordpings.view_history` | View own ping history |
-| `discordpings.view_all_history` | View all users' ping history |
-| `discordpings.manage_scheduled` | Create and manage scheduled pings |
-| `discordpings.manage_templates` | Create, edit, and delete your own broadcast templates |
-| `discordpings.manage_global_templates` | Create and manage global templates visible to all users |
+All times are stored and processed in **EVE Time (UTC)** — single source of truth. The user-facing layer auto-converts to the viewer's browser timezone:
 
-## Usage
+- Every EVE timestamp in the plugin carries a **hover tooltip** with the full local date/time (e.g. `Local: 2026-05-25, 14:00 EDT`)
+- High-priority surfaces (Calendar event modal, FC Opportunities EVE-time column, Scheduled Broadcasts list, scheduled-ping prefill banner) also show an **inline pill**: `2026-05-25 18:00 EVE · 14:00 local`
+- The schedule form has an **Enter In: [EVE/UTC | My local]** toggle so FCs can choose their input convention. Default is EVE/UTC; switch to local and the form converts to UTC on submit
+- Help & Documentation page shows your **detected browser timezone** with a live sample so you can verify what the browser reports
 
-### Sending a Quick Ping
+Same conversion mechanism as Discord / Google Calendar / GitHub. DST-safe via the browser's IANA timezone database.
 
-1. Navigate to **Discord Pings** → **Send Ping**
-2. Select your target webhook
-3. Enter your message
-4. Choose mention type (optional):
-   - No Mention
-   - @everyone
-   - @here
-   - Discord Role (select from configured roles)
-   - Custom mention
-5. Select a Discord channel to link (optional)
-6. Select formup location from staging dropdown or type manually
-7. Select doctrine from dropdown (if seat-fitting is installed) or type manually
-8. Fill in fleet details (FC, PAP type, comms, etc.)
-9. Click **Send Ping**
+## Scheduled jobs
 
-### Using Templates
+| Command | Schedule | Purpose |
+|---|---|---|
+| `discordpings:process-scheduled` | every minute | Sends due scheduled pings; handles rate-limit retries within a 15-minute safety window |
+| `discordpings:cleanup-history` | daily | Prunes broadcast history (90-day retention) + resolved tactical events (14-day retention). Both windows configurable in `discordpings.config.php` |
 
-Click any template button to quickly fill the message field:
-- **Standard CTA** - General call to arms
-- **Emergency** - Urgent hostile response
-- **Mining Op** - Mining fleet formation
-- **Roam Fleet** - PvP roam announcement
-- **Strategic Op** - Important strategic operations
-
-### Using Staging Locations
-
-1. Click the dropdown arrow next to Formup Location
-2. Select from pre-configured staging locations
-3. Or type a custom location manually
-4. Set default staging in Discord Config for quick access
-
-### Scheduling Pings
-
-1. Fill out your ping details on the Send Ping page
-2. Click **Schedule** instead of Send
-3. Set date and time in EVE time (UTC)
-4. View both EVE time and your local time for reference
-5. Set recurrence options:
-   - One-time
-   - Hourly
-   - Daily
-   - Weekly
-   - Monthly
-6. Optionally set an end date for recurring pings
-7. Pings will be sent automatically at the scheduled EVE time
-
-### Bulk Sending
-
-1. Click "Multiple Webhooks" button on the Send Ping page
-2. Check all desired webhooks
-3. Fill in your message and details
-4. Send once to reach multiple Discord channels
-
-### Managing Discord Configuration
-
-Access **Discord Pings** → **Settings** to manage:
-
-- **Webhooks Tab**: Add, edit, test, and delete webhook configurations
-- **Discord Roles Tab**: Configure Discord roles for mentions
-- **Discord Channels Tab**: Add Discord channels for quick linking
-- **Staging Locations Tab**: Manage staging locations for quick selection
-- **PAP Types Tab**: Add, reorder, and deactivate PAP types (Strategic, Peacetime, CTA seeded by default)
-
-## Integration with Seat-Fitting
-
-The plugin automatically detects and integrates with seat-fitting plugins (CryptaTech or Denngarr versions):
-
-- Doctrine dropdown appears when seat-fitting is installed
-- Creates clickable doctrine links in Discord
-- Falls back to plain text if doctrine viewing route is not available
-- Works with both scheduled and immediate pings
-
-## Discord Embed Format
-
-Pings are sent as rich Discord embeds with:
-- **Title**:
-   - 📢 Fleet Broadcast (for fleet operations)
-   - 📣 Announcement (for general announcements)
-   - 💬 Message (for simple messages)
-   - ‼️ PREPING ‼️ (for staging fleets before ops)
-- **Message**: Your custom message
-- **Fields**: 
-  - 👤 FC Name
-  - 📍 Formup Location
-  - 🎯 PAP Type
-  - 🚀 Doctrine (with clickable link if using seat-fitting)
-  - 🎧 Comms / Channel (combined field)
-- **Footer**: "This was a coord broadcast from [username] to discord at [timestamp] EVE"
-- **Color**: Customizable per webhook or per ping
-- **Mentions**: Configurable @everyone, @here, or specific roles
-
-## Time Zones
-
-- All times in the interface are displayed in EVE time (UTC)
-- Your local time is shown for reference when scheduling
-- Scheduled pings execute based on EVE time
-- History timestamps are in EVE time
-
-## Scheduled Jobs
-
-The plugin includes two automated jobs:
-
-1. **Process Scheduled Pings** - Runs every minute to send due pings
-2. **Cleanup History** - Runs daily at 2 AM to remove old ping history
-
-These are automatically registered in SeAT's schedule when you run migrations.
+Both are auto-registered in SeAT's schedule on first install.
 
 ## Troubleshooting
 
-### Webhook Test Fails
-- Verify the webhook URL is correct and starts with `https://discord.com/api/webhooks/`
-- Check if the Discord channel still exists
-- Ensure the webhook wasn't deleted in Discord
+The Diagnostic page (`/discord-pings/diagnostic`, admin-only) covers most operational concerns — start there. Master Test runs ~15 pass/warn/fail checks: required tables exist, settings within valid ranges, cron processing, MC EventBus subscriptions registered, webhook URLs encrypted at rest, and more.
 
-### Pings Not Sending
-- Check if Laravel queue is running: `php artisan queue:work`
-- Verify cron job is configured correctly
-- Check SeAT logs in `storage/logs/`
+Quick checks if you can't reach the Diagnostic page:
 
-### Scheduled Pings Not Working
-- Ensure the scheduler is running (check crontab)
-- Verify queue workers are processing jobs
-- Check if the scheduled ping is marked as active
-- Verify times are being set correctly in EVE time
+- **Pings not sending**: verify Laravel queue worker + scheduler are running. Run `docker compose exec front php artisan schedule:list` to confirm `discordpings:process-scheduled` is registered
+- **Webhook test fails**: verify the URL starts with `https://discord.com/api/webhooks/`. Confirm the webhook wasn't deleted in Discord
+- **Permission issues**: assign permissions via SeAT's Access Management UI. The Help & Documentation page's Permissions section has role recipes for the common patterns
+- **Sidebar entry missing for FC Opportunities**: requires both Manager Core AND Structure Manager installed (class_exists detection)
+- **Mining extractions not appearing**: requires Mining Manager **v2.0.1+** (the version that ships the EventBus publisher). Check Settings > Structure Timers tab for the Mining Manager detection badge
+- **Stale data**: run `docker compose exec front php artisan migrate:status` to confirm all migrations applied (look for `Yes` next to every `discord_*` migration)
 
-### Permission Issues
-- Run `php artisan discordpings:setup --grant-admin` to grant admin permissions
-- Ensure users have the `discordpings.view` permission to see the menu
-- Check role restrictions on webhooks
-- Verify webhook is active
+## Rate limits
 
-### Missing Discord Roles/Channels in Dropdown
-- Ensure roles and channels are added in Discord Config
-- Check that they are marked as active
-- Verify the Discord IDs are correct
-
-### Doctrine Dropdown Not Showing
-- Ensure seat-fitting plugin is installed (CryptaTech or Denngarr version)
-- Create at least one doctrine in the fitting plugin
-- Check logs for any loading errors
-
-### Database Errors
-- Run `php artisan migrate` to ensure all tables are created
-- Clear caches with `php artisan cache:clear`
-
-### Rate Limiting
-- Discord has rate limits on webhooks (30 requests per minute)
-- Space out bulk broadcasts
-- Use scheduled pings for better timing
+Discord enforces ~30 requests/minute per webhook. The plugin enforces its own configurable per-webhook caps (default 10/min, 100/hour — set in `config/discordpings.php`). Rate-limited sends retry on the next cron tick within a 15-minute safety window before being marked failed.
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/MattFalahe/seat-discord-pings/issues)
-- **Discord**: Join the [SeAT Discord server](https://discord.gg/seat)
-- **Documentation**: [SeAT Docs](https://docs.eveseat.net/)
+- **SeAT Discord**: [SeAT community Discord](https://discord.gg/azquy29nqs)
+- **SeAT Docs**: [docs.eveseat.net](https://docs.eveseat.net/)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes
+4. Open a Pull Request
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 - see the [LICENSE](LICENSE) file for details.
+GPL-2.0-or-later — see [LICENSE](LICENSE).
 
 ## Credits
 
@@ -309,4 +194,4 @@ This project is licensed under the GNU General Public License v2.0 - see the [LI
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes in each version.
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.

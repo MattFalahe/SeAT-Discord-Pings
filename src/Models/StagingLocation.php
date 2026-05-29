@@ -1,6 +1,6 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Models;
+namespace DiscordPings\Models;
 
 use Illuminate\Database\Eloquent\Model;
 

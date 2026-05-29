@@ -5,12 +5,16 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title">Scheduled Pings</h3>
+            <h3 class="card-title">
+                <i class="fas fa-clock"></i> Scheduled Pings
+            </h3>
             <div class="card-tools">
                 @if($canSeeAll ?? false)
                     <form method="POST" action="{{ route('discordpings.scheduled.bulk-clear') }}" style="display:inline;"
@@ -30,10 +34,10 @@
                         </button>
                     </form>
                 @endif
-                <a href="{{ route('discordpings.scheduled.calendar') }}" class="btn btn-sm btn-info mr-1">
+                <a href="{{ route('discordpings.scheduled.calendar') }}" class="btn btn-sm btn-pings-secondary mr-1">
                     <i class="fas fa-calendar-alt"></i> Calendar View
                 </a>
-                <a href="{{ route('discordpings.scheduled.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('discordpings.scheduled.create') }}" class="btn btn-sm btn-pings-primary">
                     <i class="fas fa-plus"></i> Schedule New Ping
                 </a>
             </div>
@@ -57,7 +61,9 @@
                     @foreach($scheduledPings as $ping)
                         <tr>
                             <td data-order="{{ $ping->scheduled_at->timestamp }}">
-                                {{ $ping->scheduled_at->format('Y-m-d H:i') }} EVE
+                                <span class="eve-time" data-eve-time="{{ $ping->scheduled_at->toIso8601String() }}" data-show-local>
+                                    {{ $ping->scheduled_at->format('Y-m-d H:i') }} EVE
+                                </span>
                             </td>
                             <td>
                                 @if($ping->webhook)
@@ -114,11 +120,13 @@
             </table>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')
 <script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <script>
 $(document).ready(function() {
     $('#scheduledTable').DataTable({

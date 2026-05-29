@@ -4,7 +4,9 @@
 @section('page_header', 'Create Broadcast Template')
 
 @push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
+    /* Page-specific only — chrome lives in canonical CSS */
     .color-preview {
         width: 30px;
         height: 30px;
@@ -12,18 +14,19 @@
         display: inline-block;
         vertical-align: middle;
         margin-left: 10px;
-        border: 1px solid #dee2e6;
+        border: 1px solid rgba(255, 255, 255, 0.15);
     }
 </style>
 @endpush
 
 @section('full')
+<div class="discord-pings-wrapper">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <form method="POST" action="{{ route('discordpings.templates.store') }}">
                 @csrf
 
-                <div class="card">
+                <div class="card card-dark">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-file-alt"></i> Template Details</h3>
                     </div>
@@ -94,7 +97,7 @@
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card card-dark">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-list"></i> Optional Fields</h3>
                         <div class="card-tools">
@@ -198,10 +201,10 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-pings-primary">
                             <i class="fas fa-save"></i> Save Template
                         </button>
-                        <a href="{{ route('discordpings.templates') }}" class="btn btn-secondary">
+                        <a href="{{ route('discordpings.templates') }}" class="btn btn-pings-secondary">
                             Cancel
                         </a>
                     </div>
@@ -209,6 +212,7 @@
             </form>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')

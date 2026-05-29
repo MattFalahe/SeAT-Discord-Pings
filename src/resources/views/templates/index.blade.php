@@ -5,14 +5,18 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title">Templates</h3>
+            <h3 class="card-title">
+                <i class="fas fa-file-alt"></i> Templates
+            </h3>
             <div class="card-tools">
-                <a href="{{ route('discordpings.templates.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('discordpings.templates.create') }}" class="btn btn-sm btn-pings-primary">
                     <i class="fas fa-plus"></i> Create Template
                 </a>
             </div>
@@ -75,6 +79,7 @@
             </table>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')

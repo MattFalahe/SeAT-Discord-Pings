@@ -1,14 +1,15 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\PingTemplate;
-use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
-use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
-use MattFalahe\Seat\DiscordPings\Models\PapType;
+use DiscordPings\Models\PingTemplate;
+use DiscordPings\Models\DiscordRole;
+use DiscordPings\Models\StagingLocation;
+use DiscordPings\Models\PapType;
+use DiscordPings\Helpers\DiscordHelper;
 
 class TemplateController extends Controller
 {
@@ -36,28 +37,8 @@ class TemplateController extends Controller
         $stagings = StagingLocation::active()->get();
         $papTypes = PapType::active()->ordered()->get();
 
-        // Check if seat-fitting plugin is installed and get doctrines
-        $doctrines = [];
-        $hasFittingPlugin = false;
-
-        // Try CryptaTech namespace first
-        if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-            $hasFittingPlugin = true;
-            try {
-                $doctrines = \CryptaTech\Seat\Fitting\Models\Doctrine::all();
-            } catch (\Exception $e) {
-                Log::info('CryptaTech seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-            }
-        }
-        // Fall back to Denngarr namespace
-        elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-            $hasFittingPlugin = true;
-            try {
-                $doctrines = \Denngarr\Seat\Fitting\Models\Doctrine::all();
-            } catch (\Exception $e) {
-                Log::info('Denngarr seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-            }
-        }
+        $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
+        $doctrines = DiscordHelper::listFittingDoctrines();
 
         return view('discordpings::templates.create', compact('roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
     }
@@ -127,28 +108,8 @@ class TemplateController extends Controller
             $stagings = StagingLocation::active()->get();
             $papTypes = PapType::active()->ordered()->get();
 
-            // Check if seat-fitting plugin is installed and get doctrines
-            $doctrines = [];
-            $hasFittingPlugin = false;
-
-            // Try CryptaTech namespace first
-            if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \CryptaTech\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('CryptaTech seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-                }
-            }
-            // Fall back to Denngarr namespace
-            elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \Denngarr\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('Denngarr seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-                }
-            }
+            $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
+            $doctrines = DiscordHelper::listFittingDoctrines();
 
             return view('discordpings::templates.edit', compact('template', 'roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
         } catch (\Exception $e) {

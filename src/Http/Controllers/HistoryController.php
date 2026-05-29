@@ -1,12 +1,12 @@
 <?php
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\PingHistory;
-use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
-use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\DiscordWebhook;
+use DiscordPings\Jobs\SendPingJob;
 
 class HistoryController extends Controller
 {
@@ -37,7 +37,9 @@ class HistoryController extends Controller
                 $query->where('message', 'like', '%' . $request->search . '%');
             }
             
-            $histories = $query->latest()->get();
+            // Cap at 1000 most-recent rows: the view uses client-side DataTables,
+            // which slows to a crawl past ~10k rows and OOMs on very large histories.
+            $histories = $query->latest()->limit(1000)->get();
             $webhooks = DiscordWebhook::all();
             
             return view('discordpings::history.index', compact('histories', 'webhooks'));
@@ -87,21 +89,20 @@ class HistoryController extends Controller
                 'message' => $history->message,
                 'webhook_id' => $history->webhook_id,
             ];
-            
+
             // Add fields if they exist
             if ($history->fields) {
                 $data = array_merge($data, $history->fields);
             }
-            
-            // Send the ping
-            $helper = new DiscordHelper();
-            $result = $helper->sendPing($history->webhook, $data, auth()->user());
-            
-            if ($result['success']) {
-                return redirect()->back()->with('success', 'Ping resent successfully!');
-            } else {
-                return redirect()->back()->with('error', 'Failed to resend ping: ' . $result['error']);
-            }
+
+            SendPingJob::dispatch(
+                $history->webhook->id,
+                $data,
+                auth()->id(),
+                auth()->user()->name,
+            );
+
+            return redirect()->back()->with('success', 'Ping queued for resend.');
             
         } catch (\Exception $e) {
             Log::error('Discord Pings resend error: ' . $e->getMessage());

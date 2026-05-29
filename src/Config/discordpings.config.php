@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => '1.0.3',
+    'version' => '2.0.0',
     
     // App name for Discord webhooks
     'app_name' => 'SeAT Broadcast',
@@ -30,6 +30,38 @@ return [
             'enabled' => true,
             'link_doctrines' => true,
         ],
+    ],
+
+    // Structure timer integration (Manager Core EventBus).
+    // When Manager Core and Structure Manager are installed, SeAT Broadcast
+    // subscribes to structure_manager.timer.* events: structure timers and
+    // fleet ops appear on the Broadcasts Calendar, and webhooks flagged to
+    // receive structure alerts get pre-timer reminder pings (T-24h, T-1h).
+    'structure_events' => [
+        // Master switch for the EventBus subscription and calendar ingest.
+        'enabled' => true,
+        // Days to keep resolved (dismissed / elapsed) timers before the
+        // cleanup job prunes them.
+        'retention_days' => 14,
+        // Default form-up lead time in minutes. When an FC clicks
+        // "Schedule formup ping" from a tactical event (Calendar modal or
+        // FC Opportunities board), the scheduled time is pre-filled to
+        // (timer eve_time minus this offset). Operator-overridable via the
+        // Settings > Structure Timers tab.
+        'formup_offset_minutes' => 30,
+    ],
+
+    // Mining extraction integration (Manager Core EventBus + Mining Manager).
+    // When all three of Manager Core, Mining Manager (v2.0.1+) and SeAT
+    // Broadcast are installed, SeAT Broadcast subscribes to the
+    // mining.extraction_* event family: moon extractions appear as a
+    // distinct ⛏️ mining category on the Broadcasts Calendar and FC
+    // Opportunities board, and webhooks flagged "Receive mining extraction
+    // alerts" get a single pre-expiry reminder ping (T-2h before the window
+    // closes).
+    'mining_events' => [
+        // Master switch for the EventBus subscription and calendar ingest.
+        'enabled' => true,
     ],
     
     // Templates

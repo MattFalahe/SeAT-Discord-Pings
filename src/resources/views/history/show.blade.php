@@ -3,12 +3,20 @@
 @section('title', 'Ping Details')
 @section('page_header', 'Ping Details')
 
+@push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
+@endpush
+
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title">Ping Information</h3>
+            <h3 class="card-title">
+                <i class="fas fa-info-circle"></i> Ping Information
+            </h3>
             <div class="card-tools">
-                <a href="{{ route('discordpings.history') }}" class="btn btn-sm btn-secondary">
+                <a href="{{ route('discordpings.history') }}" class="btn btn-sm btn-pings-secondary">
                     <i class="fas fa-arrow-left"></i> Back to History
                 </a>
             </div>
@@ -16,7 +24,11 @@
         <div class="card-body">
             <dl class="row">
                 <dt class="col-sm-3">Sent At</dt>
-                <dd class="col-sm-9">{{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE</dd>
+                <dd class="col-sm-9">
+                    <span class="eve-time" data-eve-time="{{ $history->created_at->utc()->toIso8601String() }}" data-show-local>
+                        {{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE
+                    </span>
+                </dd>
 
                 <dt class="col-sm-3">Webhook</dt>
                 <dd class="col-sm-9">
@@ -48,7 +60,7 @@
 
                 <dt class="col-sm-3">Message</dt>
                 <dd class="col-sm-9">
-                    <div class="border rounded p-3 bg-light">
+                    <div class="border rounded p-3" style="background: rgba(0,0,0,0.25); white-space: pre-wrap;">
                         {{ $history->message }}
                     </div>
                 </dd>
@@ -80,4 +92,5 @@
             @endif
         </div>
     </div>
+</div>
 @stop

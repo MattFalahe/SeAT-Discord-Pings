@@ -37,4 +37,8 @@ return [
         'label' => 'discordpings::permissions.manage_global_templates_label',
         'description' => 'discordpings::permissions.manage_global_templates_description',
     ],
+    'admin' => [
+        'label' => 'discordpings::permissions.admin_label',
+        'description' => 'discordpings::permissions.admin_description',
+    ],
 ];

@@ -1,15 +1,17 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
-use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
-use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
-use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
-use MattFalahe\Seat\DiscordPings\Models\PapType;
+use DiscordPings\Models\DiscordRole;
+use DiscordPings\Models\DiscordChannel;
+use DiscordPings\Models\DiscordWebhook;
+use DiscordPings\Models\StagingLocation;
+use DiscordPings\Models\PapType;
+use DiscordPings\Models\PluginSetting;
+use DiscordPings\Services\DiscordRoleResolver;
 
 class DiscordConfigController extends Controller
 {
@@ -24,7 +26,75 @@ class DiscordConfigController extends Controller
         $stagings = StagingLocation::all();
         $papTypes = PapType::ordered()->get();
 
-        return view('discordpings::config.index', compact('webhooks', 'roles', 'channels', 'stagings', 'papTypes'));
+        // Structure Timers tab: current opt-out state + integration detection.
+        $structureAlertsEnabled = PluginSetting::getBool('structure_alerts_enabled', true);
+        $miningAlertsEnabled = PluginSetting::getBool('mining_alerts_enabled', true);
+        $managerCoreInstalled = class_exists('\ManagerCore\Services\EventBus');
+        $structureManagerInstalled = class_exists('\StructureManager\Services\TimerEventPublisher');
+        $miningManagerInstalled = class_exists('\MiningManager\Services\Events\MoonExtractionEventPublisher');
+        $formupOffsetMinutes = (int) PluginSetting::getValue(
+            'formup_offset_minutes',
+            (int) config('discordpings.structure_events.formup_offset_minutes', 30)
+        );
+
+        // Routing Map tab: which webhooks fire for each event the plugin
+        // reacts to, with corp scope and active/inactive status. Read-only
+        // snapshot — operators verify "what fires where" at a glance
+        // without clicking through every webhook.
+        $alertWebhooks = DiscordWebhook::where('receives_structure_alerts', true)
+            ->orderBy('name')
+            ->get();
+        $miningAlertWebhooks = DiscordWebhook::where('receives_mining_alerts', true)
+            ->orderBy('name')
+            ->get();
+        $routingCorpNames = $this->resolveCorporationNames(
+            $alertWebhooks->pluck('corporation_id')
+                ->merge($miningAlertWebhooks->pluck('corporation_id'))
+                ->filter()->unique()->all()
+        );
+
+        // Discord Roles tab: connector-sourced picker for the Add Role modal.
+        // Empty array when no connector plugin is detected — the picker
+        // button is hidden and operators fall back to manual snowflake entry.
+        // Already-added roles are filtered out by the resolver so we don't
+        // offer duplicates.
+        $connectorRoles      = DiscordRoleResolver::listAvailableRoles();
+        $connectorAvailable  = DiscordRoleResolver::isAvailable();
+        $connectorProviderLabel = DiscordRoleResolver::providerLabel();
+
+        return view('discordpings::config.index', compact(
+            'webhooks', 'roles', 'channels', 'stagings', 'papTypes',
+            'structureAlertsEnabled', 'miningAlertsEnabled',
+            'managerCoreInstalled', 'structureManagerInstalled', 'miningManagerInstalled',
+            'formupOffsetMinutes',
+            'alertWebhooks', 'miningAlertWebhooks', 'routingCorpNames',
+            'connectorRoles', 'connectorAvailable', 'connectorProviderLabel'
+        ));
+    }
+
+    /**
+     * Look up corporation names for a set of IDs (for the Routing Map tab).
+     * Defensive: returns an empty array when corporation_infos is missing
+     * or the query fails. Caller falls back to displaying raw IDs.
+     */
+    private function resolveCorporationNames(array $corpIds): array
+    {
+        if (empty($corpIds)) {
+            return [];
+        }
+
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('corporation_infos')) {
+                return [];
+            }
+
+            return \Illuminate\Support\Facades\DB::table('corporation_infos')
+                ->whereIn('corporation_id', $corpIds)
+                ->pluck('name', 'corporation_id')
+                ->toArray();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
     
     /**
@@ -319,6 +389,41 @@ class DiscordConfigController extends Controller
             return response()->json(['success' => true, 'message' => 'Default staging location set']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to set default'], 500);
+        }
+    }
+
+    /**
+     * Save Structure Timer integration settings — the master opt-out toggle
+     * for pre-timer reminder pings.
+     */
+    public function updateStructureTimerSettings(Request $request)
+    {
+        try {
+            PluginSetting::setValue(
+                'structure_alerts_enabled',
+                $request->boolean('structure_alerts_enabled') ? '1' : '0'
+            );
+
+            // Mining extraction alerts share the same opt-out surface as
+            // structure timer alerts so operators have one place to manage
+            // every EventBus-driven alert.
+            PluginSetting::setValue(
+                'mining_alerts_enabled',
+                $request->boolean('mining_alerts_enabled') ? '1' : '0'
+            );
+
+            // Clamp form-up offset to a sensible range (5 minutes to 12 hours).
+            $formupOffset = (int) $request->input(
+                'formup_offset_minutes',
+                (int) config('discordpings.structure_events.formup_offset_minutes', 30)
+            );
+            $formupOffset = max(5, min(720, $formupOffset));
+            PluginSetting::setValue('formup_offset_minutes', (string) $formupOffset);
+
+            return redirect()->back()->with('success', 'Structure timer settings saved.');
+        } catch (\Exception $e) {
+            Log::error('Discord Pings structure timer settings error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to save structure timer settings.');
         }
     }
 }

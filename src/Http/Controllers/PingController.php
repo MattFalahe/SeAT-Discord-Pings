@@ -1,24 +1,26 @@
 <?php
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
-use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
-use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
-use MattFalahe\Seat\DiscordPings\Models\PingHistory;
-use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
-use MattFalahe\Seat\DiscordPings\Models\PingTemplate;
-use MattFalahe\Seat\DiscordPings\Models\PapType;
-use MattFalahe\Seat\DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Models\DiscordWebhook;
+use DiscordPings\Models\DiscordRole;
+use DiscordPings\Models\DiscordChannel;
+use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\StagingLocation;
+use DiscordPings\Models\PingTemplate;
+use DiscordPings\Models\PapType;
+use DiscordPings\Models\TacticalEvent;
+use DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Jobs\SendPingJob;
 
 class PingController extends Controller
 {
     /**
      * Show the send ping page
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
             $webhooks = DiscordWebhook::active()->get();
@@ -28,36 +30,32 @@ class PingController extends Controller
             $papTypes = PapType::active()->ordered()->get();
 
             $templates = PingTemplate::forUser(auth()->id())->get();
-            
+
             $recentPings = PingHistory::where('user_id', auth()->id())
                 ->with('webhook')
                 ->latest()
                 ->take(5)
                 ->get();
-            
-            // Check if seat-fitting plugin is installed and get doctrines
-            $doctrines = [];
-            $hasFittingPlugin = false;
-            
-            // Try CryptaTech namespace first
-            if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \CryptaTech\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('CryptaTech seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-                }
-            } 
-            // Fall back to Denngarr namespace
-            elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \Denngarr\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('Denngarr seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
+
+            $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
+            $doctrines = DiscordHelper::listFittingDoctrines();
+
+            // FC Opportunities → "Form-up" (immediate Send): when arriving
+            // with ?tactical_event_id=N, pre-fill the form with urgent
+            // "forming up NOW" copy + PREPING embed type. Mirrors the
+            // schedule path's pre-fill but uses 'send' mode of the
+            // TacticalEvent::buildBroadcastPrefill helper.
+            $tacticalEvent = null;
+            $prefill = [];
+            $rawTacticalEventId = $request->input('tactical_event_id');
+            if ($rawTacticalEventId) {
+                $tacticalEvent = TacticalEvent::visibleTo(auth()->user())
+                    ->find((int) $rawTacticalEventId);
+                if ($tacticalEvent) {
+                    $prefill = $tacticalEvent->buildBroadcastPrefill('send');
                 }
             }
-            
+
             return view('discordpings::send', compact(
                 'webhooks',
                 'roles',
@@ -67,9 +65,11 @@ class PingController extends Controller
                 'templates',
                 'recentPings',
                 'doctrines',
-                'hasFittingPlugin'
+                'hasFittingPlugin',
+                'prefill',
+                'tacticalEvent'
             ));
-            
+
         } catch (\Exception $e) {
             Log::error('Discord Pings view error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load ping form. Please check logs.');
@@ -105,40 +105,22 @@ class PingController extends Controller
                 return redirect()->back()->with('error', 'Invalid or inactive webhook.');
             }
             
-            // Handle doctrine from seat-fitting if selected
-            if (!empty($validated['doctrine_id'])) {
-                $doctrine = null;
-                
-                // Try CryptaTech namespace first
-                if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \CryptaTech\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from CryptaTech seat-fitting: ' . $e->getMessage());
-                    }
+            $doctrine = !empty($validated['doctrine_id'])
+                ? DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id'])
+                : null;
+
+            if ($doctrine) {
+                try {
+                    $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
+                    $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
+                    $validated['doctrine_url'] = $doctrineUrl;
+                } catch (\Exception $e) {
+                    Log::info('Could not generate doctrine URL: ' . $e->getMessage());
+                    $validated['doctrine'] = $doctrine->name;
                 }
-                // Fall back to Denngarr namespace
-                elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \Denngarr\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from Denngarr seat-fitting: ' . $e->getMessage());
-                    }
-                }
-                
-                if ($doctrine) {
-                    try {
-                        $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
-                        $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
-                        $validated['doctrine_url'] = $doctrineUrl;
-                    } catch (\Exception $e) {
-                        Log::info('Could not generate doctrine URL: ' . $e->getMessage());
-                        $validated['doctrine'] = $doctrine->name;
-                    }
-                    $validated['doctrine_name'] = $doctrine->name;
-                }
+                $validated['doctrine_name'] = $doctrine->name;
             }
-            
+
             // Handle role mention
             if ($validated['mention_type'] === 'role' && !empty($validated['role_mention'])) {
                 $role = DiscordRole::find($validated['role_mention']);
@@ -156,25 +138,25 @@ class PingController extends Controller
                 }
             }
             
-            $helper = new DiscordHelper();
-            $result = $helper->sendPing($webhook, $validated, auth()->user());
-            
-            if ($result['success']) {
-                return redirect()->back()->with('success', 'Broadcast sent successfully!');
-            } else {
-                return redirect()->back()->with('error', 'Failed to send broadcast: ' . $result['error']);
-            }
-            
+            SendPingJob::dispatch(
+                $webhook->id,
+                $validated,
+                auth()->id(),
+                auth()->user()->name,
+            );
+
+            return redirect()->back()->with('success', 'Broadcast queued for delivery to Discord.');
+
         } catch (\Exception $e) {
             Log::error('Discord ping send error', [
                 'error' => $e->getMessage(),
                 'user' => auth()->id()
             ]);
-            
+
             return redirect()->back()->with('error', 'Failed to send broadcast. Please check logs.');
         }
     }
-    
+
     /**
      * Send to multiple webhooks
      */
@@ -199,40 +181,22 @@ class PingController extends Controller
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             ]);
             
-            // Handle doctrine from seat-fitting if selected
-            if (!empty($validated['doctrine_id'])) {
-                $doctrine = null;
-                
-                // Try CryptaTech namespace first
-                if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \CryptaTech\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from CryptaTech seat-fitting: ' . $e->getMessage());
-                    }
+            $doctrine = !empty($validated['doctrine_id'])
+                ? DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id'])
+                : null;
+
+            if ($doctrine) {
+                try {
+                    $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
+                    $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
+                    $validated['doctrine_url'] = $doctrineUrl;
+                } catch (\Exception $e) {
+                    Log::info('Could not generate doctrine URL: ' . $e->getMessage());
+                    $validated['doctrine'] = $doctrine->name;
                 }
-                // Fall back to Denngarr namespace
-                elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \Denngarr\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from Denngarr seat-fitting: ' . $e->getMessage());
-                    }
-                }
-                
-                if ($doctrine) {
-                    try {
-                        $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
-                        $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
-                        $validated['doctrine_url'] = $doctrineUrl;
-                    } catch (\Exception $e) {
-                        Log::info('Could not generate doctrine URL: ' . $e->getMessage());
-                        $validated['doctrine'] = $doctrine->name;
-                    }
-                    $validated['doctrine_name'] = $doctrine->name;
-                }
+                $validated['doctrine_name'] = $doctrine->name;
             }
-            
+
             // Handle role mention
             if (($validated['mention_type'] ?? 'none') === 'role' && !empty($validated['role_mention'])) {
                 $role = DiscordRole::find($validated['role_mention']);
@@ -250,35 +214,34 @@ class PingController extends Controller
                 }
             }
             
-            $successCount = 0;
-            $failCount = 0;
-            $helper = new DiscordHelper();
-            
+            $queuedCount = 0;
+            $skippedCount = 0;
+
             foreach ($validated['webhook_ids'] as $webhookId) {
                 $webhook = DiscordWebhook::find($webhookId);
-                
+
                 if (!$webhook || !$webhook->is_active) {
-                    $failCount++;
+                    $skippedCount++;
                     continue;
                 }
-                
+
                 $data = $validated;
                 $data['webhook_id'] = $webhookId;
-                
-                $result = $helper->sendPing($webhook, $data, auth()->user());
-                
-                if ($result['success']) {
-                    $successCount++;
-                } else {
-                    $failCount++;
-                }
+
+                SendPingJob::dispatch(
+                    $webhook->id,
+                    $data,
+                    auth()->id(),
+                    auth()->user()->name,
+                );
+                $queuedCount++;
             }
-            
-            $message = "Sent to {$successCount} webhook(s)";
-            if ($failCount > 0) {
-                $message .= ", {$failCount} failed";
+
+            $message = "Queued broadcast to {$queuedCount} webhook(s)";
+            if ($skippedCount > 0) {
+                $message .= "; {$skippedCount} skipped (inactive or missing)";
             }
-            
+
             return redirect()->back()->with('success', $message);
             
         } catch (\Exception $e) {

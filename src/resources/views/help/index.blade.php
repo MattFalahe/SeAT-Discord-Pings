@@ -4,216 +4,23 @@
 @section('page_header', trans('discordpings::help.help_documentation'))
 
 @push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
-    .help-wrapper {
-        display: flex;
-        gap: 20px;
-    }
+    /* Page-specific only — chrome lives in canonical CSS */
 
-    .help-sidebar {
-        flex: 0 0 280px;
-        position: sticky;
-        top: 20px;
-        max-height: calc(100vh - 120px);
-        overflow-y: auto;
-    }
-
-    .help-content {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .help-nav .nav-link {
-        color: #e2e8f0;
-        border-radius: 5px;
-        margin-bottom: 5px;
-        padding: 10px 15px;
-        transition: all 0.3s;
-        font-size: 0.95rem;
-    }
-
-    .help-nav .nav-link:hover {
-        background: rgba(23, 162, 184, 0.2);
-    }
-
-    .help-nav .nav-link.active {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-    }
-
-    .help-nav .nav-link i {
-        width: 24px;
-        text-align: center;
-        margin-right: 10px;
-    }
-
-    .help-section {
-        display: none;
-        animation: fadeIn 0.3s;
-    }
-
-    .help-section.active {
-        display: block;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .help-card {
-        background: #2d3748;
-        border-radius: 10px;
-        padding: 25px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(23, 162, 184, 0.2);
-    }
-
-    .help-card h3 {
-        color: #17a2b8;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .help-card h4 {
-        color: #9ca3af;
-        margin-top: 20px;
-        margin-bottom: 10px;
-        font-size: 1.1rem;
-    }
-
-    .help-card h5 {
-        color: #9ca3af;
-        margin-top: 15px;
-        margin-bottom: 8px;
-        font-size: 1rem;
-    }
-
-    .help-card p, .help-card li {
-        color: #d1d5db;
-        line-height: 1.6;
-    }
-
-    .help-card ul, .help-card ol {
-        color: #d1d5db;
-        line-height: 1.8;
-        margin-left: 20px;
-    }
-
-    .help-card code {
-        background: rgba(0, 0, 0, 0.3);
-        padding: 2px 6px;
-        border-radius: 3px;
-        color: #fbbf24;
-        font-size: 0.9em;
-    }
-
-    .help-card pre {
-        background: rgba(0, 0, 0, 0.3);
-        padding: 15px;
-        border-radius: 5px;
-        overflow-x: auto;
-        color: #d1d5db;
-    }
-
-    .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
-    }
-
-    .feature-item {
-        background: rgba(23, 162, 184, 0.1);
-        border: 1px solid rgba(23, 162, 184, 0.2);
-        border-radius: 8px;
-        padding: 15px;
-        transition: transform 0.2s, border-color 0.2s;
-    }
-
-    .feature-item:hover {
-        transform: translateY(-2px);
-        border-color: #17a2b8;
-    }
-
-    .feature-item h5 {
-        color: #17a2b8;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .feature-item p {
-        color: #9ca3af;
-        font-size: 0.9rem;
-        margin-bottom: 0;
-    }
-
-    .info-box {
-        background: rgba(23, 162, 184, 0.15);
-        border-left: 4px solid #17a2b8;
-        padding: 15px;
-        border-radius: 0 8px 8px 0;
-        margin: 15px 0;
-        color: #d1d5db;
-        line-height: 1.6;
-    }
-
-    .info-box p {
-        margin-bottom: 0;
-    }
-
-    .info-box i {
-        margin-right: 8px;
-    }
-
-    .info-box strong {
-        margin-right: 5px;
-    }
-
-    .warning-box {
-        background: rgba(250, 177, 21, 0.1);
-        border-left: 4px solid #fab115;
-        padding: 15px;
-        border-radius: 0 8px 8px 0;
-        margin: 15px 0;
-        color: #d1d5db;
-        line-height: 1.6;
-    }
-
-    .warning-box p {
-        margin-bottom: 0;
-    }
-
-    .success-box {
-        background: rgba(72, 187, 120, 0.1);
-        border-left: 4px solid #48bb78;
-        padding: 15px;
-        border-radius: 0 8px 8px 0;
-        margin: 15px 0;
-        color: #d1d5db;
-        line-height: 1.6;
-    }
-
-    .success-box p {
-        margin-bottom: 0;
-    }
-
+    /* Step list (numbered counter circles) — slightly tighter than canonical .step-by-step */
     .step-list {
         counter-reset: step-counter;
         list-style: none;
         padding-left: 0;
     }
-
     .step-list li {
         counter-increment: step-counter;
         position: relative;
         padding-left: 45px;
         margin-bottom: 12px;
+        color: #d1d5db !important;
     }
-
     .step-list li::before {
         content: counter(step-counter);
         position: absolute;
@@ -221,8 +28,8 @@
         top: 0;
         width: 30px;
         height: 30px;
-        background: linear-gradient(135deg, #17a2b8, #138496);
-        color: white;
+        background: linear-gradient(135deg, var(--pings-primary-start) 0%, var(--pings-primary-end) 100%);
+        color: #fff;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -231,199 +38,61 @@
         font-size: 0.85rem;
     }
 
-    .faq-item {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
-        margin-bottom: 10px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s;
-    }
-
-    .faq-item:hover {
-        border-color: rgba(23, 162, 184, 0.3);
-    }
-
-    .faq-question {
-        padding: 15px 20px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: #e2e8f0;
-        font-weight: 500;
-        transition: background 0.2s;
-    }
-
-    .faq-question:hover {
-        background: rgba(23, 162, 184, 0.1);
-    }
-
-    .faq-question i {
-        transition: transform 0.3s;
-        color: #17a2b8;
-    }
-
-    .faq-question.open i {
-        transform: rotate(180deg);
-    }
-
-    .faq-answer {
-        display: none;
-        padding: 0 20px 15px;
-        color: #9ca3af;
-        line-height: 1.6;
-    }
-
-    .faq-answer.open {
-        display: block;
-    }
-
-    .perm-table {
-        width: 100%;
-    }
-
-    .perm-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        color: #d1d5db;
-    }
-
-    .perm-table td:first-child {
-        color: #17a2b8;
-        font-weight: 500;
-        white-space: nowrap;
-        width: 1%;
-    }
-
-    .search-box {
-        position: relative;
-        margin-bottom: 15px;
-    }
-
-    .search-box input {
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(23, 162, 184, 0.3);
-        color: #e2e8f0;
-        border-radius: 8px;
-        padding: 8px 15px 8px 35px;
-        width: 100%;
-    }
-
-    .search-box input:focus {
-        outline: none;
-        border-color: #17a2b8;
-    }
-
-    .search-box i {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #6b7280;
-    }
-
+    /* Plugin-info gradient header card (used on Overview section) */
     .plugin-info {
         background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
         border-radius: 10px;
         padding: 20px;
         margin-bottom: 20px;
-        border: 1px solid rgba(23, 162, 184, 0.3);
+        border: 1px solid rgba(102, 126, 234, 0.3);
     }
-
     .plugin-info h3 {
-        color: #17a2b8;
+        color: var(--pings-primary-start) !important;
         margin-bottom: 15px;
     }
-
     .plugin-info .info-row {
-        color: #9ca3af;
+        color: #9ca3af !important;
         margin: 5px 0;
     }
-
     .plugin-info .author {
-        color: #17a2b8;
+        color: var(--pings-primary-start) !important;
         margin: 10px 0;
     }
 
+    /* Plugin link list (GitHub / Changelog / Issues / README quick-jump tiles) */
     .plugin-links {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 10px;
         margin-top: 15px;
     }
-
     .plugin-link {
-        background: rgba(23, 162, 184, 0.1);
+        background: rgba(102, 126, 234, 0.1);
         padding: 10px;
         border-radius: 5px;
-        border: 1px solid rgba(23, 162, 184, 0.3);
-        color: #17a2b8;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: var(--pings-primary-start) !important;
         text-decoration: none;
         display: flex;
         align-items: center;
         gap: 10px;
         transition: all 0.3s;
     }
-
     .plugin-link:hover {
-        background: rgba(23, 162, 184, 0.2);
-        color: #40d3ff;
+        background: rgba(102, 126, 234, 0.2);
+        color: #a5b4fc !important;
         text-decoration: none;
         transform: translateX(5px);
-    }
-
-    .quick-links {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
-        margin: 20px 0;
-    }
-
-    .quick-link {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        color: white;
-        text-decoration: none;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .quick-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
-        color: white;
-        text-decoration: none;
-    }
-
-    .quick-link i {
-        font-size: 2rem;
-        margin-bottom: 8px;
-        display: block;
-    }
-
-    @media (max-width: 768px) {
-        .help-wrapper {
-            flex-direction: column;
-        }
-        .help-sidebar {
-            position: static;
-            max-height: none;
-            flex: none;
-        }
-        .feature-grid {
-            grid-template-columns: 1fr;
-        }
     }
 </style>
 @endpush
 
 @section('full')
+<div class="discord-pings-wrapper">
 <div class="help-wrapper">
     {{-- Sidebar --}}
     <div class="help-sidebar">
-        <div class="card">
+        <div class="card card-dark">
             <div class="card-body p-3">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
@@ -454,6 +123,22 @@
                     <a href="#" class="nav-link" data-section="calendar">
                         <i class="fas fa-calendar-alt"></i> {{ trans('discordpings::help.calendar') }}
                     </a>
+                    <a href="#" class="nav-link" data-section="structure-timers">
+                        <i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.structure_timers') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
+                    </a>
+                    <a href="#" class="nav-link" data-section="mining-extractions">
+                        <i class="fas fa-gem"></i> {{ trans('discordpings::help.mining_extractions_title') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
+                    </a>
+                    <a href="#" class="nav-link" data-section="fc-opportunities">
+                        <i class="fas fa-bullseye"></i> {{ trans('discordpings::help.fc_opportunities') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
+                    </a>
+                    <a href="#" class="nav-link" data-section="published-events">
+                        <i class="fas fa-broadcast-tower"></i> {{ trans('discordpings::help.published_events') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
+                    </a>
                     <a href="#" class="nav-link" data-section="configuration">
                         <i class="fas fa-cog"></i> {{ trans('discordpings::help.configuration') }}
                     </a>
@@ -462,6 +147,9 @@
                     </a>
                     <a href="#" class="nav-link" data-section="commands">
                         <i class="fas fa-terminal"></i> {{ trans('discordpings::help.commands') }}
+                    </a>
+                    <a href="#" class="nav-link" data-section="permissions">
+                        <i class="fas fa-user-shield"></i> {{ trans('discordpings::help.permissions') }}
                     </a>
                     <a href="#" class="nav-link" data-section="faq">
                         <i class="fas fa-question-circle"></i> {{ trans('discordpings::help.faq') }}
@@ -483,7 +171,7 @@
                 <h3><i class="fas fa-info-circle"></i> {{ trans('discordpings::help.plugin_info_title') }}</h3>
                 <div class="info-row">
                     <strong>{{ trans('discordpings::help.version') }}:</strong>
-                    <img src="https://img.shields.io/github/v/release/MattFalahe/SeAT-Discord-Pings" alt="Version" style="vertical-align: middle;">
+                    <img src="https://img.shields.io/packagist/v/mattfalahe/seat-discord-pings" alt="Version" style="vertical-align: middle;">
                     <img src="https://img.shields.io/badge/SeAT-5.0-green" alt="SeAT" style="vertical-align: middle;">
                 </div>
                 <div class="info-row">
@@ -493,7 +181,7 @@
                 <div class="author">
                     <i class="fas fa-user"></i> <strong>{{ trans('discordpings::help.author') }}:</strong> Matt Falahe
                     <br>
-                    <i class="fas fa-envelope"></i> <a href="mailto:mattfalahe@gmail.com" style="color: #17a2b8;">mattfalahe@gmail.com</a>
+                    <i class="fas fa-envelope"></i> <a href="mailto:mattfalahe@gmail.com" style="color: #667eea;">mattfalahe@gmail.com</a>
                 </div>
 
                 <div class="plugin-links">
@@ -524,14 +212,94 @@
                 </div>
             </div>
 
+            {{-- Version Status — installed vs latest on Packagist --}}
+            @php
+                $vs = $versionStatus ?? ['current' => '?', 'current_source' => 'config', 'is_dev_branch' => false, 'latest' => null, 'status' => 'unknown', 'message' => '', 'release_url' => null];
+                $statusBadgeClass = [
+                    'current'    => 'badge-success',
+                    'outdated'   => 'badge-warning',
+                    'ahead'      => 'badge-info',
+                    'dev_branch' => 'badge-info',
+                    'unknown'    => 'badge-secondary',
+                ][$vs['status']] ?? 'badge-secondary';
+                $statusLabel = [
+                    'current'    => '✓ Up to date',
+                    'outdated'   => '⚠ Update available',
+                    'ahead'      => '🚀 Pre-release',
+                    'dev_branch' => '🌱 Development branch',
+                    'unknown'    => '— Unable to check',
+                ][$vs['status']] ?? '— Unknown';
+                // Show the raw branch ref as-is (no 'v' prefix); tagged versions get the v.
+                $installedDisplay = $vs['is_dev_branch'] ? $vs['current'] : ('v' . $vs['current']);
+                $sourceHint = $vs['current_source'] === 'composer'
+                    ? 'resolved via Composer\'s installed.json'
+                    : 'resolved via discordpings.config.php (fallback — Composer metadata unavailable)';
+            @endphp
+            <div class="help-card">
+                <h3><i class="fas fa-tag"></i> Version Status</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0.5rem 0;">
+                    <div>
+                        <strong>Installed:</strong>
+                        <span class="badge badge-secondary" style="font-size: 0.9rem;" title="{{ $sourceHint }}">
+                            {{ $installedDisplay }}
+                        </span>
+                    </div>
+                    <div>
+                        <strong>Latest release:</strong>
+                        @if($vs['latest'])
+                            <span class="badge badge-secondary" style="font-size: 0.9rem;">v{{ $vs['latest'] }}</span>
+                        @else
+                            <span class="badge badge-secondary" style="font-size: 0.9rem;">unknown</span>
+                        @endif
+                    </div>
+                    <div>
+                        <span class="badge {{ $statusBadgeClass }}" style="font-size: 0.9rem;">{{ $statusLabel }}</span>
+                    </div>
+                    @if($vs['release_url'])
+                        <div>
+                            <a href="{{ $vs['release_url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-pings-secondary">
+                                <i class="fas fa-external-link-alt"></i> View release notes
+                            </a>
+                        </div>
+                    @endif
+                </div>
+                <small class="text-muted">{{ $vs['message'] }}</small>
+                @if($vs['status'] === 'outdated')
+                    <div class="info-box" style="margin-top: 0.75rem;">
+                        <i class="fas fa-arrow-circle-up"></i>
+                        <strong>Upgrade recipe (SeAT Docker stack):</strong>
+                        <pre style="margin-top: 0.4rem; margin-bottom: 0;"><code>docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml down
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml up -d</code></pre>
+                        <small class="text-muted" style="display: block; margin-top: 0.4rem;">
+                            Container boot pulls the latest plugin via composer, runs new migrations, and re-seeds schedules automatically.
+                        </small>
+                    </div>
+                @endif
+                <small class="text-muted" style="display: block; margin-top: 0.4rem; font-size: 0.75rem;">
+                    <i class="fas fa-info-circle"></i>
+                    Installed version {{ $sourceHint }}. Latest checked via Packagist's public API (6h cache, safe on outages).
+                </small>
+            </div>
+
             <div class="help-card">
                 <h3><i class="fas fa-bullhorn"></i> {{ trans('discordpings::help.welcome_title') }}</h3>
                 <p>{{ trans('discordpings::help.welcome_desc') }}</p>
             </div>
 
+            {{-- v2.0.0 upgrade highlights --}}
+            <div class="whats-new-box">
+                <h4><i class="fas fa-rocket"></i> {{ trans('discordpings::help.whats_new_v2_title') }}</h4>
+                <p>{!! trans('discordpings::help.whats_new_v2_intro') !!}</p>
+                {!! trans('discordpings::help.whats_new_v2_list') !!}
+                <p style="margin-top: 12px; margin-bottom: 0; font-size: 0.88rem; color: #8b95a5;">
+                    <i class="fas fa-info-circle"></i>
+                    {!! trans('discordpings::help.whats_new_v2_upgrade_note') !!}
+                </p>
+            </div>
+
             <div class="help-card">
                 <h3><i class="fas fa-info-circle"></i> {{ trans('discordpings::help.what_is_title') }}</h3>
-                <p>{{ trans('discordpings::help.what_is_desc') }}</p>
+                <p>{!! trans('discordpings::help.what_is_desc') !!}</p>
 
                 <div class="info-box">
                     <i class="fas fa-lightbulb"></i>
@@ -567,6 +335,18 @@
                         <h5><i class="fas fa-cog"></i> {{ trans('discordpings::help.feature_config_title') }}</h5>
                         <p>{{ trans('discordpings::help.feature_config_desc') }}</p>
                     </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.feature_structure_timers_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
+                        <p>{{ trans('discordpings::help.feature_structure_timers_desc') }}</p>
+                    </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.feature_fc_opportunities_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
+                        <p>{{ trans('discordpings::help.feature_fc_opportunities_desc') }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -596,6 +376,18 @@
                 <h3><i class="fas fa-star"></i> {{ trans('discordpings::help.whats_new') }}</h3>
                 <p>{{ trans('discordpings::help.whats_new_intro') }}</p>
 
+                <h4>{{ trans('discordpings::help.whats_new_fc_opportunities_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_fc_opportunities_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> Open it from the sidebar: <strong>SeAT Broadcast &gt; FC Opportunities</strong>.</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.whats_new_structure_timers_title') }}</h4>
+                <p>{{ trans('discordpings::help.whats_new_structure_timers_desc') }}</p>
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> The structure timer integration is optional. It activates only when <strong>Manager Core</strong> and <strong>Structure Manager</strong> are installed.</p>
+                </div>
+
                 <h4>{{ trans('discordpings::help.whats_new_prepping_title') }}</h4>
                 <p>{{ trans('discordpings::help.whats_new_prepping_desc') }}</p>
                 <div class="info-box">
@@ -611,7 +403,7 @@
                 <h4>{{ trans('discordpings::help.whats_new_scheduled_visibility_title') }}</h4>
                 <p>{{ trans('discordpings::help.whats_new_scheduled_visibility_desc') }}</p>
                 <div class="warning-box">
-                    <p><i class="fas fa-shield-alt"></i> <strong>Permission required:</strong> You must have the <strong>Manage Scheduled Pings</strong> permission assigned to your SeAT role to see and manage other users' scheduled broadcasts.</p>
+                    <p><i class="fas fa-shield-alt"></i> <strong>Permission required:</strong> Regular FCs (with just <strong>Send Discord Pings</strong>) manage their OWN scheduled broadcasts. To also see and manage OTHER users' broadcasts you need the <strong>Manage All Scheduled Pings</strong> permission (the "Fleet Coordinator" tier).</p>
                 </div>
 
                 <h4>{{ trans('discordpings::help.whats_new_calendar_history_title') }}</h4>
@@ -638,25 +430,7 @@
                     <li>{{ trans('discordpings::help.getting_started_step3') }}</li>
                     <li>{{ trans('discordpings::help.getting_started_step4') }}</li>
                     <li>{{ trans('discordpings::help.getting_started_step5') }}</li>
-                </ol>
-
-                <h4>{{ trans('discordpings::help.installation_title') }}</h4>
-                <ol class="step-list">
-                    <li>
-                        <strong>{{ trans('discordpings::help.install_step1_title') }}</strong><br>
-                        {{ trans('discordpings::help.install_step1_desc') }}
-                        <pre><code>composer require mattfalahe/seat-discord-pings</code></pre>
-                    </li>
-                    <li>
-                        <strong>{{ trans('discordpings::help.install_step2_title') }}</strong><br>
-                        {{ trans('discordpings::help.install_step2_desc') }}
-                        <pre><code>php artisan migrate
-php artisan vendor:publish --tag=public --force</code></pre>
-                    </li>
-                    <li>
-                        <strong>{{ trans('discordpings::help.install_step3_title') }}</strong><br>
-                        {{ trans('discordpings::help.install_step3_desc') }}
-                    </li>
+                    <li>{{ trans('discordpings::help.getting_started_step6') }}</li>
                 </ol>
             </div>
         </div>
@@ -756,7 +530,7 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <h4>{{ trans('discordpings::help.scheduled_bulk_clear') }}</h4>
                 <p>{{ trans('discordpings::help.scheduled_bulk_clear_desc') }}</p>
                 <div class="info-box">
-                    <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage Scheduled Pings permission. Active upcoming pings are never touched by the bulk clear.</p>
+                    <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage All Scheduled Pings permission (Fleet Coordinator tier — bulk-clear touches everyone's inactive pings, so it's gated above the FC tier). Active upcoming pings are never touched.</p>
                 </div>
 
                 <div class="warning-box">
@@ -785,6 +559,151 @@ php artisan vendor:publish --tag=public --force</code></pre>
 
                 <h4>{{ trans('discordpings::help.calendar_click') }}</h4>
                 <p>{{ trans('discordpings::help.calendar_click_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.calendar_local_time_title') }}</h4>
+                <p>{{ trans('discordpings::help.calendar_local_time_desc') }}</p>
+                <div class="info-box">
+                    <p>
+                        <i class="fas fa-globe"></i>
+                        <strong>Your browser timezone (right now):</strong>
+                        <code id="detected-tz-name">detecting…</code>
+                        — sample conversion: <code id="detected-tz-sample">…</code>
+                    </p>
+                    <p class="text-muted" style="font-size: 0.85em; margin-bottom: 0;">
+                        If this doesn't match your physical timezone, check your operating
+                        system's Date &amp; Time settings — the browser inherits its timezone
+                        from there.
+                    </p>
+                </div>
+                <script>
+                    (function () {
+                        try {
+                            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+                            var nowSample = new Intl.DateTimeFormat(undefined, {
+                                year: 'numeric', month: '2-digit', day: '2-digit',
+                                hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+                            }).format(new Date());
+                            var elTz     = document.getElementById('detected-tz-name');
+                            var elSample = document.getElementById('detected-tz-sample');
+                            if (elTz)     elTz.textContent = tz;
+                            if (elSample) elSample.textContent = nowSample;
+                        } catch (e) {
+                            // Old browser — leave placeholders.
+                        }
+                    })();
+                </script>
+            </div>
+        </div>
+
+        {{-- Structure Timers --}}
+        <div class="help-section" id="structure-timers">
+            <div class="help-card">
+                <h3><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.structure_timers') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                    <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
+                </h3>
+                <p>{!! trans('discordpings::help.structure_timers_intro') !!}</p>
+
+                <div class="warning-box">
+                    <p><i class="fas fa-shield-alt"></i> <strong>{{ trans('discordpings::help.structure_timers_requirements_title') }}:</strong> {{ trans('discordpings::help.structure_timers_requirements_desc') }}</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.structure_timers_how_title') }}</h4>
+                <p>{{ trans('discordpings::help.structure_timers_how_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.structure_timers_planner_title') }}</h4>
+                <p>{!! trans('discordpings::help.structure_timers_planner_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.structure_timers_pings_title') }}</h4>
+                <p>{{ trans('discordpings::help.structure_timers_pings_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.structure_timers_opsec_title') }}</h4>
+                <p>{{ trans('discordpings::help.structure_timers_opsec_desc') }}</p>
+
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>{{ trans('discordpings::help.structure_timers_retention_title') }}:</strong> {{ trans('discordpings::help.structure_timers_retention_desc') }}</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Mining Extractions --}}
+        <div class="help-section" id="mining-extractions">
+            <div class="help-card">
+                <h3><i class="fas fa-gem"></i> {{ trans('discordpings::help.mining_extractions_title') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                    <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
+                </h3>
+                <p>{!! trans('discordpings::help.mining_extractions_intro') !!}</p>
+
+                <h4>{{ trans('discordpings::help.mining_extractions_lifecycle_title') }}</h4>
+                <p>{!! trans('discordpings::help.mining_extractions_lifecycle_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.mining_extractions_multi_fc_title') }}</h4>
+                <p>{{ trans('discordpings::help.mining_extractions_multi_fc_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.mining_extractions_alerts_title') }}</h4>
+                <p>{{ trans('discordpings::help.mining_extractions_alerts_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.mining_extractions_opsec_title') }}</h4>
+                <p>{{ trans('discordpings::help.mining_extractions_opsec_desc') }}</p>
+            </div>
+        </div>
+
+        {{-- FC Opportunities --}}
+        <div class="help-section" id="fc-opportunities">
+            <div class="help-card">
+                <h3><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.fc_opportunities') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                    <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
+                </h3>
+                <p>{{ trans('discordpings::help.fc_opportunities_intro') }}</p>
+
+                <div class="warning-box">
+                    <p><i class="fas fa-shield-alt"></i> <strong>{{ trans('discordpings::help.fc_opportunities_requires_title') }}:</strong> {{ trans('discordpings::help.fc_opportunities_requires_desc') }}</p>
+                </div>
+
+                <h4>{{ trans('discordpings::help.fc_opportunities_what_title') }}</h4>
+                <p>{{ trans('discordpings::help.fc_opportunities_what_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.fc_opportunities_workflow_title') }}</h4>
+                <p>{!! trans('discordpings::help.fc_opportunities_workflow_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.fc_opportunities_source_title') }}</h4>
+                <p>{!! trans('discordpings::help.fc_opportunities_source_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.fc_opportunities_indicators_title') }}</h4>
+                <p>{{ trans('discordpings::help.fc_opportunities_indicators_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.fc_opportunities_offset_title') }}</h4>
+                <p>{{ trans('discordpings::help.fc_opportunities_offset_desc') }}</p>
+
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> <strong>Permissions:</strong> Any user with the <strong>Send Discord Pings</strong> permission can access FC Opportunities, schedule pings for ops, and manage their own scheduled pings on the Calendar and list views. The higher <strong>Manage All Scheduled Pings</strong> permission adds visibility and control over OTHER users' pings (the "Fleet Coordinator" tier). The "📡 N scheduled" badge on every op shows the <strong>global</strong> count of formup broadcasts already scheduled, so even tier-1 FCs see when an op is covered and don't duplicate effort.</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Published Events --}}
+        <div class="help-section" id="published-events">
+            <div class="help-card">
+                <h3><i class="fas fa-broadcast-tower"></i> {{ trans('discordpings::help.published_events') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                    <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
+                </h3>
+                <p>{!! trans('discordpings::help.published_events_intro') !!}</p>
+
+                <h4>{{ trans('discordpings::help.published_events_catalog_title') }}</h4>
+                <p>{!! trans('discordpings::help.published_events_catalog_desc') !!}</p>
+
+                <h4><code>{{ trans('discordpings::help.published_events_broadcast_sent_title') }}</code></h4>
+                <p>{!! trans('discordpings::help.published_events_broadcast_sent_desc') !!}</p>
+
+                <h4><code>{{ trans('discordpings::help.published_events_formup_scheduled_title') }}</code></h4>
+                <p>{!! trans('discordpings::help.published_events_formup_scheduled_desc') !!}</p>
+
+                <div class="info-box">
+                    <p><i class="fas fa-shield-alt"></i> <strong>{{ trans('discordpings::help.published_events_safety_title') }}:</strong> {{ trans('discordpings::help.published_events_safety_desc') }}</p>
+                </div>
             </div>
         </div>
 
@@ -805,6 +724,14 @@ php artisan vendor:publish --tag=public --force</code></pre>
 
                 <h4>{{ trans('discordpings::help.configuration_pap_types') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_pap_types_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.configuration_structure_timers') }}</h4>
+                <p>{{ trans('discordpings::help.configuration_structure_timers_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.configuration_routing_map') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.configuration_routing_map_desc') }}</p>
             </div>
         </div>
 
@@ -826,6 +753,12 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <h4><i class="fas fa-calendar-alt"></i> {{ trans('discordpings::help.page_calendar') }}</h4>
                 <p>{{ trans('discordpings::help.page_calendar_desc') }}</p>
 
+                <h4><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.page_opportunities') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                    <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.page_opportunities_desc') }}</p>
+
                 <h4><i class="fas fa-file-alt"></i> {{ trans('discordpings::help.page_templates') }}</h4>
                 <p>{{ trans('discordpings::help.page_templates_desc') }}</p>
 
@@ -836,6 +769,14 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <p>{{ trans('discordpings::help.page_config_desc') }}</p>
                 <div class="info-box">
                     <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage Webhooks permission to access the Settings page.</p>
+                </div>
+
+                <h4><i class="fas fa-stethoscope"></i> {{ trans('discordpings::help.page_diagnostic') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.page_diagnostic_desc') }}</p>
+                <div class="warning-box">
+                    <p><i class="fas fa-shield-alt"></i> <strong>Admin-only:</strong> Requires the <strong>Plugin Admin</strong> permission. Intentionally NOT in the sidebar nav to hide troubleshooting clutter from daily ops. Reach via <code>/discord-pings/diagnostic</code>.</p>
                 </div>
             </div>
         </div>
@@ -854,10 +795,6 @@ php artisan vendor:publish --tag=public --force</code></pre>
                 <p>{{ trans('discordpings::help.command_cleanup_desc') }}</p>
                 <pre><code>php artisan discordpings:cleanup-history</code></pre>
 
-                <h4>{{ trans('discordpings::help.command_setup_permissions') }}</h4>
-                <p>{{ trans('discordpings::help.command_setup_permissions_desc') }}</p>
-                <pre><code>php artisan discordpings:setup-permissions</code></pre>
-
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i>
                     <strong>{{ trans('discordpings::help.scheduler_note') }}:</strong>
@@ -866,12 +803,166 @@ php artisan vendor:publish --tag=public --force</code></pre>
             </div>
         </div>
 
+        {{-- Permissions --}}
+        <div class="help-section" id="permissions">
+            <div class="help-card">
+                <h3><i class="fas fa-user-shield"></i> {{ trans('discordpings::help.permissions') }}</h3>
+                <p>{!! trans('discordpings::help.permissions_intro') !!}</p>
+
+                {{-- Tier Model --}}
+                <h4>{{ trans('discordpings::help.permissions_tier_model_title') }}</h4>
+                <p>{{ trans('discordpings::help.permissions_tier_model_desc') }}</p>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered" style="margin-top: 0.75rem;">
+                        <thead>
+                            <tr>
+                                <th>Capability</th>
+                                <th>Tier 1: <code>discordpings.send</code><br><small class="text-muted">("Send Discord Pings" — the FC tier)</small></th>
+                                <th>Tier 2: <code>discordpings.manage_scheduled</code><br><small class="text-muted">("Manage All Scheduled Pings" — the Fleet Coordinator tier, ON TOP of tier 1)</small></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Send manual broadcasts</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Schedule a new ping (own)</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>See own scheduled pings in list / calendar</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Edit / delete own scheduled pings</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Use FC Opportunities planner</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>See "📡 N scheduled" global coordination badge on FC Opportunities</td>
+                                <td><i class="fas fa-check text-success"></i> (count only)</td>
+                                <td><i class="fas fa-check text-success"></i> (count + can drill into the underlying pings)</td>
+                            </tr>
+                            <tr style="border-top: 2px solid var(--pings-border);">
+                                <td>See OTHER users' scheduled pings in list / calendar</td>
+                                <td><i class="fas fa-times text-danger"></i></td>
+                                <td><i class="fas fa-check text-success"></i> (with "Created By" column)</td>
+                            </tr>
+                            <tr>
+                                <td>Edit / delete OTHER users' scheduled pings</td>
+                                <td><i class="fas fa-times text-danger"></i> (403 if attempted)</td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Bulk-clear inactive pings older than N days</td>
+                                <td><i class="fas fa-times text-danger"></i></td>
+                                <td><i class="fas fa-check text-success"></i></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="info-box" style="margin-top: 0.75rem;">
+                    <p><i class="fas fa-info-circle"></i> The calendar's "manual broadcast history" events (the past sent broadcasts displayed as small dots) follow a <strong>separate</strong> permission pair: <strong>View Ping History</strong> (own) and <strong>View All History</strong> (everyone's). A tier-1 FC with only <code>view_history</code> sees own scheduled pings + own past broadcasts on the calendar; pair them with <code>view_all_history</code> to see everyone's past broadcasts while still only seeing their own scheduled pings.</p>
+                </div>
+
+                {{-- Scenario recipes --}}
+                <h4 class="mt-4">{{ trans('discordpings::help.permissions_scenarios_title') }}</h4>
+                <p>{{ trans('discordpings::help.permissions_scenarios_desc') }}</p>
+
+                <div class="feature-grid">
+                    <div class="feature-item" style="border-left: 4px solid #1abc9c;">
+                        <h5><i class="fas fa-user"></i> Solo FC (small corp)</h5>
+                        <p>One person runs all ops.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li><code>discordpings.view</code></li>
+                            <li><code>discordpings.send</code></li>
+                            <li><code>discordpings.view_history</code></li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Can do everything; nothing to coordinate.</p>
+                    </div>
+
+                    <div class="feature-item" style="border-left: 4px solid #667eea;">
+                        <h5><i class="fas fa-users"></i> Regular FC (multi-FC corp)</h5>
+                        <p>One of several FCs sharing the duty.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li><code>discordpings.view</code></li>
+                            <li><code>discordpings.send</code></li>
+                            <li><code>discordpings.view_history</code> (or <code>view_all_history</code> for full transparency)</li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Plans and runs their own ops; sees the global "📡 N scheduled" coordination badge so they don't duplicate work.</p>
+                    </div>
+
+                    <div class="feature-item" style="border-left: 4px solid #f39c12;">
+                        <h5><i class="fas fa-shield-alt"></i> Fleet Coordinator</h5>
+                        <p>Oversees all FC scheduling.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li>Everything in <em>Regular FC</em> +</li>
+                            <li><code>discordpings.manage_scheduled</code></li>
+                            <li><code>discordpings.view_all_history</code></li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Sees every FC's pings, can resolve overlaps, can bulk-clear old inactive entries.</p>
+                    </div>
+
+                    <div class="feature-item" style="border-left: 4px solid #6c757d;">
+                        <h5><i class="fas fa-eye"></i> Auditor / Read-only Director</h5>
+                        <p>Doesn't run fleets but wants visibility.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li><code>discordpings.view</code></li>
+                            <li><code>discordpings.view_all_history</code></li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Sees the History page across all users. No scheduling, no planning surface. Calendar / FC Opportunities are hidden (no <code>send</code>).</p>
+                    </div>
+
+                    <div class="feature-item" style="border-left: 4px solid #dc3545;">
+                        <h5><i class="fas fa-cog"></i> Plugin Admin</h5>
+                        <p>Operations engineer / SeAT admin.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li>All FC + Coordinator perms +</li>
+                            <li><code>discordpings.manage_webhooks</code></li>
+                            <li><code>discordpings.manage_global_templates</code></li>
+                            <li><code>discordpings.admin</code> (Diagnostic page)</li>
+                            <li><code>discordpings.send_multiple</code> (multi-webhook broadcast)</li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Full control. Can configure webhooks, roles, channels, troubleshoot via the Diagnostic page.</p>
+                    </div>
+                </div>
+
+                {{-- Full reference --}}
+                <h4 class="mt-4">{{ trans('discordpings::help.permissions_reference_title') }}</h4>
+                <p>{{ trans('discordpings::help.permissions_reference_desc') }}</p>
+
+                <ul class="permissions-list">
+                    <li><strong>View Discord Pings</strong> (<code>discordpings.view</code>) — {{ trans('discordpings::help.perm_view') }}</li>
+                    <li><strong>Send Discord Pings</strong> (<code>discordpings.send</code>) — {{ trans('discordpings::help.perm_send') }}</li>
+                    <li><strong>Send to Multiple Webhooks</strong> (<code>discordpings.send_multiple</code>) — {{ trans('discordpings::help.perm_send_multiple') }}</li>
+                    <li><strong>Manage Webhooks</strong> (<code>discordpings.manage_webhooks</code>) — {{ trans('discordpings::help.perm_manage_webhooks') }}</li>
+                    <li><strong>View Ping History</strong> (<code>discordpings.view_history</code>) — {{ trans('discordpings::help.perm_view_history') }}</li>
+                    <li><strong>View All History</strong> (<code>discordpings.view_all_history</code>) — {{ trans('discordpings::help.perm_view_all_history') }}</li>
+                    <li><strong>Manage All Scheduled Pings</strong> (<code>discordpings.manage_scheduled</code>) — {{ trans('discordpings::help.perm_manage_scheduled') }}</li>
+                    <li><strong>Manage Templates</strong> (<code>discordpings.manage_templates</code>) — {{ trans('discordpings::help.perm_manage_templates') }}</li>
+                    <li><strong>Manage Global Templates</strong> (<code>discordpings.manage_global_templates</code>) — {{ trans('discordpings::help.perm_manage_global_templates') }}</li>
+                    <li><strong>Plugin Admin</strong> (<code>discordpings.admin</code>) — {{ trans('discordpings::help.perm_admin') }}</li>
+                </ul>
+            </div>
+        </div>
+
         {{-- FAQ --}}
         <div class="help-section" id="faq">
             <div class="help-card">
                 <h3><i class="fas fa-question-circle"></i> {{ trans('discordpings::help.faq') }}</h3>
 
-                @for($i = 1; $i <= 10; $i++)
+                @for($i = 1; $i <= 13; $i++)
                     <div class="faq-item">
                         <div class="faq-question">
                             <span>{{ trans('discordpings::help.faq_q' . $i) }}</span>
@@ -917,10 +1008,21 @@ php artisan vendor:publish --tag=public --force</code></pre>
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution2') }}</li>
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution3') }}</li>
                 </ul>
+
+                <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_fc_opps_empty_title') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <ul>
+                    <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution1') }}</li>
+                    <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution2') }}</li>
+                    <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution3') }}</li>
+                    <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution4') }}</li>
+                </ul>
             </div>
         </div>
 
     </div>
+</div>
 </div>
 @stop
 

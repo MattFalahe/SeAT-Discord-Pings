@@ -1,9 +1,9 @@
 <?php
 
-namespace MattFalahe\Seat\DiscordPings\Console\Commands;
+namespace DiscordPings\Console\Commands;
 
 use Illuminate\Console\Command;
-use MattFalahe\Seat\DiscordPings\Jobs\CleanupOldHistory;
+use DiscordPings\Jobs\CleanupOldHistory;
 
 class CleanupPingHistory extends Command
 {

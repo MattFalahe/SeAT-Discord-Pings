@@ -5,12 +5,16 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title">Ping History</h3>
+            <h3 class="card-title">
+                <i class="fas fa-history"></i> Ping History
+            </h3>
         </div>
         <div class="card-body">
             <table id="historyTable" class="table table-striped table-hover" style="width:100%">
@@ -28,7 +32,9 @@
                     @foreach($histories as $history)
                         <tr>
                             <td data-order="{{ $history->created_at->timestamp }}">
-                                {{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE
+                                <span class="eve-time" data-eve-time="{{ $history->created_at->utc()->toIso8601String() }}">
+                                    {{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE
+                                </span>
                             </td>
                             <td>
                                 @if($history->webhook)
@@ -71,11 +77,13 @@
             </table>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')
 <script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <script>
 $(document).ready(function() {
     $('#historyTable').DataTable({

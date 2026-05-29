@@ -1,16 +1,20 @@
 <?php
-namespace MattFalahe\Seat\DiscordPings\Http\Controllers;
+namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use MattFalahe\Seat\DiscordPings\Models\ScheduledPing;
-use MattFalahe\Seat\DiscordPings\Models\DiscordWebhook;
-use MattFalahe\Seat\DiscordPings\Models\DiscordRole;
-use MattFalahe\Seat\DiscordPings\Models\DiscordChannel;
-use MattFalahe\Seat\DiscordPings\Models\StagingLocation;
-use MattFalahe\Seat\DiscordPings\Models\PapType;
-use MattFalahe\Seat\DiscordPings\Models\PingHistory;
+use DiscordPings\Models\ScheduledPing;
+use DiscordPings\Models\DiscordWebhook;
+use DiscordPings\Models\DiscordRole;
+use DiscordPings\Models\DiscordChannel;
+use DiscordPings\Models\StagingLocation;
+use DiscordPings\Models\PapType;
+use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\TacticalEvent;
+use DiscordPings\Models\PluginSetting;
+use DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Services\BroadcastEventPublisher;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -43,7 +47,7 @@ class ScheduledController extends Controller
     /**
      * Show create form
      */
-    public function create()
+    public function create(Request $request)
     {
         try {
             $webhooks = DiscordWebhook::active()->get();
@@ -52,26 +56,27 @@ class ScheduledController extends Controller
             $stagings = StagingLocation::active()->get();
             $papTypes = PapType::active()->ordered()->get();
 
-            // Check for seat-fitting plugin
-            $doctrines = [];
-            $hasFittingPlugin = false;
-            
-            if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \CryptaTech\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('CryptaTech seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
-                }
-            } elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                $hasFittingPlugin = true;
-                try {
-                    $doctrines = \Denngarr\Seat\Fitting\Models\Doctrine::all();
-                } catch (\Exception $e) {
-                    Log::info('Denngarr seat-fitting plugin found but could not load doctrines: ' . $e->getMessage());
+            $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
+            $doctrines = DiscordHelper::listFittingDoctrines();
+
+            // FC Opportunities: when arriving from a tactical event (Calendar
+            // modal or FC Opportunities board), pre-fill the form with the
+            // op's structure/system/time so the FC just reviews and submits.
+            $tacticalEvent = null;
+            $prefill = [];
+            $tacticalEventId = null;
+            $rawTacticalEventId = $request->input('tactical_event_id');
+            if ($rawTacticalEventId) {
+                $tacticalEvent = TacticalEvent::visibleTo(auth()->user())
+                    ->find((int) $rawTacticalEventId);
+                if ($tacticalEvent && $tacticalEvent->eve_time) {
+                    // 'schedule' mode: includes scheduled_at = eve_time minus
+                    // the configured form-up offset, fleet embed type.
+                    $prefill = $tacticalEvent->buildBroadcastPrefill('schedule');
+                    $tacticalEventId = $tacticalEvent->id;
                 }
             }
-            
+
             return view('discordpings::scheduled.create', compact(
                 'webhooks',
                 'roles',
@@ -79,15 +84,18 @@ class ScheduledController extends Controller
                 'stagings',
                 'papTypes',
                 'doctrines',
-                'hasFittingPlugin'
+                'hasFittingPlugin',
+                'prefill',
+                'tacticalEvent',
+                'tacticalEventId'
             ));
-            
+
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled create error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load create form. Please check logs.');
         }
     }
-    
+
     /**
      * Store scheduled ping
      */
@@ -100,6 +108,7 @@ class ScheduledController extends Controller
                 'message' => 'required|string|max:2000',
                 'embed_type' => 'nullable|string|in:fleet,announcement,message,prepping',
                 'repeat_interval' => 'nullable|in:hourly,daily,weekly,monthly',
+                'tactical_event_id' => 'nullable|integer|exists:discord_tactical_events,id',
                 // Optional fields
                 'fc_name' => 'nullable|string|max:100',
                 'formup_location' => 'nullable|string|max:100',
@@ -171,37 +180,19 @@ class ScheduledController extends Controller
                 return redirect()->back()->with('error', 'You have reached the maximum number of scheduled broadcasts.');
             }
             
-            // Handle doctrine from seat-fitting if selected
-            if (!empty($validated['doctrine_id'])) {
-                $doctrine = null;
-                
-                // Try CryptaTech namespace first
-                if (class_exists('CryptaTech\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \CryptaTech\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from CryptaTech seat-fitting: ' . $e->getMessage());
-                    }
+            $doctrine = !empty($validated['doctrine_id'])
+                ? DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id'])
+                : null;
+
+            if ($doctrine) {
+                try {
+                    $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
+                    $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
+                    $validated['doctrine_url'] = $doctrineUrl;
+                } catch (\Exception $e) {
+                    $validated['doctrine'] = $doctrine->name;
                 }
-                // Fall back to Denngarr namespace
-                elseif (class_exists('Denngarr\Seat\Fitting\Models\Doctrine')) {
-                    try {
-                        $doctrine = \Denngarr\Seat\Fitting\Models\Doctrine::find($validated['doctrine_id']);
-                    } catch (\Exception $e) {
-                        Log::info('Could not load doctrine from Denngarr seat-fitting: ' . $e->getMessage());
-                    }
-                }
-                
-                if ($doctrine) {
-                    try {
-                        $doctrineUrl = route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]);
-                        $validated['doctrine'] = "[{$doctrine->name}]({$doctrineUrl})";
-                        $validated['doctrine_url'] = $doctrineUrl;
-                    } catch (\Exception $e) {
-                        $validated['doctrine'] = $doctrine->name;
-                    }
-                    $validated['doctrine_name'] = $doctrine->name;
-                }
+                $validated['doctrine_name'] = $doctrine->name;
             }
             
             // Handle role mention
@@ -235,9 +226,10 @@ class ScheduledController extends Controller
             }
             
             // Create scheduled ping - times are already in Carbon format
-            ScheduledPing::create([
+            $scheduled = ScheduledPing::create([
                 'webhook_id' => $validated['webhook_id'],
                 'user_id' => auth()->id(),
+                'tactical_event_id' => $validated['tactical_event_id'] ?? null,
                 'message' => $validated['message'],
                 'fields' => $fields,
                 'scheduled_at' => $scheduledAt,  // Already a Carbon instance in UTC
@@ -245,7 +237,14 @@ class ScheduledController extends Controller
                 'repeat_until' => $repeatUntil,  // Already a Carbon instance in UTC or null
                 'is_active' => true,
             ]);
-            
+
+            // If this scheduled ping is correlated with a tactical event, publish
+            // a pings.formup.scheduled event so HR Manager (or any subscriber)
+            // can credit the FC for coordinating around a timer/op.
+            if (! empty($validated['tactical_event_id'])) {
+                $this->publishFormupScheduledEvent($scheduled, $webhook, $scheduledAt);
+            }
+
             // Success message showing EVE time
             return redirect()->route('discordpings.scheduled')
                 ->with('success', sprintf(
@@ -279,13 +278,8 @@ class ScheduledController extends Controller
             $stagings  = StagingLocation::active()->get();
             $papTypes  = PapType::active()->ordered()->get();
 
-            $hasFittingPlugin = false;
-            $doctrines = collect();
-            foreach (['CryptaTech\Seat\Fitting\Models\Doctrine', 'Denngarr\Seat\Fitting\Models\Doctrine'] as $class) {
-                if (class_exists($class)) {
-                    try { $doctrines = $class::orderBy('name')->get(); $hasFittingPlugin = true; break; } catch (\Exception $e) {}
-                }
-            }
+            $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
+            $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
             // If a specific occurrence time was passed from the calendar, use it to pre-fill
             $fromTime = request('from');
@@ -360,20 +354,17 @@ class ScheduledController extends Controller
                 return redirect()->back()->with('error', 'Invalid or inactive webhook.');
             }
 
-            // Handle doctrine
-            if (!empty($validated['doctrine_id'])) {
-                foreach (['CryptaTech\Seat\Fitting\Models\Doctrine', 'Denngarr\Seat\Fitting\Models\Doctrine'] as $class) {
-                    if (class_exists($class)) {
-                        try {
-                            $doctrine = $class::find($validated['doctrine_id']);
-                            if ($doctrine) {
-                                try { $validated['doctrine'] = "[{$doctrine->name}](" . route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]) . ")"; } catch (\Exception $e) { $validated['doctrine'] = $doctrine->name; }
-                                $validated['doctrine_name'] = $doctrine->name;
-                                break;
-                            }
-                        } catch (\Exception $e) {}
-                    }
+            $doctrine = !empty($validated['doctrine_id'])
+                ? DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id'])
+                : null;
+
+            if ($doctrine) {
+                try {
+                    $validated['doctrine'] = "[{$doctrine->name}](" . route('fitting.doctrineviewdetails', ['doctrine_id' => $doctrine->id]) . ")";
+                } catch (\Exception $e) {
+                    $validated['doctrine'] = $doctrine->name;
                 }
+                $validated['doctrine_name'] = $doctrine->name;
             }
 
             // Handle role mention
@@ -592,6 +583,20 @@ class ScheduledController extends Controller
                 }
             }
 
+            // The calendar surface is intentionally pings-only: scheduled
+            // broadcasts (active + sent, dimmed) and manual broadcast
+            // history. Tactical events (structure timers + mining
+            // extractions) ingested from Manager Core's EventBus live on
+            // the **FC Opportunities** board, which is the dedicated
+            // planning surface. If an FC schedules a formup broadcast for
+            // a tactical event, that scheduled ping naturally lands on
+            // the calendar via the loop above.
+            //
+            // Separation of concerns: the calendar is "what's being
+            // broadcast and when"; FC Opportunities is "what's coming up
+            // that an FC might want to broadcast about". Operators always
+            // know where to look.
+
             return response()->json($events);
         } catch (\Exception $e) {
             Log::error('Discord Pings calendar events error: ' . $e->getMessage());
@@ -624,5 +629,57 @@ class ScheduledController extends Controller
                 'isActive' => (bool) $ping->is_active,
             ],
         ];
+    }
+
+    /**
+     * Publish a pings.formup.scheduled event to Manager Core's EventBus when
+     * an FC creates a scheduled ping correlated with a tactical event.
+     *
+     * Subscribers (e.g. HR Manager) can use this as a strong "this user is
+     * acting as an active FC" signal. Silent no-op without MC; never throws.
+     */
+    private function publishFormupScheduledEvent(
+        ScheduledPing $scheduled,
+        DiscordWebhook $webhook,
+        Carbon $scheduledAt
+    ): void {
+        try {
+            $event = TacticalEvent::find($scheduled->tactical_event_id);
+            $user  = auth()->user();
+
+            BroadcastEventPublisher::publishFormupScheduled([
+                'user_id'                   => (int) ($user->id ?? 0),
+                'user_name'                 => (string) ($user->name ?? 'unknown'),
+                'scheduled_ping_id'         => (int) $scheduled->id,
+                'webhook_id'                => (int) $webhook->id,
+                'webhook_name'              => (string) ($webhook->name ?? ''),
+                'webhook_corporation_id'    => isset($webhook->corporation_id) && $webhook->corporation_id !== null
+                    ? (int) $webhook->corporation_id
+                    : null,
+                'scheduled_at'              => $scheduledAt->utc()->toIso8601String(),
+                'tactical_event_id'         => (int) $scheduled->tactical_event_id,
+                'tactical_event' => $event ? [
+                    'source_plugin'        => $event->source_plugin,
+                    'external_timer_id'    => $event->external_timer_id,
+                    'event_type'           => $event->event_type,
+                    'category_group'       => $event->category_group,
+                    'severity'             => $event->severity,
+                    'is_manual'            => (bool) $event->is_manual,
+                    'corporation_id'       => $event->corporation_id !== null ? (int) $event->corporation_id : null,
+                    'structure_id'         => $event->structure_id !== null ? (int) $event->structure_id : null,
+                    'structure_name'       => $event->structure_name,
+                    'structure_type'       => $event->structure_type,
+                    'system_id'            => $event->system_id !== null ? (int) $event->system_id : null,
+                    'system_name'          => $event->system_name,
+                    'eve_time'             => $event->eve_time ? $event->eve_time->utc()->toIso8601String() : null,
+                    'owner_corporation'    => $event->owner_corporation_name,
+                    'attacker_corporation' => $event->attacker_corporation_name,
+                ] : null,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning(
+                '[DiscordPings] publishFormupScheduledEvent failed: ' . $e->getMessage()
+            );
+        }
     }
 }

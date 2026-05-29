@@ -5,7 +5,10 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/fullcalendar.min.css') }}">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
+    /* Page-specific only — FullCalendar dark-theme overrides + event detail bits.
+       Card chrome / buttons / general primitives live in canonical CSS. */
     #calendar {
         max-width: 100%;
         margin: 0 auto;
@@ -132,14 +135,15 @@
 @endpush
 
 @section('full')
-    <div class="card">
+<div class="discord-pings-wrapper">
+    <div class="card card-dark">
         <div class="card-header">
             <h3 class="card-title"><i class="fas fa-calendar-alt"></i> Calendar</h3>
             <div class="card-tools">
-                <a href="{{ route('discordpings.scheduled') }}" class="btn btn-sm btn-outline-secondary mr-1">
+                <a href="{{ route('discordpings.scheduled') }}" class="btn btn-sm btn-pings-secondary mr-1">
                     <i class="fas fa-list"></i> List View
                 </a>
-                <a href="{{ route('discordpings.scheduled.create') }}" class="btn btn-sm btn-success">
+                <a href="{{ route('discordpings.scheduled.create') }}" class="btn btn-sm btn-pings-primary">
                     <i class="fas fa-plus"></i> Schedule New
                 </a>
             </div>
@@ -166,35 +170,37 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-clock"></i> Scheduled Broadcast</h5>
+                    <h5 class="modal-title" id="eventModalTitle"><i class="fas fa-clock"></i> Scheduled Broadcast</h5>
                     <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
-                    <div class="event-detail-row">
-                        <div class="event-detail-label">Time (EVE)</div>
-                        <div class="event-detail-value" id="eventTime"></div>
+                    <div id="pingDetailSection">
+                        <div class="event-detail-row">
+                            <div class="event-detail-label">Time (EVE)</div>
+                            <div class="event-detail-value" id="eventTime"></div>
+                        </div>
+                        <div class="event-detail-row">
+                            <div class="event-detail-label">Webhook</div>
+                            <div class="event-detail-value" id="eventWebhook"></div>
+                        </div>
+                        <div class="event-detail-row">
+                            <div class="event-detail-label">Repeat</div>
+                            <div class="event-detail-value" id="eventRepeat"></div>
+                        </div>
+                        <div class="event-detail-row" id="eventRepeatUntilRow" style="display:none">
+                            <div class="event-detail-label">Until</div>
+                            <div class="event-detail-value" id="eventRepeatUntil"></div>
+                        </div>
+                        <div class="event-detail-row">
+                            <div class="event-detail-label">Times Sent</div>
+                            <div class="event-detail-value" id="eventTimesSent"></div>
+                        </div>
+                        <div class="event-detail-row">
+                            <div class="event-detail-label">Message</div>
+                            <div class="event-detail-value" id="eventMessage" style="white-space: pre-wrap;"></div>
+                        </div>
+                        <div id="eventFieldsContainer"></div>
                     </div>
-                    <div class="event-detail-row">
-                        <div class="event-detail-label">Webhook</div>
-                        <div class="event-detail-value" id="eventWebhook"></div>
-                    </div>
-                    <div class="event-detail-row">
-                        <div class="event-detail-label">Repeat</div>
-                        <div class="event-detail-value" id="eventRepeat"></div>
-                    </div>
-                    <div class="event-detail-row" id="eventRepeatUntilRow" style="display:none">
-                        <div class="event-detail-label">Until</div>
-                        <div class="event-detail-value" id="eventRepeatUntil"></div>
-                    </div>
-                    <div class="event-detail-row">
-                        <div class="event-detail-label">Times Sent</div>
-                        <div class="event-detail-value" id="eventTimesSent"></div>
-                    </div>
-                    <div class="event-detail-row">
-                        <div class="event-detail-label">Message</div>
-                        <div class="event-detail-value" id="eventMessage" style="white-space: pre-wrap;"></div>
-                    </div>
-                    <div id="eventFieldsContainer"></div>
                 </div>
                 <div class="modal-footer">
                     <a id="editPingBtn" href="#" class="btn btn-info" style="display:none;">
@@ -205,13 +211,22 @@
             </div>
         </div>
     </div>
+</div>
 @stop
 
 @push('javascript')
 <script src="{{ asset('vendor/discordpings/js/vendor/fullcalendar.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
+
+    // The calendar surface is intentionally pings-only: scheduled
+    // broadcasts (active + sent) and manual broadcast history.
+    // Tactical events (structure timers, mining extractions) live on
+    // the **FC Opportunities** board — that's the dedicated planning
+    // surface. If an FC schedules a formup ping for an op, the
+    // resulting scheduled ping shows up here via the normal path.
 
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -313,14 +328,31 @@ document.addEventListener('DOMContentLoaded', function() {
             var props = info.event.extendedProps;
             var startDate = info.event.start;
 
-            // Format time as EVE
+            // Modal title reflects whether this is a scheduled ping or a
+            // manual broadcast from history.
+            $('#eventModalTitle').html('<i class="fas fa-clock"></i> ' +
+                (props.isHistory ? 'Manual Broadcast' : 'Scheduled Broadcast'));
+
+            // Format time as EVE — wrap in an eve-time span so the converter
+            // adds a local-time tooltip + inline pill after the modal renders.
             var timeStr = startDate.getUTCFullYear() + '-' +
                 String(startDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
                 String(startDate.getUTCDate()).padStart(2, '0') + ' ' +
                 String(startDate.getUTCHours()).padStart(2, '0') + ':' +
                 String(startDate.getUTCMinutes()).padStart(2, '0') + ' EVE';
 
-            $('#eventTime').text(timeStr);
+            // textContent assignment + setAttribute avoid any innerHTML
+            // injection risk even though the source data is server-controlled.
+            var $timeWrap = $('<span/>', {
+                'class': 'eve-time',
+                'data-eve-time': startDate.toISOString(),
+                'data-show-local': '',
+                'text': timeStr,
+            });
+            $('#eventTime').empty().append($timeWrap);
+            if (window.EveTime) {
+                window.EveTime.convertOne($timeWrap[0]);
+            }
             $('#eventWebhook').html(
                 '<span class="badge" style="background-color: ' + props.webhookColor + '">' +
                 props.webhook + '</span>' +

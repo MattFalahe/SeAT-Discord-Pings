@@ -24,18 +24,18 @@
     },
     "autoload": {
         "psr-4": {
-            "MattFalahe\\Seat\\DiscordPings\\": "src/"
+            "DiscordPings\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MattFalahe\\Seat\\DiscordPings\\Tests\\": "tests/"
+            "DiscordPings\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "MattFalahe\\Seat\\DiscordPings\\DiscordPingsServiceProvider"
+                "DiscordPings\\DiscordPingsServiceProvider"
             ]
         }
     },

@@ -5,6 +5,39 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ---
 
+## 🩹 Version 2.0.1 — *June 2026*
+
+Patch release. One blocker bug fix on top of v2.0.0. No migrations, no schema changes, no new features. Fully backwards-compatible.
+
+### 🐛 Bug Fixes
+
+**Send Broadcast and Scheduled Broadcast forms crashed without `seat-fitting` installed.** Four controller methods (`PingController::index`, `ScheduledController::create`, `TemplateController::create`, `TemplateController::edit`) handed the doctrines list to their views as a raw PHP array. The blade templates guarded the doctrine dropdown with `@if((... ?? collect())->count() > 0)`, which expects a Collection. PHP's null-coalesce only fires on null, so an empty array (the case when no fitting plugin is installed) fell through to `[]->count()` and crashed the page with a fatal `Illuminate\View\ViewException`.
+
+The fix wraps each `DiscordHelper::listFittingDoctrines()` call with `collect()` at the four affected call sites so views always receive a Collection. The helper signature stays `: array` (no public API change). `ScheduledController::edit` already had this wrap from earlier work; the other four call sites were missed during the v2.0.0 refactor.
+
+Affected pages, all broken in v2.0.0 when `seat-fitting` is not installed (most installs):
+- Send Broadcast (`/discord-pings/send`)
+- Scheduled Broadcast create (`/discord-pings/scheduled/create`)
+- Template create (`/discord-pings/templates/create`)
+- Template edit (`/discord-pings/templates/{id}/edit`)
+
+Manual doctrine entry without `seat-fitting` was always intended: every form has an `@else` branch that renders a plain text input, and the server-side validation accepts a free-text `doctrine` field. v2.0.0 just crashed before render so operators could not reach the input.
+
+### 📦 Upgrade
+
+No migrations, no schema changes. Restart the front container to pick up the new controller code:
+
+```
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml down
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml up -d
+```
+
+### ⚠️ Breaking Changes
+
+None. v2.0.0 installs upgrade cleanly with all settings, webhooks, scheduled pings, broadcast history, templates and tactical events preserved.
+
+---
+
 ## 🆕 Version 2.0.0 — *May 2026*
 
 This release turns SeAT Broadcast into the **Planning HUB for fleet commanders**. With **Manager Core**, **Structure Manager** and **Mining Manager** installed, every structure timer, manual fleet op and moon extraction flows automatically onto a dedicated **FC Opportunities** board, and one click on any opportunity opens a pre-filled formup broadcast ready to schedule. The Broadcasts Calendar stays strictly broadcast-focused (scheduled + manually sent pings); the planner and the calendar are deliberately separate surfaces. Also folds in the 2026 reliability/security hardening, pre-timer reminder pings, EVE→local time auto-conversion, and an internal PHP namespace alignment with the rest of the plugin family.

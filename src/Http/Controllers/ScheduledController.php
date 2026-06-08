@@ -57,7 +57,9 @@ class ScheduledController extends Controller
             $papTypes = PapType::active()->ordered()->get();
 
             $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-            $doctrines = DiscordHelper::listFittingDoctrines();
+            // collect() wrap: listFittingDoctrines() returns a PHP array; the
+            // blade calls ->count() on it which crashes on bare arrays
+            $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
             // FC Opportunities: when arriving from a tactical event (Calendar
             // modal or FC Opportunities board), pre-fill the form with the

@@ -38,7 +38,9 @@ class TemplateController extends Controller
         $papTypes = PapType::active()->ordered()->get();
 
         $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-        $doctrines = DiscordHelper::listFittingDoctrines();
+        // collect() wrap: listFittingDoctrines() returns a PHP array; the
+        // blade calls ->count() on it which crashes on bare arrays
+        $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
         return view('discordpings::templates.create', compact('roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
     }
@@ -109,7 +111,9 @@ class TemplateController extends Controller
             $papTypes = PapType::active()->ordered()->get();
 
             $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-            $doctrines = DiscordHelper::listFittingDoctrines();
+            // collect() wrap: listFittingDoctrines() returns a PHP array; the
+            // blade calls ->count() on it which crashes on bare arrays
+            $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
             return view('discordpings::templates.edit', compact('template', 'roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
         } catch (\Exception $e) {

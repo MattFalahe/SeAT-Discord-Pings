@@ -38,7 +38,10 @@ class PingController extends Controller
                 ->get();
 
             $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-            $doctrines = DiscordHelper::listFittingDoctrines();
+            // listFittingDoctrines() returns a PHP array; wrap in collect() so
+            // the blade's ($doctrines ?? collect())->count() pattern is type-
+            // correct (empty arrays bypass `?? collect()` and crash on ->count())
+            $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
             // FC Opportunities → "Form-up" (immediate Send): when arriving
             // with ?tactical_event_id=N, pre-fill the form with urgent

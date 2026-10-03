@@ -5,6 +5,14 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ---
 
+## Unreleased
+
+### 📖 Documentation
+
+- **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h. Text only, no migrations, fully backwards-compatible.
+
+---
+
 ## 🩹 Version 2.0.1 — *June 2026*
 
 Patch release. One blocker bug fix on top of v2.0.0. No migrations, no schema changes, no new features. Fully backwards-compatible.

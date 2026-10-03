@@ -48,7 +48,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 
 ### With Manager Core + Mining Manager (v2.0.1+)
 
-- ⛏️ **Mining extractions on FC Opportunities** — moon extractions appear as a distinct mining category with the 48h fleet-able window
+- ⛏️ **Mining extractions on FC Opportunities** — moon extractions appear as a distinct mining category with their fleet-able window (48h, or up to 96h with a moon drilling rig)
 - 🏞️ **Multi-FC friendly** — mining ops welcome multiple formup pings (different timezones, fleet sizes, drops across the window); the badge stays informational
 - 📨 **T-2h pre-expiry alerts** (per-webhook opt-in via `Receive mining extraction alerts` flag)
 - 🔗 **Deep link** from any mining row to the Mining Manager extraction detail page (ore composition, jackpot status, countdowns)

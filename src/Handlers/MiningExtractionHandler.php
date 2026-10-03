@@ -16,16 +16,18 @@ use DiscordPings\Models\TacticalEvent;
  * the FC Opportunities board.
  *
  * Lifecycle mapping:
- *   - extraction_ready    → upsert as status='active' (48h fleet-able window opens)
+ *   - extraction_ready    → upsert as status='active' (fleet-able window opens)
  *   - extraction_unstable → keep active, fire pre-expiry alert (T-2h)
  *   - extraction_expired  → flip to status='elapsed' (window closed)
  *
  * Key differences from StructureTimerHandler:
  *   - eve_time on the calendar row = window_closes_at (the actual deadline),
  *     not chunk_arrival_time. FCs care about WHEN the mining window ends,
- *     not when it opened (the 48h window is plenty of lead time).
+ *     not when it opened (the window runs 48h to 96h depending on the
+ *     refinery's moon rigs, plenty of lead time). Mining Manager works the
+ *     close out per chunk, so never derive it from fractured_at + 48h here.
  *   - Only ONE pre-event alert stage (unstable / T-2h), not the two-stage
- *     T-24h + T-1h structure-timer ladder. Mining ops are 2-day events with
+ *     T-24h + T-1h structure-timer ladder. Mining ops run 2 to 4 days with
  *     many fleets welcome over the window — the unstable alert is a final
  *     "form up now before it expires" reminder.
  *   - Uses the receives_mining_alerts webhook flag, NOT receives_structure_alerts.
@@ -81,8 +83,9 @@ class MiningExtractionHandler
             switch ($stage) {
                 case 'ready':
                     // Window has opened; calendar entry is now active.
-                    // No ping at this stage — 48h is plenty of lead time
-                    // and a "ready" ping would be premature noise.
+                    // No ping at this stage: the window runs at least 48h,
+                    // plenty of lead time, and a "ready" ping would be
+                    // premature noise.
                     break;
 
                 case 'unstable':

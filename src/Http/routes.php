@@ -119,6 +119,27 @@ Route::group([
         ->name('discordpings.config.pap-types.toggle')
         ->middleware('can:discordpings.manage_webhooks');
 
+    // Ping Requests: the buttons line members get
+    Route::post('/config/ping-requests', 'PingRequestButtonController@store')
+        ->name('discordpings.config.ping-requests.store')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::post('/config/ping-requests/examples', 'PingRequestButtonController@loadExamples')
+        ->name('discordpings.config.ping-requests.examples')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::put('/config/ping-requests/{id}', 'PingRequestButtonController@update')
+        ->name('discordpings.config.ping-requests.update')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::post('/config/ping-requests/{id}/toggle', 'PingRequestButtonController@toggle')
+        ->name('discordpings.config.ping-requests.toggle')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    Route::delete('/config/ping-requests/{id}', 'PingRequestButtonController@destroy')
+        ->name('discordpings.config.ping-requests.destroy')
+        ->middleware('can:discordpings.manage_webhooks');
+
     // Structure Timer integration settings
     Route::post('/config/structure-timers', 'DiscordConfigController@updateStructureTimerSettings')
         ->name('discordpings.config.structure-timers')

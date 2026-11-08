@@ -53,6 +53,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#ping-requests-tab">
+                        <i class="fas fa-hand-paper"></i> Ping Requests
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#structure-timers-tab">
                         <i class="fas fa-satellite-dish"></i> Structure Timers
                     </a>
@@ -396,6 +401,11 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                {{-- Ping Requests Tab --}}
+                <div class="tab-pane fade" id="ping-requests-tab">
+                    @include('discordpings::config.sections.ping-requests')
                 </div>
 
                 {{-- Structure Timers Tab --}}

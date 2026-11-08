@@ -4,12 +4,14 @@ namespace DiscordPings\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\DiscordChannel;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\StagingLocation;
 use DiscordPings\Models\PapType;
+use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\PluginSetting;
 use DiscordPings\Services\DiscordRoleResolver;
 
@@ -62,14 +64,93 @@ class DiscordConfigController extends Controller
         $connectorAvailable  = DiscordRoleResolver::isAvailable();
         $connectorProviderLabel = DiscordRoleResolver::providerLabel();
 
+        // Ping Requests tab.
+        $requestButtons = PingRequestButton::with('webhook')->orderBy('sort_order')->orderBy('name')->get();
+        $requestCorporations = $this->requestCorporations($requestButtons);
+        $seatRoles = $this->seatRoles($requestButtons);
+        $pickerRoles = $this->pickerRoles($roles, $connectorRoles);
+
         return view('discordpings::config.index', compact(
             'webhooks', 'roles', 'channels', 'stagings', 'papTypes',
             'structureAlertsEnabled', 'miningAlertsEnabled',
             'managerCoreInstalled', 'structureManagerInstalled', 'miningManagerInstalled',
             'formupOffsetMinutes',
             'alertWebhooks', 'miningAlertWebhooks', 'routingCorpNames',
-            'connectorRoles', 'connectorAvailable', 'connectorProviderLabel'
+            'connectorRoles', 'connectorAvailable', 'connectorProviderLabel',
+            'requestButtons', 'requestCorporations', 'seatRoles', 'pickerRoles'
         ));
+    }
+
+    /**
+     * Corporations a button can be limited to: the ones with members on this
+     * SeAT, plus any a button already names, so that editing a button can't
+     * quietly drop its limit.
+     *
+     * @return array<int, string> names by corporation id
+     */
+    private function requestCorporations($buttons): array
+    {
+        try {
+            $names = DB::table('refresh_tokens')
+                ->join('character_affiliations', 'refresh_tokens.character_id', '=', 'character_affiliations.character_id')
+                ->join('corporation_infos', 'character_affiliations.corporation_id', '=', 'corporation_infos.corporation_id')
+                ->whereNull('refresh_tokens.deleted_at')
+                ->distinct()
+                ->pluck('corporation_infos.name', 'corporation_infos.corporation_id')
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not list corporations for Ping Requests: ' . $e->getMessage());
+            $names = [];
+        }
+
+        $used = $buttons->pluck('corporation_id')->filter()->unique()->all();
+        $names += $this->resolveCorporationNames(array_values(array_diff($used, array_keys($names))));
+
+        foreach ($used as $corporationId) {
+            $names[$corporationId] = $names[$corporationId] ?? 'Corporation ' . $corporationId;
+        }
+
+        asort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $names;
+    }
+
+    /** @return array<int, string> titles by SeAT role id, including any a button still names */
+    private function seatRoles($buttons): array
+    {
+        try {
+            $titles = DB::table('roles')->orderBy('title')->pluck('title', 'id')->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not list SeAT roles for Ping Requests: ' . $e->getMessage());
+            $titles = [];
+        }
+
+        foreach ($buttons->pluck('role_id')->filter()->unique() as $roleId) {
+            $titles[$roleId] = $titles[$roleId] ?? 'Deleted role ' . $roleId;
+        }
+
+        return $titles;
+    }
+
+    /**
+     * What "Pick from Discord" offers: the roles already on the Discord Roles
+     * tab, then whatever the connector has that isn't there yet.
+     *
+     * @return array<int, array{id: string, name: string, source: string}>
+     */
+    private function pickerRoles($roles, array $connectorRoles): array
+    {
+        $picker = [];
+
+        foreach ($roles->where('is_active', true) as $role) {
+            $picker[] = ['id' => (string) $role->role_id, 'name' => (string) $role->name, 'source' => 'SeAT Broadcast'];
+        }
+
+        foreach ($connectorRoles as $role) {
+            $picker[] = ['id' => (string) $role['id'], 'name' => (string) $role['name'], 'source' => DiscordRoleResolver::providerShortLabel($role['source'])];
+        }
+
+        return $picker;
     }
 
     /**

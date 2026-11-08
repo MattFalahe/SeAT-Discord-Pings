@@ -84,6 +84,52 @@
         text-decoration: none;
         transform: translateX(5px);
     }
+
+    /* Recent changes sits on the page rather than in a dark card, so it gets
+       solid colours. A see-through tint goes pale on a light theme. */
+    .recent-changes-box {
+        background: linear-gradient(135deg, #36425f 0%, #343951 100%);
+        border-left: 4px solid #667eea;
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin: 20px 0;
+        color: #d1d5db !important;
+    }
+    .recent-changes-box h4 {
+        color: #8b9cf7 !important;
+        margin-top: 0;
+        margin-bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+    .recent-changes-box h4 .recent-changes-tag {
+        font-size: 0.6em;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: #c7d2fe !important;
+        background: rgba(102, 126, 234, 0.22);
+        border: 1px solid rgba(139, 156, 247, 0.4);
+        border-radius: 20px;
+        padding: 3px 12px;
+    }
+    .recent-changes-box p,
+    .recent-changes-box li {
+        color: #d1d5db !important;
+    }
+    .recent-changes-box ul {
+        margin-bottom: 0;
+        padding-left: 20px;
+    }
+    .recent-changes-box strong {
+        color: #e2e8f0 !important;
+    }
+    .recent-changes-box a {
+        color: #a5b4fc !important;
+    }
 </style>
 @endpush
 
@@ -107,6 +153,9 @@
                     </a>
                     <a href="#" class="nav-link" data-section="getting-started">
                         <i class="fas fa-rocket"></i> {{ trans('discordpings::help.getting_started') }}
+                    </a>
+                    <a href="#" class="nav-link" data-section="ping-requests">
+                        <i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}
                     </a>
                     <a href="#" class="nav-link" data-section="sending-pings">
                         <i class="fas fa-paper-plane"></i> {{ trans('discordpings::help.sending_pings') }}
@@ -297,6 +346,18 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 </p>
             </div>
 
+            {{-- The latest update of v2 only: what you would notice without reading the changelog. --}}
+            <div class="recent-changes-box">
+                <h4>
+                    <span><i class="fas fa-history"></i> {{ trans('discordpings::help.recent_changes_title') }}</span>
+                    <span class="recent-changes-tag">{{ trans('discordpings::help.recent_changes_name') }}</span>
+                </h4>
+                <p>{!! trans('discordpings::help.recent_changes_intro') !!}</p>
+                <ul>
+                    <li>{!! trans('discordpings::help.recent_changes_ping_requests') !!}</li>
+                </ul>
+            </div>
+
             <div class="help-card">
                 <h3><i class="fas fa-info-circle"></i> {{ trans('discordpings::help.what_is_title') }}</h3>
                 <p>{!! trans('discordpings::help.what_is_desc') !!}</p>
@@ -347,27 +408,46 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         </h5>
                         <p>{{ trans('discordpings::help.feature_fc_opportunities_desc') }}</p>
                     </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.feature_ping_requests_title') }}</h5>
+                        <p>{{ trans('discordpings::help.feature_ping_requests_desc') }}</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="help-card">
-                <h3><i class="fas fa-rocket"></i> {{ trans('discordpings::help.quick_links_title') }}</h3>
+            {{-- View alone only opens this page, so someone holding just that has nothing to link to. --}}
+            @canany(['discordpings.line_member', 'discordpings.send', 'discordpings.view_history'])
+                <div class="help-card">
+                    <h3><i class="fas fa-rocket"></i> {{ trans('discordpings::help.quick_links_title') }}</h3>
 
-                <div class="quick-links">
-                    <a href="{{ route('discordpings.send') }}" class="quick-link">
-                        <i class="fas fa-paper-plane"></i>
-                        {{ trans('discordpings::help.send_broadcast') }}
-                    </a>
-                    <a href="{{ route('discordpings.history') }}" class="quick-link">
-                        <i class="fas fa-history"></i>
-                        {{ trans('discordpings::help.view_history') }}
-                    </a>
-                    <a href="{{ route('discordpings.scheduled.calendar') }}" class="quick-link">
-                        <i class="fas fa-calendar-alt"></i>
-                        {{ trans('discordpings::help.view_calendar') }}
-                    </a>
+                    <div class="quick-links">
+                        @can('discordpings.line_member')
+                            <a href="{{ route('discordpings.requests') }}" class="quick-link">
+                                <i class="fas fa-hand-paper"></i>
+                                {{ trans('discordpings::help.ping_requests') }}
+                            </a>
+                        @endcan
+                        @can('discordpings.send')
+                            <a href="{{ route('discordpings.send') }}" class="quick-link">
+                                <i class="fas fa-paper-plane"></i>
+                                {{ trans('discordpings::help.send_broadcast') }}
+                            </a>
+                        @endcan
+                        @can('discordpings.view_history')
+                            <a href="{{ route('discordpings.history') }}" class="quick-link">
+                                <i class="fas fa-history"></i>
+                                {{ trans('discordpings::help.view_history') }}
+                            </a>
+                        @endcan
+                        @can('discordpings.send')
+                            <a href="{{ route('discordpings.scheduled.calendar') }}" class="quick-link">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ trans('discordpings::help.view_calendar') }}
+                            </a>
+                        @endcan
+                    </div>
                 </div>
-            </div>
+            @endcanany
         </div>
 
         {{-- What's New --}}
@@ -432,6 +512,37 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{{ trans('discordpings::help.getting_started_step5') }}</li>
                     <li>{{ trans('discordpings::help.getting_started_step6') }}</li>
                 </ol>
+            </div>
+        </div>
+
+        {{-- Ping Requests --}}
+        <div class="help-section" id="ping-requests">
+            <div class="help-card">
+                <h3><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}</h3>
+                <p>{{ trans('discordpings::help.ping_requests_intro') }}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_access_title') }}</h4>
+                <p>{!! trans('discordpings::help.ping_requests_access_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_emergency_title') }}</h4>
+                <p>{{ trans('discordpings::help.ping_requests_emergency_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_request_title') }}</h4>
+                <p>{{ trans('discordpings::help.ping_requests_request_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_saved_title') }}</h4>
+                <p>{!! trans('discordpings::help.ping_requests_saved_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_discord_title') }}</h4>
+                <p>{!! trans('discordpings::help.ping_requests_discord_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_setup_title') }}</h4>
+                <p>{!! trans('discordpings::help.ping_requests_setup_desc') !!}</p>
+
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <div>{!! trans('discordpings::help.ping_requests_history_note') !!}</div>
+                </div>
             </div>
         </div>
 
@@ -725,6 +836,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.configuration_pap_types') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_pap_types_desc') }}</p>
 
+                <h4>{{ trans('discordpings::help.configuration_ping_requests') }}</h4>
+                <p>{{ trans('discordpings::help.configuration_ping_requests_desc') }}</p>
+
                 <h4>{{ trans('discordpings::help.configuration_structure_timers') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_structure_timers_desc') }}</p>
 
@@ -740,6 +854,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
             <div class="help-card">
                 <h3><i class="fas fa-th-large"></i> {{ trans('discordpings::help.pages_guide') }}</h3>
                 <p>{{ trans('discordpings::help.pages_guide_intro') }}</p>
+
+                <h4><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.page_ping_requests') }}</h4>
+                <p>{{ trans('discordpings::help.page_ping_requests_desc') }}</p>
 
                 <h4><i class="fas fa-paper-plane"></i> {{ trans('discordpings::help.page_send') }}</h4>
                 <p>{{ trans('discordpings::help.page_send_desc') }}</p>
@@ -881,6 +998,16 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <p>{{ trans('discordpings::help.permissions_scenarios_desc') }}</p>
 
                 <div class="feature-grid">
+                    <div class="feature-item" style="border-left: 4px solid #17a2b8;">
+                        <h5><i class="fas fa-hand-paper"></i> Line Member</h5>
+                        <p>Flies in fleets and sometimes needs help.</p>
+                        <ul style="margin-bottom: 0;">
+                            <li><code>discordpings.view</code></li>
+                            <li><code>discordpings.line_member</code></li>
+                        </ul>
+                        <p style="margin-top: 0.5rem; font-size: 0.85rem;" class="text-muted">Ping Requests and this Help page, nothing else in the plugin.</p>
+                    </div>
+
                     <div class="feature-item" style="border-left: 4px solid #1abc9c;">
                         <h5><i class="fas fa-user"></i> Solo FC (small corp)</h5>
                         <p>One person runs all ops.</p>
@@ -943,7 +1070,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <p>{{ trans('discordpings::help.permissions_reference_desc') }}</p>
 
                 <ul class="permissions-list">
-                    <li><strong>View Discord Pings</strong> (<code>discordpings.view</code>) — {{ trans('discordpings::help.perm_view') }}</li>
+                    <li><strong>View SeAT Broadcast</strong> (<code>discordpings.view</code>) — {{ trans('discordpings::help.perm_view') }}</li>
                     <li><strong>Line Member</strong> (<code>discordpings.line_member</code>) — {{ trans('discordpings::help.perm_line_member') }}</li>
                     <li><strong>Send Discord Pings</strong> (<code>discordpings.send</code>) — {{ trans('discordpings::help.perm_send') }}</li>
                     <li><strong>Send to Multiple Webhooks</strong> (<code>discordpings.send_multiple</code>) — {{ trans('discordpings::help.perm_send_multiple') }}</li>
@@ -1018,6 +1145,19 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution2') }}</li>
                     <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution3') }}</li>
                     <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution4') }}</li>
+                </ul>
+
+                <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_requests_missing_title') }}</h4>
+                <ul>
+                    <li>{{ trans('discordpings::help.issue_requests_missing_solution1') }}</li>
+                    <li>{{ trans('discordpings::help.issue_requests_missing_solution2') }}</li>
+                    <li>{{ trans('discordpings::help.issue_requests_missing_solution3') }}</li>
+                </ul>
+
+                <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_requests_no_discord_title') }}</h4>
+                <ul>
+                    <li>{{ trans('discordpings::help.issue_requests_no_discord_solution1') }}</li>
+                    <li>{{ trans('discordpings::help.issue_requests_no_discord_solution2') }}</li>
                 </ul>
             </div>
         </div>

@@ -5,11 +5,60 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ---
 
-## Unreleased
+## 🙋 Version 2.0.2 — *November 2026*
+
+**Requests and Roles.** Line members get their own way into the plugin. You set up buttons in Settings ("Help, I'm tackled", "I want a mining fleet"), each with a webhook and a role to ping, and anyone holding the new **Line Member** permission presses one from the new **Ping Requests** page. The message reaches Discord with the sender's SeAT main character and corporation, plus their Discord name when seat-connector is installed and the account is linked, because the character in trouble can be any alt.
+
+**Backwards compatible.** Two new tables and one new permission. Nothing that exists is changed or rewritten, no role loses anything, and nobody gets the page until you hand out the permission. No button posts anywhere until you give it a webhook and switch it on.
+
+### 🎉 New Features
+
+**🙋 Ping Requests**
+- New **Ping Requests** sidebar page for anyone with `discordpings.view` and `discordpings.line_member`
+- Two kinds of button. **Emergency** buttons are red and post the moment they're pressed: no confirm box, no cooldown and no limit from the plugin, since every second counts. **Request** buttons show what will be posted first, then rest for a per-member cooldown you set on each button
+- **Starter text** takes your alliance's format as it stands: a line ending in a colon becomes a box for the member to fill in, every other line goes out as written, and a box left empty is dropped from the message
+- **Saved forms** per button and per member (20 at most), so one press can carry the ship, the system and the cyno
+- A button can be limited to a corporation, a SeAT role or both
+- Only the role set on the button can be pinged, whatever a member types, and member text can't hide a link behind other words
+- A press waits for Discord's answer, so "Sent to Discord" means it got there. If it didn't, the member is told and the cooldown is handed back
+- Requests are not broadcasts: they don't publish `pings.broadcast.sent`, so HR Manager won't take a member asking for help for an active FC
+- **Settings > Ping Requests** is the new tab for all of this. **Load examples** adds four buttons to start from, switched off and with no webhook
+
+**🔐 Line Member permission**
+- `discordpings.line_member` is the permission for the member side of the plugin. `discordpings.view` is still the menu and Help & Documentation, and its description now says so
+
+**📜 History**
+- Requests show on the History page with a **Ping request** badge and an All / Broadcasts / Ping requests filter. They can't be resent
+- They stay off the Calendar and out of an FC's recent pings
+
+**🩺 Diagnostics**
+- Master Test checks the two new tables and warns about a switched-on button with no active webhook, an emergency button that pings nobody, or a button limited to a SeAT role that has since been deleted. It also says whether seat-connector was found
+
+### 🐛 Bug Fixes
+
+- Quick Links on the Help page now only offer what you can open. Someone holding View alone used to get links that ended in a 403
 
 ### 📖 Documentation
 
-- **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h. Text only, no migrations, fully backwards-compatible.
+- **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h
+- Help & Documentation has a Ping Requests section and a Line Member recipe. The permission list now uses the name SeAT shows for View
+
+### 🧪 Under the hood
+
+- A test suite and GitHub checks now run on every push
+
+### 📦 Upgrade
+
+Migrations run on restart. Then give **Line Member** to the role your members hold and add your buttons in Settings > Ping Requests.
+
+```
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml down
+docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml up -d
+```
+
+### ⚠️ Breaking Changes
+
+None. v2.0.1 installs upgrade cleanly with all settings, webhooks, scheduled pings, broadcast history, templates and tactical events preserved.
 
 ---
 

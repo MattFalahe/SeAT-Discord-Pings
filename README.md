@@ -36,6 +36,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - ‼️ **PREPING ‼️** broadcast type alongside Fleet / Announcement / Message
 - 🎨 **Visual color picker** for embed colours
 - 📡 **Multi-webhook send** to fan out a single broadcast across channels
+- 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account
 
 ### With Manager Core + Structure Manager
 
@@ -61,7 +62,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 ### Diagnostic & operational
 
 - 🩺 **Admin-only Diagnostic page** at `/discord-pings/diagnostic` (NOT in sidebar) with 6 tabs: Health Checks, Master Test, System Validation, Settings Health, Data Integrity, Broadcast Trace
-- 🗺️ **Notification Routing Map** (7th Settings tab) — read-only snapshot showing which webhooks fire for each event, with corp scope + active/dormant state
+- 🗺️ **Notification Routing Map** (last Settings tab) — read-only snapshot showing which webhooks fire for each event, with corp scope + active/dormant state
 - 📚 **In-plugin Help & Documentation** with scenario-driven permissions docs, EVE→local time explanation, full feature reference
 
 ## Requirements
@@ -71,7 +72,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - **Laravel** 10.0+
 - **Discord webhook URLs**
 - **Queue worker + scheduler** running for scheduled pings and EventBus delivery
-- *Optional* — Manager Core, Structure Manager, Mining Manager (for the cross-plugin integrations described above)
+- *Optional* — Manager Core, Structure Manager, Mining Manager (for the cross-plugin integrations described above), seat-connector with its Discord driver (adds the sender's Discord name to Ping Requests)
 
 ## Installation
 
@@ -98,15 +99,15 @@ Two-tier model for scheduled-broadcast surfaces (Calendar, FC Opportunities, sch
 | `discordpings.send_multiple` | extra | Send a single broadcast to multiple webhooks at once |
 | `discordpings.view_history` | baseline | See own broadcast history (Calendar + History page) |
 | `discordpings.view_all_history` | extra | See every user's broadcast history |
-| `discordpings.manage_webhooks` | admin | Manage Settings page (webhooks / roles / channels / staging / PAP types / structure-timer + mining-alert toggles / routing map) |
+| `discordpings.manage_webhooks` | admin | Manage Settings page (webhooks / roles / channels / staging / PAP types / ping request buttons / structure-timer + mining-alert toggles / routing map) |
 | `discordpings.manage_scheduled` | **Fleet Coordinator** | Adds visibility + control over OTHER users' scheduled pings, plus the bulk-clear of inactive pings (stacks ON TOP of the FC tier) |
 | `discordpings.manage_templates` | baseline | Manage own broadcast templates |
 | `discordpings.manage_global_templates` | admin | Manage global broadcast templates visible to everyone |
 | `discordpings.admin` | admin | Access the `/discord-pings/diagnostic` admin page |
 
-The Help & Documentation page inside the plugin has a **Permissions** section with five role recipes (Solo FC / Regular FC / Fleet Coordinator / Auditor / Plugin Admin) showing the exact permission combinations to assign — start there.
+The Help & Documentation page inside the plugin has a **Permissions** section with six role recipes (Line Member / Solo FC / Regular FC / Fleet Coordinator / Auditor / Plugin Admin) showing the exact permission combinations to assign — start there.
 
-## Settings page (7 tabs)
+## Settings page (8 tabs)
 
 | Tab | What lives here |
 |---|---|
@@ -115,6 +116,7 @@ The Help & Documentation page inside the plugin has a **Permissions** section wi
 | Discord Channels | Pre-registered channels for inline `#channel` links |
 | Staging Locations | Pre-registered staging spots for quick formup-location selection |
 | PAP Types | Configurable PAP categories (Strategic / Peacetime / CTA seeded by default) |
+| Ping Requests | The buttons line members can press: type, webhook, role to ping, starter text, cooldown, corporation or SeAT role limit |
 | Structure Timers | Master toggles for pre-event alerts (structure + mining), default formup lead time, MC / SM / MM detection badges |
 | Routing Map | Read-only snapshot of which webhooks will fire for each event right now, with corp scope + master switch state |
 

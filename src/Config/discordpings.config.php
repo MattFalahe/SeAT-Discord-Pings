@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => '2.0.1',
+    'version' => '2.0.2',
     
     // App name for Discord webhooks
     'app_name' => 'SeAT Broadcast',

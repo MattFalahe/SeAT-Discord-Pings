@@ -32,6 +32,7 @@ class PingController extends Controller
             $templates = PingTemplate::forUser(auth()->id())->get();
 
             $recentPings = PingHistory::where('user_id', auth()->id())
+                ->broadcasts()
                 ->with('webhook')
                 ->latest()
                 ->take(5)

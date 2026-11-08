@@ -15,6 +15,16 @@
             <h3 class="card-title">
                 <i class="fas fa-history"></i> Ping History
             </h3>
+            <div class="card-tools">
+                @php
+                    $source = request()->query('source');
+                @endphp
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ route('discordpings.history') }}" class="btn {{ $source === 'broadcasts' || $source === 'requests' ? 'btn-pings-secondary' : 'btn-pings-primary' }}">All</a>
+                    <a href="{{ route('discordpings.history', ['source' => 'broadcasts']) }}" class="btn {{ $source === 'broadcasts' ? 'btn-pings-primary' : 'btn-pings-secondary' }}">Broadcasts</a>
+                    <a href="{{ route('discordpings.history', ['source' => 'requests']) }}" class="btn {{ $source === 'requests' ? 'btn-pings-primary' : 'btn-pings-secondary' }}">Ping requests</a>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <table id="historyTable" class="table table-striped table-hover" style="width:100%">
@@ -45,11 +55,20 @@
                                     <span class="badge badge-secondary">Deleted</span>
                                 @endif
                             </td>
-                            <td>{{ Str::limit($history->message, 80) }}</td>
+                            <td>
+                                @if($history->isMemberRequest())
+                                    <span class="badge badge-info">Ping request</span>
+                                @endif
+                                {{ Str::limit($history->message, 80) }}
+                            </td>
                             <td>{{ $history->user_name }}</td>
                             <td>
                                 @if($history->status === 'sent')
                                     <span class="badge badge-success">Sent</span>
+                                @elseif($history->status === 'blocked')
+                                    <span class="badge badge-secondary">Cooldown</span>
+                                @elseif($history->status === 'rate_limited')
+                                    <span class="badge badge-warning">Rate limited</span>
                                 @else
                                     <span class="badge badge-danger">Failed</span>
                                 @endif
@@ -60,7 +79,7 @@
                                        class="btn btn-info">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    @if($history->webhook && $history->webhook->is_active)
+                                    @if($history->webhook && $history->webhook->is_active && ! $history->isMemberRequest())
                                         <form method="POST" action="{{ route('discordpings.history.resend', $history->id) }}"
                                               style="display: inline;">
                                             @csrf
@@ -97,9 +116,9 @@ $(document).ready(function() {
             search: '_INPUT_',
             searchPlaceholder: 'Search history...',
             lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ broadcasts',
-            infoEmpty: 'No broadcast history found',
-            emptyTable: 'No broadcast history found'
+            info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+            infoEmpty: 'No history found',
+            emptyTable: 'No history found'
         }
     });
 });

@@ -549,6 +549,7 @@ class ScheduledController extends Controller
 
             if ($canSeeOwnHistory || $canSeeAllHistory) {
                 $historyQuery = PingHistory::with(['webhook', 'user'])
+                    ->broadcasts()
                     ->where('status', 'sent')
                     ->whereBetween('created_at', [$start, $end]);
 

@@ -33,6 +33,15 @@ class PingHistory extends Model
         return $query->where('fields->source', self::SOURCE_MEMBER_REQUEST);
     }
 
+    /** A row with no source at all is an ordinary broadcast, and a plain != would skip those. */
+    public function scopeBroadcasts($query)
+    {
+        return $query->where(function ($inner) {
+            $inner->whereNull('fields->source')
+                ->orWhere('fields->source', '!=', self::SOURCE_MEMBER_REQUEST);
+        });
+    }
+
     /**
      * Get the webhook
      */

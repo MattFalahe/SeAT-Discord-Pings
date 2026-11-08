@@ -255,6 +255,38 @@ class SourceTest extends TestCase
         $this->assertSame($total, $gated);
     }
 
+    /** Resend posts as an FC broadcast, which is the one thing a member's request must never become. */
+    public function test_a_ping_request_can_never_be_resent(): void
+    {
+        foreach (['history/index.blade.php', 'history/show.blade.php'] as $view) {
+            $source = file_get_contents(self::SRC . 'resources/views/' . $view);
+            $this->assertSame(
+                preg_match_all("/route\('discordpings\.history\.resend'/", $source),
+                preg_match_all("/isMemberRequest\(\)\)\s*<form method=\"POST\" action=\"\{\{ route\('discordpings\.history\.resend'/", $source),
+                $view . ' offers Resend without checking for a ping request'
+            );
+        }
+
+        $controller = file_get_contents(self::SRC . 'Http/Controllers/HistoryController.php');
+        $resend = substr($controller, strpos($controller, 'function resend'));
+        $this->assertLessThan(strpos($resend, 'SendPingJob::dispatch'), strpos($resend, 'isMemberRequest()'));
+    }
+
+    /** The Calendar and an FC's recent list are about broadcasts. A member shouting for help would only be noise there. */
+    public function test_ping_requests_stay_off_the_calendar_and_the_recent_list(): void
+    {
+        $queries = [
+            'ScheduledController.php' => "PingHistory::with(['webhook', 'user'])",
+            'PingController.php' => "PingHistory::where('user_id', auth()->id())",
+        ];
+
+        foreach ($queries as $file => $start) {
+            $source = file_get_contents(self::SRC . 'Http/Controllers/' . $file);
+            $this->assertStringContainsString($start, $source, $file . ' no longer reads history this way');
+            $this->assertStringContainsString('->broadcasts()', substr($source, strpos($source, $start), 120), $file . ' lets ping requests in');
+        }
+    }
+
     /** All of this is public, and the CSS goes out to every browser that opens a page. */
     public function test_nothing_published_names_a_private_note(): void
     {

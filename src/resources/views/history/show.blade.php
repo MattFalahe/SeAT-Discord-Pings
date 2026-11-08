@@ -46,6 +46,10 @@
                 <dd class="col-sm-9">
                     @if($history->status === 'sent')
                         <span class="badge badge-success">Sent Successfully</span>
+                    @elseif($history->status === 'blocked')
+                        <span class="badge badge-secondary">Held by cooldown</span>
+                    @elseif($history->status === 'rate_limited')
+                        <span class="badge badge-warning">Rate limited</span>
                     @else
                         <span class="badge badge-danger">Failed</span>
                     @endif
@@ -81,8 +85,8 @@
             </dl>
         </div>
         <div class="card-footer">
-            @if($history->webhook && $history->webhook->is_active)
-                <form method="POST" action="{{ route('discordpings.history.resend', $history->id) }}" 
+            @if($history->webhook && $history->webhook->is_active && ! $history->isMemberRequest())
+                <form method="POST" action="{{ route('discordpings.history.resend', $history->id) }}"
                       style="display: inline;">
                     @csrf
                     <button type="submit" class="btn btn-warning">

@@ -36,7 +36,13 @@ class HistoryController extends Controller
             if ($request->has('search')) {
                 $query->where('message', 'like', '%' . $request->search . '%');
             }
-            
+
+            if ($request->query('source') === 'requests') {
+                $query->memberRequests();
+            } elseif ($request->query('source') === 'broadcasts') {
+                $query->broadcasts();
+            }
+
             // Cap at 1000 most-recent rows: the view uses client-side DataTables,
             // which slows to a crawl past ~10k rows and OOMs on very large histories.
             $histories = $query->latest()->limit(1000)->get();
@@ -79,6 +85,12 @@ class HistoryController extends Controller
         try {
             $history = PingHistory::with('webhook')->findOrFail($id);
             
+            // Resend goes out as an FC broadcast under whoever pressed it, and
+            // that's not what a member's request for help is.
+            if ($history->isMemberRequest()) {
+                return redirect()->back()->with('error', 'A ping request cannot be resent.');
+            }
+
             // Check if webhook still exists and is active
             if (!$history->webhook || !$history->webhook->is_active) {
                 return redirect()->back()->with('error', 'Webhook is no longer available.');

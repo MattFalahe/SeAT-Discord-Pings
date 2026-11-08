@@ -14,6 +14,9 @@ class SourceTest extends TestCase
     private const SRC = self::ROOT . 'src/';
     private const HELP_VIEW = 'src/resources/views/help/index.blade.php';
 
+    /** Everything before this has shipped and can't be renamed, so the naming rules start here. */
+    private const FIRST_RULED_MIGRATION = 20;
+
     /** @return string[] paths of the files under src/ with this ending */
     private static function files(string $ending, string $under = ''): array
     {
@@ -78,6 +81,48 @@ class SourceTest extends TestCase
                     $value = is_array($value) ? ($value[$part] ?? null) : null;
                 }
                 $this->assertNotNull($value, basename($path) . " names $file.$key, which is not there");
+            }
+        }
+    }
+
+    /** @return string[] the migrations the naming rules apply to, in number order */
+    private static function ruledMigrations(): array
+    {
+        $found = array_filter(
+            self::files('.php', 'database/migrations'),
+            fn ($path) => (int) substr(basename($path), 11, 6) >= self::FIRST_RULED_MIGRATION
+        );
+        usort($found, fn ($a, $b) => substr(basename($a), 11, 6) <=> substr(basename($b), 11, 6));
+
+        return $found;
+    }
+
+    public function test_new_migrations_are_named_classes_matching_their_file(): void
+    {
+        foreach (self::ruledMigrations() as $path) {
+            $source = file_get_contents($path);
+            $suffix = preg_replace('/^\d{4}_\d{2}_\d{2}_\d{6}_/', '', basename($path, '.php'));
+            $class = str_replace(' ', '', ucwords(str_replace('_', ' ', $suffix)));
+
+            $this->assertStringNotContainsString('return new class', $source, basename($path));
+            $this->assertMatchesRegularExpression('/\bclass ' . $class . ' extends Migration\b/', $source, basename($path));
+            $this->assertStringContainsString('discord_ping', $suffix, basename($path) . ' has to name the plugin: migrations share one namespace');
+        }
+    }
+
+    public function test_new_migration_numbers_run_in_order_with_none_repeated(): void
+    {
+        $numbers = array_map(fn ($path) => (int) substr(basename($path), 11, 6), self::ruledMigrations());
+
+        $this->assertSame(range(self::FIRST_RULED_MIGRATION, self::FIRST_RULED_MIGRATION + count($numbers) - 1), $numbers);
+    }
+
+    public function test_index_names_fit_in_what_mysql_allows(): void
+    {
+        foreach (self::ruledMigrations() as $path) {
+            preg_match_all("/'(dp_[a-z0-9_]+)'/", file_get_contents($path), $matches);
+            foreach ($matches[1] as $name) {
+                $this->assertLessThanOrEqual(64, strlen($name), $name);
             }
         }
     }

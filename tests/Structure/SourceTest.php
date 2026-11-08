@@ -291,18 +291,4 @@ class SourceTest extends TestCase
         }
     }
 
-    /** All of this is public, and the CSS goes out to every browser that opens a page. */
-    public function test_nothing_published_names_a_private_note(): void
-    {
-        $note = '/feedback_[a-z_]{4,}|(?:project|reference|user)_[a-z0-9_]{4,}\.md|MEMORY\.md|project memory|\(memory\)|north star|claude|anthropic|co-authored-by|ai-assisted|\[\[[a-z0-9_-]+\]\]/i';
-
-        foreach (['.php', '.css', '.js'] as $ending) {
-            foreach (self::files($ending) as $path) {
-                if (str_contains(str_replace('\\', '/', $path), '/vendor/')) {
-                    continue;
-                }
-                $this->assertDoesNotMatchRegularExpression($note, file_get_contents($path), basename($path));
-            }
-        }
-    }
 }

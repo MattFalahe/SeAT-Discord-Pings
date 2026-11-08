@@ -944,6 +944,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
 
                 <ul class="permissions-list">
                     <li><strong>View Discord Pings</strong> (<code>discordpings.view</code>) — {{ trans('discordpings::help.perm_view') }}</li>
+                    <li><strong>Line Member</strong> (<code>discordpings.line_member</code>) — {{ trans('discordpings::help.perm_line_member') }}</li>
                     <li><strong>Send Discord Pings</strong> (<code>discordpings.send</code>) — {{ trans('discordpings::help.perm_send') }}</li>
                     <li><strong>Send to Multiple Webhooks</strong> (<code>discordpings.send_multiple</code>) — {{ trans('discordpings::help.perm_send_multiple') }}</li>
                     <li><strong>Manage Webhooks</strong> (<code>discordpings.manage_webhooks</code>) — {{ trans('discordpings::help.perm_manage_webhooks') }}</li>

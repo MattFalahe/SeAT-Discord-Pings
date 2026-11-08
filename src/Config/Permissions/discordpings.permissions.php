@@ -5,6 +5,10 @@ return [
         'label' => 'discordpings::permissions.view_label',
         'description' => 'discordpings::permissions.view_description',
     ],
+    'line_member' => [
+        'label' => 'discordpings::permissions.line_member_label',
+        'description' => 'discordpings::permissions.line_member_description',
+    ],
     'send' => [
         'label' => 'discordpings::permissions.send_label',
         'description' => 'discordpings::permissions.send_description',

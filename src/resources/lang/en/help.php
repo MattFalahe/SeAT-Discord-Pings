@@ -259,7 +259,8 @@ return [
 
     'permissions_reference_title' => 'Full Permission Reference',
     'permissions_reference_desc' => 'Every permission the plugin offers, in approximate "you-need-this-first" order.',
-    'perm_view' => 'View Discord Pings - Basic access to the plugin.',
+    'perm_view' => 'View Discord Pings - The menu and this Help page, nothing else.',
+    'perm_line_member' => 'Line Member - Ping Requests: the buttons and saved forms. Needs View Discord Pings as well.',
     'perm_send' => 'Send Discord Pings - Send broadcasts to a single webhook (manual + scheduled). Includes access to the Scheduled Broadcasts list, Calendar, and FC Opportunities planner — limited to the user\'s OWN scheduled pings. Pair with Manage All Scheduled Pings for the Fleet Coordinator tier.',
     'perm_send_multiple' => 'Send to Multiple Webhooks - Send broadcasts to multiple webhooks at once.',
     'perm_manage_webhooks' => 'Manage Webhooks - Create, edit, and delete Discord webhooks and configuration.',

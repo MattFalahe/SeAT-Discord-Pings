@@ -92,7 +92,8 @@ Two-tier model for scheduled-broadcast surfaces (Calendar, FC Opportunities, sch
 
 | Permission | Tier | What it grants |
 |---|---|---|
-| `discordpings.view` | baseline | Sidebar entry visibility |
+| `discordpings.view` | baseline | The menu and Help & Documentation, nothing else |
+| `discordpings.line_member` | member | Ping Requests: the buttons and saved forms. Needs `view` as well |
 | `discordpings.send` | **FC** | Send manual broadcasts. Schedule + see + manage own scheduled pings. Use FC Opportunities planner. See own pings on the Calendar |
 | `discordpings.send_multiple` | extra | Send a single broadcast to multiple webhooks at once |
 | `discordpings.view_history` | baseline | See own broadcast history (Calendar + History page) |

@@ -85,8 +85,11 @@
         transform: translateX(5px);
     }
 
-    /* Recent changes sits on the page rather than in a dark card, so it gets
-       solid colours. A see-through tint goes pale on a light theme. */
+    /* What's New and Recent changes sit on the page rather than in a dark card,
+       so they get solid colours. A see-through tint goes pale on a light theme. */
+    .whats-new-box {
+        background: linear-gradient(135deg, #2c4848 0%, #2c4650 100%);
+    }
     .recent-changes-box {
         background: linear-gradient(135deg, #36425f 0%, #343951 100%);
         border-left: 4px solid #667eea;

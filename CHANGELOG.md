@@ -37,6 +37,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 ### 🐛 Bug Fixes
 
 - Quick Links on the Help page now only offer what you can open. Someone holding View alone used to get links that ended in a 403
+- The What's New box on the Help page can be read on a light SeAT theme. Its text used to fade into the background
 
 ### 📖 Documentation
 

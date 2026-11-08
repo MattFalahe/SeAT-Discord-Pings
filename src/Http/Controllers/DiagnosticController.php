@@ -9,10 +9,12 @@ use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\PapType;
 use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\PluginSetting;
 use DiscordPings\Models\ScheduledPing;
 use DiscordPings\Models\StagingLocation;
 use DiscordPings\Models\TacticalEvent;
+use DiscordPings\Services\DiscordUserResolver;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +115,7 @@ class DiagnosticController extends Controller
             'discord_webhooks', 'discord_ping_histories', 'discord_scheduled_pings',
             'discord_tactical_events', 'discord_settings', 'discord_roles',
             'discord_channels', 'discord_staging_locations', 'discord_pap_types',
+            'discord_ping_request_buttons', 'discord_ping_request_presets',
         ];
         foreach ($requiredTables as $t) {
             $exists = Schema::hasTable($t);
@@ -237,6 +240,10 @@ class DiagnosticController extends Controller
             ];
         }
 
+        if (Schema::hasTable('discord_ping_request_buttons')) {
+            $checks = array_merge($checks, $this->buildPingRequestChecks());
+        }
+
         // Webhook URL encryption
         $rawHistorySample = null;
         try {
@@ -260,6 +267,66 @@ class DiagnosticController extends Controller
         $failures = collect($checks)->where('status', 'error')->count();
 
         return compact('checks', 'passed', 'warnings', 'failures');
+    }
+
+    /**
+     * A broken button only shows itself when somebody presses it, and on an
+     * emergency that is the worst moment to find out.
+     */
+    private function buildPingRequestChecks(): array
+    {
+        $checks = [[
+            'name'   => 'Discord names on ping requests',
+            'status' => 'info',
+            'detail' => DiscordUserResolver::isAvailable()
+                ? 'seat-connector found: a request names the linked Discord account of whoever sent it'
+                : 'seat-connector not installed: a request gives the main character and corporation only (this is fine if you do not use it)',
+        ]];
+
+        $buttons = PingRequestButton::active()->with('webhook')->get();
+
+        if ($buttons->isEmpty()) {
+            $checks[] = [
+                'name'   => 'Ping request buttons',
+                'status' => 'info',
+                'detail' => 'No buttons are switched on',
+            ];
+
+            return $checks;
+        }
+
+        $noWebhook = $buttons->filter(fn ($button) => ! $button->webhook || ! $button->webhook->is_active);
+        $checks[] = [
+            'name'   => 'Ping request buttons can post',
+            'status' => $noWebhook->isEmpty() ? 'ok' : ($noWebhook->contains(fn ($button) => $button->isEmergency()) ? 'error' : 'warn'),
+            'detail' => $noWebhook->isEmpty()
+                ? $buttons->count() . ' button(s) switched on, each with an active webhook'
+                : 'Webhook missing or switched off, so pressing these posts nothing: ' . $noWebhook->pluck('name')->implode(', '),
+        ];
+
+        $noMention = $buttons->filter(fn ($button) => $button->isEmergency() && empty($button->mention_role_id));
+        $checks[] = [
+            'name'   => 'Emergency buttons ping a role',
+            'status' => $noMention->isEmpty() ? 'ok' : 'warn',
+            'detail' => $noMention->isEmpty()
+                ? 'Every emergency button mentions a Discord role'
+                : 'These post without pinging anybody: ' . $noMention->pluck('name')->implode(', '),
+        ];
+
+        $limited = $buttons->whereNotNull('role_id');
+        $knownRoles = $limited->isEmpty()
+            ? collect()
+            : DB::table('roles')->whereIn('id', $limited->pluck('role_id')->unique()->all())->pluck('id')->map(fn ($id) => (int) $id);
+        $lostRole = $limited->reject(fn ($button) => $knownRoles->contains($button->role_id));
+        $checks[] = [
+            'name'   => 'Ping request role limits still exist',
+            'status' => $lostRole->isEmpty() ? 'ok' : 'warn',
+            'detail' => $lostRole->isEmpty()
+                ? 'Every button limited to a SeAT role points at one that exists'
+                : 'Limited to a SeAT role that was deleted, so only admins can see them: ' . $lostRole->pluck('name')->implode(', '),
+        ];
+
+        return $checks;
     }
 
     /**
@@ -370,6 +437,8 @@ class DiagnosticController extends Controller
             'discord_pap_types'          => 'PAP types',
             'discord_webhook_roles'      => 'Webhook ↔ role pivot',
             'discord_pings_templates'    => 'Ping templates',
+            'discord_ping_request_buttons' => 'Ping request buttons',
+            'discord_ping_request_presets' => 'Saved request forms',
         ] as $table => $label) {
             $exists = Schema::hasTable($table);
             $rows   = null;
@@ -518,7 +587,8 @@ class DiagnosticController extends Controller
 
         // Recent history rows attributed to this ping (by user_id + webhook_id heuristic, since
         // history doesn't carry a scheduled_ping_id FK).
-        $recentHistory = PingHistory::where('webhook_id', $ping->webhook_id)
+        $recentHistory = PingHistory::broadcasts()
+            ->where('webhook_id', $ping->webhook_id)
             ->where('user_id', $ping->user_id)
             ->where('created_at', '>=', Carbon::now()->subDays(7))
             ->orderByDesc('created_at')

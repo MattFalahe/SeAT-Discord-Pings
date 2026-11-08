@@ -6,6 +6,7 @@
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
+    .pr-notice { border-left: 4px solid var(--pings-info); }
     .pr-card { height: 100%; margin-bottom: 0; }
     .pr-card.pr-emergency { border-left: 4px solid var(--pings-danger); }
     .pr-plain { white-space: pre-wrap; font-size: 0.875rem; }
@@ -30,10 +31,13 @@
                 : ', Discord not linked';
         }
     @endphp
-    <div class="alert-pings-styled alert-pings-info">
-        <i class="fas fa-info-circle"></i>
-        A red button posts to Discord the moment you press it. The others show you what will be posted first.
-        Every message says who sent it: <strong>{{ $who }}</strong>.
+    {{-- A card and not the tinted alert: this sits right on the page, and that tint goes pale on a light theme. --}}
+    <div class="card card-dark pr-notice">
+        <div class="card-body">
+            <i class="fas fa-info-circle"></i>
+            A red button posts to Discord the moment you press it. The others show you what will be posted first.
+            Every message says who sent it: <strong>{{ $who }}</strong>
+        </div>
     </div>
 
     <div class="row">

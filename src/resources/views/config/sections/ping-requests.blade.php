@@ -161,12 +161,13 @@
                             </select>
                         </div>
                     </div>
-                    <div class="alert-pings-styled alert-pings-info" id="prb_type_help_emergency" style="display: none;">
+                    {{-- Plain muted text, because the tinted alert is unreadable on a modal that a light theme makes white. --}}
+                    <p class="text-muted" id="prb_type_help_emergency" style="display: none;">
                         <i class="fas fa-bolt"></i> An emergency posts the moment it's pressed. There's no confirm box and no cooldown.
-                    </div>
-                    <div class="alert-pings-styled alert-pings-info" id="prb_type_help_request">
+                    </p>
+                    <p class="text-muted" id="prb_type_help_request">
                         <i class="fas fa-clipboard-check"></i> A request shows the member what will be posted first, then waits out the cooldown before it can be pressed again.
-                    </div>
+                    </p>
 
                     <div class="row">
                         <div class="col-md-6 form-group">

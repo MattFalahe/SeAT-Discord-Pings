@@ -269,7 +269,11 @@ class SourceTest extends TestCase
 
         $controller = file_get_contents(self::SRC . 'Http/Controllers/HistoryController.php');
         $resend = substr($controller, strpos($controller, 'function resend'));
-        $this->assertLessThan(strpos($resend, 'SendPingJob::dispatch'), strpos($resend, 'isMemberRequest()'));
+        $this->assertMatchesRegularExpression(
+            '/if \(\$history->isMemberRequest\(\)\) \{\s*return redirect\(\)->back\(\)->with\(\'error\'.*SendPingJob::dispatch/s',
+            $resend,
+            'HistoryController::resend has to refuse a ping request before it queues anything'
+        );
     }
 
     /** The Calendar and an FC's recent list are about broadcasts. A member shouting for help would only be noise there. */

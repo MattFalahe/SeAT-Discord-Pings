@@ -12,6 +12,27 @@ Route::group([
         ->name('discordpings.help')
         ->middleware('can:discordpings.view');
 
+    // Ping Requests: line members
+    Route::get('/requests', 'PingRequestController@index')
+        ->name('discordpings.requests')
+        ->middleware('can:discordpings.line_member');
+
+    Route::post('/requests/{id}/press', 'PingRequestController@press')
+        ->name('discordpings.requests.press')
+        ->middleware('can:discordpings.line_member');
+
+    Route::post('/requests/{id}/presets', 'PingRequestController@storePreset')
+        ->name('discordpings.requests.presets.store')
+        ->middleware('can:discordpings.line_member');
+
+    Route::put('/requests/presets/{id}', 'PingRequestController@updatePreset')
+        ->name('discordpings.requests.presets.update')
+        ->middleware('can:discordpings.line_member');
+
+    Route::delete('/requests/presets/{id}', 'PingRequestController@destroyPreset')
+        ->name('discordpings.requests.presets.destroy')
+        ->middleware('can:discordpings.line_member');
+
     // Templates
     Route::get('/templates', 'TemplateController@index')
         ->name('discordpings.templates')

@@ -244,6 +244,17 @@ class SourceTest extends TestCase
         $this->assertStringNotContainsString('BroadcastEventPublisher', $source);
     }
 
+    public function test_every_member_route_needs_line_member(): void
+    {
+        $routes = file_get_contents(self::SRC . 'Http/routes.php');
+
+        $total = preg_match_all("/'PingRequestController@\w+'/", $routes);
+        $gated = preg_match_all("/'PingRequestController@\w+'\)\s*->name\('[a-z.-]+'\)\s*->middleware\('can:discordpings\.line_member'\)/", $routes);
+
+        $this->assertGreaterThan(0, $total);
+        $this->assertSame($total, $gated);
+    }
+
     /** All of this is public, and the CSS goes out to every browser that opens a page. */
     public function test_nothing_published_names_a_private_note(): void
     {

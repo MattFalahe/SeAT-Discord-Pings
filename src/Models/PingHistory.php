@@ -23,6 +23,16 @@ class PingHistory extends Model
         'created_at' => 'datetime',
     ];
 
+    public function isMemberRequest(): bool
+    {
+        return ($this->fields['source'] ?? null) === self::SOURCE_MEMBER_REQUEST;
+    }
+
+    public function scopeMemberRequests($query)
+    {
+        return $query->where('fields->source', self::SOURCE_MEMBER_REQUEST);
+    }
+
     /**
      * Get the webhook
      */

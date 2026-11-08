@@ -6,6 +6,13 @@
 // invites them to install MC + SM.
 $entries = [
     [
+        'name'  => 'Ping Requests',
+        'label' => 'discordpings::menu.ping_requests',
+        'icon'  => 'fas fa-hand-paper',
+        'route' => 'discordpings.requests',
+        'permission' => 'discordpings.line_member',
+    ],
+    [
         'name'  => 'Send Ping',
         'label' => 'discordpings::menu.send_ping',
         'icon'  => 'fas fa-paper-plane',

@@ -1,0 +1,185 @@
+<?php
+
+namespace DiscordPings\Http\Controllers;
+
+use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\PingRequestButton;
+use DiscordPings\Models\PingRequestPreset;
+use DiscordPings\Services\DiscordUserResolver;
+use DiscordPings\Services\PingRequests\ErrorText;
+use DiscordPings\Services\PingRequests\PingRequestSender;
+use DiscordPings\Services\PingRequests\StarterText;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * The line member's side of Ping Requests: the buttons and their saved forms.
+ */
+class PingRequestController extends Controller
+{
+    /** Plenty for every alt someone flies, without letting the table grow forever. */
+    private const MAX_PRESETS_PER_BUTTON = 20;
+
+    private const MAX_ANSWER_LENGTH = 1000;
+
+    public function index(PingRequestSender $sender)
+    {
+        $user = auth()->user();
+
+        $buttons = PingRequestButton::active()
+            ->visibleTo($user)
+            ->forMembers()
+            ->with('webhook')
+            ->get()
+            ->filter(fn ($button) => $button->webhook && $button->webhook->is_active)
+            ->values();
+
+        $presets = PingRequestPreset::where('user_id', $user->id)
+            ->whereIn('button_id', $buttons->pluck('id'))
+            ->orderBy('name')
+            ->get()
+            ->groupBy('button_id');
+
+        $cards = $buttons->map(fn ($button) => [
+            'id' => $button->id,
+            'name' => $button->name,
+            'emergency' => $button->isEmergency(),
+            'lines' => StarterText::lines($button->starter_text),
+            'plain' => StarterText::compose($button->starter_text, []),
+            'freeText' => ! StarterText::hasQuestions($button->starter_text),
+            'cooldownMinutes' => (int) $button->cooldown_minutes,
+            'readyIn' => $sender->secondsUntilReady($button, $user),
+            'presets' => ($presets[$button->id] ?? collect())->map(fn ($preset) => [
+                'id' => $preset->id,
+                'name' => $preset->name,
+                'answers' => (object) ($preset->answers ?? []),
+                'preview' => StarterText::compose($button->starter_text, $preset->answers ?? []),
+            ])->values()->all(),
+        ])->all();
+
+        $recent = PingHistory::where('user_id', $user->id)
+            ->memberRequests()
+            ->latest()
+            ->take(10)
+            ->get();
+
+        $identity = DiscordUserResolver::senderIdentity($user);
+
+        return view('discordpings::requests.index', compact('cards', 'recent', 'identity'));
+    }
+
+    /**
+     * Every outcome comes back as a normal response with ok true or false, so
+     * the page can always tell the member what happened to their press.
+     */
+    public function press(Request $request, $id, PingRequestSender $sender)
+    {
+        $validated = $request->validate([
+            'preset_id' => 'nullable|integer',
+            'answers' => 'nullable|array',
+            'answers.*' => 'nullable|string|max:' . self::MAX_ANSWER_LENGTH,
+        ]);
+
+        $user = auth()->user();
+        $button = PingRequestButton::active()->visibleTo($user)->with('webhook')->find($id);
+
+        if (! $button) {
+            return response()->json(['ok' => false, 'status' => 'not_found', 'message' => 'That button is no longer available. Reload the page.', 'retry_in' => null], 404);
+        }
+
+        $preset = empty($validated['preset_id']) ? null : $this->ownPreset($validated['preset_id'], $button->id);
+
+        // What was typed in the confirm box wins for this send. The saved form itself stays as it was.
+        $answers = $validated['answers'] ?? ($preset->answers ?? []);
+
+        try {
+            return response()->json($sender->press($button, $answers, $user, $preset->name ?? null));
+        } catch (\Throwable $e) {
+            Log::error('[DiscordPings] Ping request press failed: ' . ErrorText::safe($e->getMessage()), ['button_id' => $button->id]);
+
+            return response()->json(['ok' => false, 'status' => 'failed', 'message' => 'Not delivered. Something went wrong on our side, so press again or tell someone directly.', 'retry_in' => null]);
+        }
+    }
+
+    public function storePreset(Request $request, $id)
+    {
+        $user = auth()->user();
+        $button = PingRequestButton::active()->visibleTo($user)->findOrFail($id);
+        $data = $this->validatedPreset($request, $button);
+
+        $count = PingRequestPreset::where('user_id', $user->id)->where('button_id', $button->id)->count();
+        if ($count >= self::MAX_PRESETS_PER_BUTTON) {
+            return response()->json(['ok' => false, 'message' => 'You have the most saved forms this button allows. Delete one first.'], 422);
+        }
+
+        if ($this->nameTaken($user->id, $button->id, $data['name'])) {
+            return response()->json(['ok' => false, 'message' => 'You already have a saved form with that name.'], 422);
+        }
+
+        PingRequestPreset::create($data + ['user_id' => $user->id, 'button_id' => $button->id]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function updatePreset(Request $request, $id)
+    {
+        $user = auth()->user();
+        $preset = PingRequestPreset::where('user_id', $user->id)->findOrFail($id);
+        $button = PingRequestButton::active()->visibleTo($user)->findOrFail($preset->button_id);
+        $data = $this->validatedPreset($request, $button);
+
+        if ($this->nameTaken($user->id, $button->id, $data['name'], $preset->id)) {
+            return response()->json(['ok' => false, 'message' => 'You already have a saved form with that name.'], 422);
+        }
+
+        $preset->update($data);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function destroyPreset($id)
+    {
+        PingRequestPreset::where('user_id', auth()->id())->findOrFail($id)->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function ownPreset($presetId, $buttonId): ?PingRequestPreset
+    {
+        return PingRequestPreset::where('user_id', auth()->id())->where('button_id', $buttonId)->find($presetId);
+    }
+
+    private function nameTaken(int $userId, int $buttonId, string $name, ?int $exceptPresetId = null): bool
+    {
+        return PingRequestPreset::where('user_id', $userId)
+            ->where('button_id', $buttonId)
+            ->where('name', $name)
+            ->when($exceptPresetId, fn ($query) => $query->where('id', '!=', $exceptPresetId))
+            ->exists();
+    }
+
+    /**
+     * Only answers to what the button actually asks get stored.
+     *
+     * @return array{name: string, answers: array<string, string>}
+     */
+    private function validatedPreset(Request $request, PingRequestButton $button): array
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:64',
+            'answers' => 'nullable|array',
+            'answers.*' => 'nullable|string|max:' . self::MAX_ANSWER_LENGTH,
+        ]);
+
+        $asked = array_filter(array_column(StarterText::lines($button->starter_text), 'key'));
+        if (! StarterText::hasQuestions($button->starter_text)) {
+            $asked = [StarterText::FREE_TEXT];
+        }
+
+        return [
+            'name' => trim($validated['name']),
+            'answers' => array_intersect_key($validated['answers'] ?? [], array_flip($asked)),
+        ];
+    }
+}

@@ -1,0 +1,177 @@
+<?php
+
+// Stand-ins for the little of Laravel and Guzzle the request sender touches.
+// They remember what was asked of them, so a test can see what went out
+// without a Discord, a Redis or a database.
+
+namespace Illuminate\Database\Eloquent {
+    abstract class Model
+    {
+        /** @var array<int, array{0: class-string, 1: array}> every create(), in order */
+        public static array $created = [];
+        public static ?\Throwable $failCreateWith = null;
+
+        protected array $attributes = [];
+
+        public function __construct(array $attributes = [])
+        {
+            $this->attributes = $attributes;
+        }
+
+        public function __get($name)
+        {
+            return $this->attributes[$name] ?? null;
+        }
+
+        public function __set($name, $value)
+        {
+            $this->attributes[$name] = $value;
+        }
+
+        public static function create(array $attributes)
+        {
+            if (self::$failCreateWith) {
+                throw self::$failCreateWith;
+            }
+            self::$created[] = [static::class, $attributes];
+
+            return new static($attributes);
+        }
+    }
+}
+
+namespace Illuminate\Support\Facades {
+    class Cache
+    {
+        public static array $store = [];
+
+        public static function add(string $key, $value, int $seconds): bool
+        {
+            if (array_key_exists($key, self::$store)) {
+                return false;
+            }
+            self::$store[$key] = $value;
+
+            return true;
+        }
+
+        public static function get(string $key)
+        {
+            return self::$store[$key] ?? null;
+        }
+
+        public static function forget(string $key): void
+        {
+            unset(self::$store[$key]);
+        }
+    }
+
+    class RateLimiter
+    {
+        public static array $hits = [];
+
+        public static function tooManyAttempts(string $key, int $max): bool
+        {
+            return (self::$hits[$key] ?? 0) >= $max;
+        }
+
+        public static function availableIn(string $key): int
+        {
+            return 42;
+        }
+
+        public static function hit(string $key, int $seconds): void
+        {
+            self::$hits[$key] = (self::$hits[$key] ?? 0) + 1;
+        }
+    }
+
+    class Log
+    {
+        public static array $lines = [];
+
+        public static function __callStatic($level, $arguments)
+        {
+            self::$lines[] = (string) ($arguments[0] ?? '');
+        }
+    }
+
+    class Schema
+    {
+        public static array $tables = [];
+
+        public static function hasTable(string $table): bool
+        {
+            return in_array($table, self::$tables, true);
+        }
+    }
+
+    class DB
+    {
+        /** @var array<string, object> the one row a query on this table finds */
+        public static array $rows = [];
+
+        public static function table(string $table)
+        {
+            return new class(explode(' ', $table)[0]) {
+                public function __construct(private string $table)
+                {
+                }
+
+                public function __call($method, $arguments)
+                {
+                    return $this;
+                }
+
+                public function value(string $column)
+                {
+                    return DB::$rows[$this->table]->$column ?? null;
+                }
+
+                public function first()
+                {
+                    return DB::$rows[$this->table] ?? null;
+                }
+            };
+        }
+    }
+}
+
+namespace GuzzleHttp {
+    class Client
+    {
+        /** @var array<int, array{0: string, 1: array}> every post, in order */
+        public static array $posts = [];
+
+        /** @var array<int, object> what the next posts get back; a Throwable is thrown */
+        public static array $replies = [];
+
+        public function __construct(array $config = [])
+        {
+        }
+
+        public function post(string $url, array $options = [])
+        {
+            self::$posts[] = [$url, $options];
+            $reply = array_shift(self::$replies);
+
+            if ($reply === null) {
+                throw new \LogicException('A post nobody expected: ' . $url);
+            }
+            if ($reply instanceof \Throwable) {
+                throw $reply;
+            }
+
+            return $reply;
+        }
+    }
+}
+
+namespace {
+    if (!function_exists('config')) {
+        function config($key, $default = null)
+        {
+            return $default;
+        }
+    }
+}

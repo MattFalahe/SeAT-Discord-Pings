@@ -234,6 +234,16 @@ class SourceTest extends TestCase
         }
     }
 
+    /** sendPing publishes pings.broadcast.sent, and HR Manager gives the FC badge off those. */
+    public function test_the_request_sender_never_goes_through_send_ping(): void
+    {
+        $source = file_get_contents(self::SRC . 'Services/PingRequests/PingRequestSender.php');
+
+        $this->assertStringNotContainsString('->sendPing(', $source);
+        $this->assertStringNotContainsString('SendPingJob', $source);
+        $this->assertStringNotContainsString('BroadcastEventPublisher', $source);
+    }
+
     /** All of this is public, and the CSS goes out to every browser that opens a page. */
     public function test_nothing_published_names_a_private_note(): void
     {

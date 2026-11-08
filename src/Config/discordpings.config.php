@@ -16,6 +16,11 @@ return [
         'enabled' => true,
         'max_per_minute' => 10,
         'max_per_hour' => 100,
+
+        // Line members' request buttons, counted apart from the FC pings above.
+        // Emergency buttons aren't counted at all.
+        'requests_per_minute' => 10,
+        'requests_per_hour' => 100,
     ],
     
     // History retention

@@ -7,6 +7,9 @@ use Seat\Web\Models\User;
 
 class PingHistory extends Model
 {
+    /** fields.source on a row written by a line member pressing a button. */
+    public const SOURCE_MEMBER_REQUEST = 'member_request';
+
     protected $table = 'discord_ping_histories';
 
     protected $fillable = [

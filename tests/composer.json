@@ -1,0 +1,11 @@
+{
+    "name": "mattfalahe/seat-discord-pings-tests",
+    "description": "Runs SeAT Broadcast's tests on their own, with no SeAT and no database",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

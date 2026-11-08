@@ -25,9 +25,8 @@ use Illuminate\Support\Facades\Schema;
  * Hides troubleshooting clutter from daily ops while keeping it one URL
  * away when needed.
  *
- * Tabs follow the standard from feedback_plugin_diagnostic_standard.md:
- * Tier 1 universal (Health / Master Test / System Validation / Settings
- * Health / Data Integrity) plus the must-have Tier 3 Broadcast Trace.
+ * Same tabs as Structure Manager's diagnostics (Health / Master Test / System
+ * Validation / Settings Health / Data Integrity) plus a Broadcast Trace.
  */
 class DiagnosticController extends Controller
 {

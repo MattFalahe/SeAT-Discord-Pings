@@ -254,7 +254,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="prb_starter_text">Starter text</label>
+                        <label for="prb_starter_text">Section names (format)</label>
                         <textarea class="form-control" id="prb_starter_text" name="starter_text" rows="6" maxlength="2000" placeholder="Rorqual Tackled&#10;Rorqual Name:&#10;System: Location In System (Anomaly or Moon):&#10;Name of Cyno (On perch, 300km away):"></textarea>
                         <small class="text-muted">
                             Paste your alliance's format. A line ending in a colon becomes a box for the member to fill in, every other line goes out as written.

@@ -16,7 +16,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 **🙋 Ping Requests**
 - New **Ping Requests** sidebar page for anyone with `discordpings.view` and `discordpings.line_member`
 - Two kinds of button. **Emergency** buttons are red and post the moment they're pressed: no confirm box, no cooldown and no limit from the plugin, since every second counts. **Request** buttons show what will be posted first, then rest for a per-member cooldown you set on each button
-- **Starter text** takes your alliance's format as it stands: a line ending in a colon becomes a box for the member to fill in, every other line goes out as written, and a box left empty is dropped from the message
+- **Section names (format)** takes your alliance's format as it stands: a line ending in a colon becomes a box for the member to fill in, every other line goes out as written, and a box left empty is dropped from the message
 - **Saved forms** per button and per member (20 at most), so one press can carry the ship, the system and the cyno
 - A button can be limited to one or more Broadcast permissions, where holding any one is enough, and to a corporation or an alliance. SeAT roles and squads still decide who holds those permissions
 - **Role to ping** can be typed, or picked from every role the Discord Roles tab and seat-connector know about, with a badge saying where each one came from, a search box and a filter to narrow the list to one source

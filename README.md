@@ -116,7 +116,7 @@ The Help & Documentation page inside the plugin has a **Permissions** section wi
 | Discord Channels | Pre-registered channels for inline `#channel` links |
 | Staging Locations | Pre-registered staging spots for quick formup-location selection |
 | PAP Types | Configurable PAP categories (Strategic / Peacetime / CTA seeded by default) |
-| Ping Requests | The buttons line members can press: type, webhook, role to ping, starter text, cooldown, limits by Broadcast permission, corporation or alliance |
+| Ping Requests | The buttons line members can press: type, webhook, role to ping, section names, cooldown, limits by Broadcast permission, corporation or alliance |
 | Structure Timers | Master toggles for pre-event alerts (structure + mining), default formup lead time, MC / SM / MM detection badges |
 | Routing Map | Read-only snapshot of which webhooks will fire for each event right now, with corp scope + master switch state |
 

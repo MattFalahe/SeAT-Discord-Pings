@@ -7,6 +7,8 @@ use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\PingRequestPreset;
 use DiscordPings\Services\DiscordUserResolver;
 use DiscordPings\Services\PingRequests\ErrorText;
+use DiscordPings\Services\PingRequests\LocationLookup;
+use DiscordPings\Services\PingRequests\MemberAccount;
 use DiscordPings\Services\PingRequests\PingRequestSender;
 use DiscordPings\Services\PingRequests\StarterText;
 use Illuminate\Http\Request;
@@ -66,8 +68,23 @@ class PingRequestController extends Controller
             ->get();
 
         $identity = DiscordUserResolver::senderIdentity($user);
+        $characters = MemberAccount::characterNames((int) $user->id);
 
-        return view('discordpings::requests.index', compact('cards', 'recent', 'identity'));
+        return view('discordpings::requests.index', compact('cards', 'recent', 'identity', 'characters'));
+    }
+
+    public function systems(LocationLookup $lookup)
+    {
+        $systems = $lookup->systems();
+        $response = response()->json($systems);
+
+        // The map hardly ever changes, but an empty list means the read failed and that mustn't stick for a day.
+        return $systems === [] ? $response : $response->header('Cache-Control', 'private, max-age=86400');
+    }
+
+    public function locations($id, LocationLookup $lookup)
+    {
+        return response()->json($lookup->locations((int) $id, MemberAccount::affiliations((int) auth()->id())));
     }
 
     /**

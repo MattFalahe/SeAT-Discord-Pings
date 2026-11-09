@@ -31,6 +31,28 @@ class StarterTextTest extends TestCase
         $this->assertNull($lines[0]['key']);
     }
 
+    public function test_a_box_gets_its_suggestions_from_its_section_name(): void
+    {
+        $lines = StarterText::lines("Capital Tackled\nCapital Name:\nSystem: Location In System (Anomaly or any close object):\nName of Cyno (On perch, 300km away):\nDoctrine or ship:");
+
+        $this->assertSame(
+            [null, StarterText::LOOKUP_CHARACTER, StarterText::LOOKUP_LOCATION, StarterText::LOOKUP_CHARACTER, null],
+            array_column($lines, 'lookup')
+        );
+    }
+
+    public function test_a_place_beats_a_name_in_the_same_section(): void
+    {
+        $this->assertSame(StarterText::LOOKUP_LOCATION, StarterText::lines('System name:')[0]['lookup']);
+    }
+
+    public function test_only_whole_words_count(): void
+    {
+        foreach (['Delegate:', 'Salt:', 'Renamed:', 'Ecosystem:'] as $section) {
+            $this->assertNull(StarterText::lines($section)[0]['lookup'], $section);
+        }
+    }
+
     public function test_a_colon_in_the_middle_of_a_line_is_not_a_question(): void
     {
         $this->assertFalse(StarterText::hasQuestions('Doctrine: armour, bring logi'));

@@ -34,6 +34,24 @@ class MemberAccount
         ];
     }
 
+    /** @return string[] */
+    public static function characterNames(int $userId): array
+    {
+        try {
+            $names = DB::table('refresh_tokens')
+                ->join('character_infos', 'refresh_tokens.character_id', '=', 'character_infos.character_id')
+                ->where('refresh_tokens.user_id', $userId)
+                ->whereNull('refresh_tokens.deleted_at')
+                ->orderBy('character_infos.name')
+                ->pluck('character_infos.name')
+                ->all();
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return array_values(array_filter($names, fn ($name) => is_string($name) && $name !== ''));
+    }
+
     /** @return int[] */
     private static function ids(array $values): array
     {

@@ -61,5 +61,6 @@ class PingRequestAudienceTest extends TestCase
         DB::$broken['refresh_tokens'] = new \RuntimeException('gone');
 
         $this->assertSame(['corporations' => [], 'alliances' => []], MemberAccount::affiliations(5));
+        $this->assertSame([], MemberAccount::characterNames(5));
     }
 }

@@ -14,8 +14,11 @@ class StarterText
     /** The answer key for the one box a starter with no questions gets. */
     public const FREE_TEXT = 'text';
 
+    public const LOOKUP_LOCATION = 'location';
+    public const LOOKUP_CHARACTER = 'character';
+
     /**
-     * @return array<int, array{kind: string, text: string, key: ?string}>
+     * @return array<int, array{kind: string, text: string, key: ?string, lookup: ?string}>
      */
     public static function lines(?string $starter): array
     {
@@ -26,7 +29,7 @@ class StarterText
             $line = rtrim($line);
 
             if (! self::isQuestion($line)) {
-                $lines[] = ['kind' => 'text', 'text' => $line, 'key' => null];
+                $lines[] = ['kind' => 'text', 'text' => $line, 'key' => null, 'lookup' => null];
                 continue;
             }
 
@@ -35,7 +38,12 @@ class StarterText
             $label = mb_strtolower((string) preg_replace('/[^\p{L}\p{N}]+/u', '', $line));
             $seen[$label] = ($seen[$label] ?? 0) + 1;
 
-            $lines[] = ['kind' => 'question', 'text' => $line, 'key' => 'q' . substr(md5($label . '#' . $seen[$label]), 0, 12)];
+            $lines[] = [
+                'kind' => 'question',
+                'text' => $line,
+                'key' => 'q' . substr(md5($label . '#' . $seen[$label]), 0, 12),
+                'lookup' => self::lookupFor($line),
+            ];
         }
 
         return $lines;
@@ -88,6 +96,24 @@ class StarterText
     private static function isQuestion(string $line): bool
     {
         return str_ends_with($line, ':') && trim($line, " \t:") !== '';
+    }
+
+    /**
+     * Which suggestions a box gets, going by its section name so nobody has
+     * anything to set up. A wrong guess only offers something nobody has to
+     * take. Places are tried first, because "System name" isn't a character.
+     */
+    private static function lookupFor(string $line): ?string
+    {
+        if (preg_match('/\b(?:(?:system|location|moon|planet|station|structure|gate)s?|anomaly|where|forming|staging)\b/i', $line)) {
+            return self::LOOKUP_LOCATION;
+        }
+
+        if (preg_match('/\b(?:(?:name|character|pilot|cyno|alt)s?)\b/i', $line)) {
+            return self::LOOKUP_CHARACTER;
+        }
+
+        return null;
     }
 
     private static function oneLine($answer): string

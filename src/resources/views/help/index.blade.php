@@ -536,6 +536,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.ping_requests_saved_title') }}</h4>
                 <p>{!! trans('discordpings::help.ping_requests_saved_desc') !!}</p>
 
+                <h4>{{ trans('discordpings::help.ping_requests_suggest_title') }}</h4>
+                <p>{!! trans('discordpings::help.ping_requests_suggest_desc') !!}</p>
+
                 <h4>{{ trans('discordpings::help.ping_requests_discord_title') }}</h4>
                 <p>{!! trans('discordpings::help.ping_requests_discord_desc') !!}</p>
 

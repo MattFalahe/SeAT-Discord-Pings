@@ -17,6 +17,14 @@ Route::group([
         ->name('discordpings.requests')
         ->middleware('can:discordpings.line_member');
 
+    Route::get('/requests/systems', 'PingRequestController@systems')
+        ->name('discordpings.requests.systems')
+        ->middleware('can:discordpings.line_member');
+
+    Route::get('/requests/systems/{id}/locations', 'PingRequestController@locations')
+        ->name('discordpings.requests.locations')
+        ->middleware('can:discordpings.line_member');
+
     Route::post('/requests/{id}/press', 'PingRequestController@press')
         ->name('discordpings.requests.press')
         ->middleware('can:discordpings.line_member');

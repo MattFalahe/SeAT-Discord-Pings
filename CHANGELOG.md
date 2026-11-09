@@ -38,6 +38,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 - Quick Links on the Help page now only offer what you can open. Someone holding View alone used to get links that ended in a 403
 - The What's New box on the Help page can be read on a light SeAT theme. Its text used to fade into the background
+- The plugin's tables have proper page buttons and search boxes. A Bootstrap script they load was never shipped with the plugin, so each of those pages got a 404 and the page numbers ran together as plain text
 
 ### 📖 Documentation
 

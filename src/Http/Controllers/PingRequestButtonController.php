@@ -95,6 +95,7 @@ class PingRequestButtonController extends Controller
             'type' => 'required|in:' . PingRequestButton::TYPE_EMERGENCY . ',' . PingRequestButton::TYPE_REQUEST,
             'webhook_id' => 'nullable|integer|exists:discord_webhooks,id',
             'mention_role' => 'nullable|string|max:64',
+            'ping_notice' => 'nullable|string|max:100',
             'starter_text' => 'nullable|string|max:2000',
             'cooldown_minutes' => 'nullable|integer|min:0|max:1440',
             'corporation_id' => 'nullable|integer',
@@ -117,11 +118,14 @@ class PingRequestButtonController extends Controller
             throw ValidationException::withMessages(['webhook_id' => 'Pick a webhook before switching a button on.']);
         }
 
+        $notice = trim((string) ($data['ping_notice'] ?? ''));
+
         return [
             'name' => $data['name'],
             'type' => $data['type'],
             'webhook_id' => $data['webhook_id'] ?? null,
             'mention_role_id' => $roleId,
+            'ping_notice' => $notice === '' ? null : $notice,
             'starter_text' => $data['starter_text'] ?? null,
             'cooldown_minutes' => (int) ($data['cooldown_minutes'] ?? 0),
             'corporation_id' => $data['corporation_id'] ?? null,

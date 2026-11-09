@@ -45,6 +45,7 @@ class PingRequestController extends Controller
             'id' => $button->id,
             'name' => $button->name,
             'emergency' => $button->isEmergency(),
+            'pingNotice' => (string) $button->ping_notice,
             'lines' => StarterText::lines($button->starter_text),
             'plain' => StarterText::compose($button->starter_text, []),
             'freeText' => ! StarterText::hasQuestions($button->starter_text),

@@ -20,6 +20,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - **Saved forms** per button and per member (20 at most), so one press can carry the ship, the system and the cyno
 - A button can be limited to one or more Broadcast permissions, where holding any one is enough, and to a corporation or an alliance. SeAT roles and squads still decide who holds those permissions
 - **Role to ping** can be typed, or picked from every role the Discord Roles tab and seat-connector know about, with a badge saying where each one came from, a search box and a filter to narrow the list to one source
+- An optional line on the button tells members who it notifies, such as Cap Umbrella or Designated SIG. It's never posted
 - Only the role set on the button can be pinged, whatever a member types, and member text can't hide a link behind other words
 - A press waits for Discord's answer, so "Sent to Discord" means it got there. If it didn't, the member is told and the cooldown is handed back
 - Requests are not broadcasts: they don't publish `pings.broadcast.sent`, so HR Manager won't take a member asking for help for an active FC

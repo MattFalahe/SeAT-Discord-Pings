@@ -109,6 +109,7 @@
                                         'type' => $button->type,
                                         'webhook_id' => $button->webhook_id,
                                         'mention_role' => $button->mention_role_id ? '<@&' . $button->mention_role_id . '>' : '',
+                                        'ping_notice' => $button->ping_notice,
                                         'starter_text' => $button->starter_text,
                                         'cooldown_minutes' => $button->cooldown_minutes,
                                         'corporation_id' => $button->corporation_id,
@@ -247,6 +248,12 @@
                     @endif
 
                     <div class="form-group">
+                        <label for="prb_ping_notice">Tell members who gets notified</label>
+                        <input type="text" class="form-control" id="prb_ping_notice" name="ping_notice" maxlength="100" placeholder="e.g. Cap Umbrella">
+                        <small class="text-muted">Optional. When filled in it shows on the button, for example Cap Umbrella or Designated SIG. It's never posted and doesn't change who gets pinged.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="prb_starter_text">Starter text</label>
                         <textarea class="form-control" id="prb_starter_text" name="starter_text" rows="6" maxlength="2000" placeholder="Rorqual Tackled&#10;Rorqual Name:&#10;System: Location In System (Anomaly or Moon):&#10;Name of Cyno (On perch, 300km away):"></textarea>
                         <small class="text-muted">
@@ -347,6 +354,7 @@ $(document).ready(function () {
         $('#prb_type').val(button ? button.type : 'request');
         $('#prb_webhook').val(button && button.webhook_id ? String(button.webhook_id) : '');
         $('#prb_mention_role').val(button ? button.mention_role : '');
+        $('#prb_ping_notice').val(button && button.ping_notice ? button.ping_notice : '');
         $('#prb_starter_text').val(button && button.starter_text ? button.starter_text : '');
         $('#prb_cooldown').val(button ? button.cooldown_minutes : 15);
         $('#prb_corporation').val(button && button.corporation_id ? String(button.corporation_id) : '');

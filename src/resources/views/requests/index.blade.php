@@ -9,6 +9,7 @@
     .pr-notice { border-left: 4px solid var(--pings-info); }
     .pr-card { height: 100%; margin-bottom: 0; }
     .pr-card.pr-emergency { border-left: 4px solid var(--pings-danger); }
+    .pr-notifies { font-size: 0.875rem; margin-bottom: 8px; }
     .pr-plain { white-space: pre-wrap; font-size: 0.875rem; }
     .pr-press-row { display: flex; gap: 6px; margin-bottom: 6px; }
     .pr-press-row .js-pr-press { flex: 1; text-align: left; white-space: normal; }
@@ -58,6 +59,10 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        @if($card['pingNotice'] !== '')
+                            <p class="pr-notifies"><i class="fas fa-bell"></i> Notifies: {{ $card['pingNotice'] }}</p>
+                        @endif
+
                         @if($card['plain'] !== '')
                             <p class="pr-plain text-muted">{{ $card['plain'] }}</p>
                         @endif

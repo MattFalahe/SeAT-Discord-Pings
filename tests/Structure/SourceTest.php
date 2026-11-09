@@ -65,6 +65,24 @@ class SourceTest extends TestCase
         }
     }
 
+    /** A script that isn't there fails without a word: the page still loads, just with a 404 and half its look gone. */
+    public function test_every_asset_a_view_links_ships_with_the_plugin(): void
+    {
+        $linked = [];
+        foreach (self::files('.blade.php', 'resources/views') as $path) {
+            preg_match_all("/asset\('vendor\/discordpings\/([^']+)'\)/", file_get_contents($path), $matches);
+            foreach ($matches[1] as $asset) {
+                $linked[$asset] = basename($path);
+            }
+        }
+
+        $this->assertNotEmpty($linked, 'No links found, so this pattern no longer matches how views link assets');
+
+        foreach ($linked as $asset => $view) {
+            $this->assertFileExists(self::SRC . 'resources/assets/' . $asset, "$view links it");
+        }
+    }
+
     /** The menu and the permission list name their keys in config, not through trans(), and a miss shows as raw text. */
     public function test_every_language_key_named_in_the_source_exists(): void
     {

@@ -7,18 +7,21 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Suggests Discord roles operators can pick from when adding a new role record
- * on the Settings > Discord Roles tab.
+ * The Discord roles operators can pick from, as two lists.
  *
- * UNLIKE SM / MM's resolver of the same name, this one deliberately does NOT
- * query the `discord_roles` table — SeAT Broadcast owns that table, it IS the
+ * listAvailableRoles() is for Add Role on the Settings > Discord Roles tab.
+ * UNLIKE SM / MM's resolver of the same name, it deliberately does NOT query
+ * the `discord_roles` table — SeAT Broadcast owns that table, it IS the
  * destination of the Add Role form, so pulling from it would be circular and
- * could nudge operators into creating duplicate records. The picker here is
+ * could nudge operators into creating duplicate records. The picker there is
  * strictly a way to short-cut "I have to open Discord, enable Developer Mode,
  * right-click the role, copy ID, switch tabs, paste" when a connector plugin
  * already has the roles catalogued.
  *
- * Sources queried (in priority order — first sighting wins on dedup):
+ * listRoles() is for choosing a role to ping, where a role already on that tab
+ * is exactly what you're after, so it reads `discord_roles` as well.
+ *
+ * Connector sources (in priority order — first sighting wins on dedup):
  *
  *   - seat_connector_sets             (the SeAT Connector framework; the
  *                                      table is shared by warlof/seat-connector
@@ -40,15 +43,16 @@ use Illuminate\Support\Facades\Schema;
  * resolution. If the table is present, its roles contribute to the picker.
  *
  * Roles whose Discord snowflake already exists in this plugin's own
- * `discord_roles` table are filtered out of the picker — operators shouldn't
- * be offered roles they've already added (the resulting duplicate-snowflake
- * record would be confusing and break dedupe across plugins).
+ * `discord_roles` table are filtered out of listAvailableRoles() — operators
+ * shouldn't be offered roles they've already added (the resulting
+ * duplicate-snowflake record would be confusing and break dedupe across plugins).
  *
  * Returns [] from listAvailableRoles() when no connector provider is detected,
  * so the UI falls back to the always-functional manual input.
  */
 class DiscordRoleResolver
 {
+    public const PROVIDER_DISCORD_ROLES_TABLE = 'discord-roles-table';
     public const PROVIDER_SEAT_CONNECTOR = 'seat-connector';
     public const PROVIDER_WARLOF_DISCORD = 'warlof-discord';
 
@@ -123,15 +127,40 @@ class DiscordRoleResolver
             return [];
         }
 
-        $existing = self::existingSnowflakes();
-        $merged   = [];
+        return self::merge($providers, self::existingSnowflakes());
+    }
+
+    /**
+     * Every Discord role this SeAT knows about, for choosing one to ping: the
+     * Discord Roles tab first, because that's where the colours are, then
+     * whatever a connector has synced. A role found in several places comes
+     * back once, with all of them in 'sources'.
+     *
+     * Same shape as listAvailableRoles(), plus 'color' on the tab's own roles.
+     *
+     * @return array<int, array>
+     */
+    public static function listRoles(): array
+    {
+        return self::merge(array_merge([self::PROVIDER_DISCORD_ROLES_TABLE], self::detectAvailableProviders()));
+    }
+
+    /**
+     * @param  array<int, string>  $providers  in priority order
+     * @param  array<string, true>  $skip  snowflakes to leave out
+     * @return array<int, array>
+     */
+    private static function merge(array $providers, array $skip = []): array
+    {
+        $merged = [];
 
         foreach ($providers as $provider) {
             try {
                 $rows = match ($provider) {
-                    self::PROVIDER_SEAT_CONNECTOR => self::rolesFromSeatConnector(),
-                    self::PROVIDER_WARLOF_DISCORD => self::rolesFromWarlof(),
-                    default                       => [],
+                    self::PROVIDER_DISCORD_ROLES_TABLE => self::rolesFromDiscordRoles(),
+                    self::PROVIDER_SEAT_CONNECTOR      => self::rolesFromSeatConnector(),
+                    self::PROVIDER_WARLOF_DISCORD      => self::rolesFromWarlof(),
+                    default                            => [],
                 };
             } catch (\Throwable $e) {
                 Log::warning('[DiscordPings] DiscordRoleResolver: failed listing roles from ' . $provider . ': ' . $e->getMessage());
@@ -140,8 +169,7 @@ class DiscordRoleResolver
 
             foreach ($rows as $row) {
                 $id = (string) ($row['id'] ?? '');
-                if ($id === '' || isset($existing[$id])) {
-                    // Skip empty IDs + skip anything already in our own table
+                if ($id === '' || isset($skip[$id])) {
                     continue;
                 }
 
@@ -170,6 +198,7 @@ class DiscordRoleResolver
     public static function providerShortLabel(string $provider): string
     {
         return match ($provider) {
+            self::PROVIDER_DISCORD_ROLES_TABLE => 'SeAT Broadcast',
             // Generic label — the seat_connector_sets table is populated
             // by either warlof/seat-connector OR zenobio93's maintained fork,
             // we can't tell which from the schema (it's identical) and we
@@ -195,6 +224,26 @@ class DiscordRoleResolver
     }
 
     // ---- Provider-specific queries ----
+
+    /**
+     * The Discord Roles tab, without the ones switched off there.
+     */
+    private static function rolesFromDiscordRoles(): array
+    {
+        $rows = DB::table('discord_roles')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['role_id', 'name', 'color']);
+
+        return $rows->map(function ($r) {
+            return [
+                'id'             => (string) $r->role_id,
+                'name'           => (string) $r->name,
+                'mention_format' => '<@&' . $r->role_id . '>',
+                'color'          => $r->color ?: null,
+            ];
+        })->all();
+    }
 
     /**
      * warlof/seat-connector — Discord rows from seat_connector_sets.

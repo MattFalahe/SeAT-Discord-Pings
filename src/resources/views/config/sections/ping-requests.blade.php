@@ -1,5 +1,8 @@
 @php
     $pickerRoleNames = collect($pickerRoles)->pluck('name', 'id');
+    // A role in two sources counts under both, because narrowing to a source has to show all of it.
+    $pickerSourceCounts = collect($pickerRoles)->pluck('sources')->flatten()->countBy()->sortKeys();
+    $pickerSourceColours = ['discord-roles-table' => '#28a745', 'seat-connector' => '#3498db', 'warlof-discord' => '#95a5a6'];
 @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -197,14 +200,41 @@
 
                     @if(count($pickerRoles) > 0)
                         <div id="inlineRolePickerRequestButton" class="inline-role-picker"
-                             style="display: none; margin-bottom: 15px; padding: 12px; background: #1e222b; border: 1px solid #454d55; border-radius: 4px; max-height: 280px; overflow-y: auto;">
+                             style="display: none; margin-bottom: 15px; padding: 12px; background: #1e222b; border: 1px solid #454d55; border-radius: 4px;">
                             <div class="inline-role-picker-body">
-                                <input type="text" class="form-control form-control-sm mb-2 js-inline-role-filter" placeholder="Search roles...">
-                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                <div style="font-size: 0.78rem; color: #8b95a5; margin-bottom: 8px;">
+                                    {{ count($pickerRoles) }} unique {{ \Illuminate\Support\Str::plural('role', count($pickerRoles)) }}
+                                    from {{ $pickerSourceCounts->count() }} {{ \Illuminate\Support\Str::plural('source', $pickerSourceCounts->count()) }}:
+                                    @foreach($pickerSourceCounts as $source => $sourceCount)
+                                        <span class="badge" style="background: {{ $pickerSourceColours[$source] ?? '#666' }}; color: #000; font-weight: 700; font-size: 0.7rem; padding: 2px 6px; margin-left: 3px;">{{ \DiscordPings\Services\DiscordRoleResolver::providerShortLabel($source) }}: {{ $sourceCount }}</span>
+                                    @endforeach
+                                </div>
+                                <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                                    <input type="text" class="form-control form-control-sm js-inline-role-filter" placeholder="Search roles..." style="flex: 1; background: #1e222b; border: 1px solid #454d55; color: #fff;">
+                                    @if($pickerSourceCounts->count() > 1)
+                                        <select class="form-control form-control-sm js-inline-role-source" style="max-width: 180px; background: #1e222b; border: 1px solid #454d55; color: #fff;">
+                                            <option value="">All sources</option>
+                                            @foreach($pickerSourceCounts as $source => $sourceCount)
+                                                <option value="{{ $source }}">{{ \DiscordPings\Services\DiscordRoleResolver::providerShortLabel($source) }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                </div>
+                                {{-- The list scrolls on its own so the search box stays where it is on a big server. --}}
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px; max-height: 240px; overflow-y: auto;">
                                     @foreach($pickerRoles as $role)
-                                        <button type="button" class="btn btn-sm btn-outline-primary js-role-pick-btn" data-role-id="{{ $role['id'] }}" data-role-name="{{ $role['name'] }}">
+                                        <button type="button" class="btn btn-sm btn-outline-primary js-role-pick-btn" style="text-align: left;"
+                                                data-role-id="{{ $role['id'] }}" data-role-name="{{ $role['name'] }}" data-sources="{{ implode(' ', $role['sources']) }}">
+                                            @if(! empty($role['color']) && preg_match('/^#[0-9a-f]{6}$/i', $role['color']))
+                                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {{ $role['color'] }}; margin-right: 6px; vertical-align: middle;"></span>
+                                            @endif
                                             {{ $role['name'] }}
-                                            <small style="opacity: 0.6;">{{ $role['source'] }}</small>
+                                            <small style="opacity: 0.55; margin-left: 4px;">#{{ substr($role['id'], -6) }}</small>
+                                            <span class="badge" style="background: {{ $pickerSourceColours[$role['source']] ?? '#666' }}; color: #000; font-weight: 700; font-size: 0.65rem; padding: 2px 6px; margin-left: 4px; vertical-align: middle;">{{ \DiscordPings\Services\DiscordRoleResolver::providerShortLabel($role['source']) }}</span>
+                                            @if(count($role['sources']) > 1)
+                                                <span class="badge badge-secondary" style="color: #fff; font-weight: 600; font-size: 0.65rem; padding: 2px 6px; margin-left: 2px;"
+                                                      title="Also in: {{ collect($role['sources'])->reject(fn ($source) => $source === $role['source'])->map(fn ($source) => \DiscordPings\Services\DiscordRoleResolver::providerShortLabel($source))->implode(', ') }}">+{{ count($role['sources']) - 1 }}</span>
+                                            @endif
                                         </button>
                                     @endforeach
                                 </div>
@@ -305,7 +335,9 @@ $(document).ready(function () {
         $('#prb_sort_order').val(button ? button.sort_order : 0);
         $('#prb_is_active').prop('checked', button ? button.is_active : false);
 
-        $('#inlineRolePickerRequestButton').hide();
+        var $picker = $('#inlineRolePickerRequestButton').hide();
+        $picker.find('.js-inline-role-filter, .js-inline-role-source').val('');
+        $picker.find('.js-role-pick-btn').show();
         showTypeHelp();
 
         // AdminLTE's stacking puts a modal behind its own backdrop when it
@@ -344,10 +376,15 @@ $(document).ready(function () {
         $picker.slideUp(150);
     });
 
-    $(document).on('input', '.js-inline-role-filter', function () {
-        var needle = $(this).val().toLowerCase();
-        $(this).closest('.inline-role-picker').find('.js-role-pick-btn').each(function () {
-            $(this).toggle($(this).attr('data-role-name').toLowerCase().indexOf(needle) !== -1);
+    $(document).on('input change', '.js-inline-role-filter, .js-inline-role-source', function () {
+        var $picker = $(this).closest('.inline-role-picker');
+        var needle = $picker.find('.js-inline-role-filter').val().toLowerCase();
+        var source = $picker.find('.js-inline-role-source').val() || '';
+
+        $picker.find('.js-role-pick-btn').each(function () {
+            var matches = ($(this).attr('data-role-name') + ' ' + $(this).attr('data-role-id')).toLowerCase().indexOf(needle) !== -1;
+            var inSource = source === '' || $(this).attr('data-sources').split(' ').indexOf(source) !== -1;
+            $(this).toggle(matches && inSource);
         });
     });
 });

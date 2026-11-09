@@ -111,15 +111,32 @@ namespace Illuminate\Support\Facades {
         /** @var array<string, object> the one row a query on this table finds */
         public static array $rows = [];
 
+        /** @var array<string, array<int, object>> every row get() and pluck() can see, by table */
+        public static array $tables = [];
+
+        /** @var array<string, \Throwable> tables a list query blows up on */
+        public static array $broken = [];
+
         public static function table(string $table)
         {
             return new class(explode(' ', $table)[0]) {
+                private array $equals = [];
+
                 public function __construct(private string $table)
                 {
                 }
 
                 public function __call($method, $arguments)
                 {
+                    return $this;
+                }
+
+                public function where(...$arguments)
+                {
+                    if (count($arguments) === 2 && is_string($arguments[0])) {
+                        $this->equals[$arguments[0]] = $arguments[1];
+                    }
+
                     return $this;
                 }
 
@@ -132,7 +149,63 @@ namespace Illuminate\Support\Facades {
                 {
                     return DB::$rows[$this->table] ?? null;
                 }
+
+                public function get(array $columns = ['*'])
+                {
+                    return new \Illuminate\Support\Collection($this->matching());
+                }
+
+                public function pluck(string $column)
+                {
+                    return new \Illuminate\Support\Collection(array_map(fn ($row) => $row->$column, $this->matching()));
+                }
+
+                private function matching(): array
+                {
+                    if (isset(DB::$broken[$this->table])) {
+                        throw DB::$broken[$this->table];
+                    }
+
+                    return array_values(array_filter(DB::$tables[$this->table] ?? [], function ($row) {
+                        foreach ($this->equals as $column => $value) {
+                            if ($row->$column != $value) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }));
+                }
             };
+        }
+    }
+}
+
+namespace Illuminate\Support {
+    class Collection
+    {
+        public function __construct(private array $items = [])
+        {
+        }
+
+        public function map(callable $callback): self
+        {
+            return new self(array_map($callback, $this->items));
+        }
+
+        public function mapWithKeys(callable $callback): self
+        {
+            $mapped = [];
+            foreach ($this->items as $item) {
+                $mapped += $callback($item);
+            }
+
+            return new self($mapped);
+        }
+
+        public function all(): array
+        {
+            return $this->items;
         }
     }
 }

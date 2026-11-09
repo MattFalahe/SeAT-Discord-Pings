@@ -68,7 +68,7 @@ class DiscordConfigController extends Controller
         $requestButtons = PingRequestButton::with('webhook')->orderBy('sort_order')->orderBy('name')->get();
         $requestCorporations = $this->requestCorporations($requestButtons);
         $seatRoles = $this->seatRoles($requestButtons);
-        $pickerRoles = $this->pickerRoles($roles, $connectorRoles);
+        $pickerRoles = DiscordRoleResolver::listRoles();
 
         return view('discordpings::config.index', compact(
             'webhooks', 'roles', 'channels', 'stagings', 'papTypes',
@@ -130,27 +130,6 @@ class DiscordConfigController extends Controller
         }
 
         return $titles;
-    }
-
-    /**
-     * What "Pick from Discord" offers: the roles already on the Discord Roles
-     * tab, then whatever the connector has that isn't there yet.
-     *
-     * @return array<int, array{id: string, name: string, source: string}>
-     */
-    private function pickerRoles($roles, array $connectorRoles): array
-    {
-        $picker = [];
-
-        foreach ($roles->where('is_active', true) as $role) {
-            $picker[] = ['id' => (string) $role->role_id, 'name' => (string) $role->name, 'source' => 'SeAT Broadcast'];
-        }
-
-        foreach ($connectorRoles as $role) {
-            $picker[] = ['id' => (string) $role['id'], 'name' => (string) $role['name'], 'source' => DiscordRoleResolver::providerShortLabel($role['source'])];
-        }
-
-        return $picker;
     }
 
     /**

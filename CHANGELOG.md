@@ -19,6 +19,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - **Starter text** takes your alliance's format as it stands: a line ending in a colon becomes a box for the member to fill in, every other line goes out as written, and a box left empty is dropped from the message
 - **Saved forms** per button and per member (20 at most), so one press can carry the ship, the system and the cyno
 - A button can be limited to a corporation, a SeAT role or both
+- **Role to ping** can be typed, or picked from every role the Discord Roles tab and seat-connector know about, with a badge saying where each one came from, a search box and a filter to narrow the list to one source
 - Only the role set on the button can be pinged, whatever a member types, and member text can't hide a link behind other words
 - A press waits for Discord's answer, so "Sent to Discord" means it got there. If it didn't, the member is told and the cooldown is handed back
 - Requests are not broadcasts: they don't publish `pings.broadcast.sent`, so HR Manager won't take a member asking for help for an active FC

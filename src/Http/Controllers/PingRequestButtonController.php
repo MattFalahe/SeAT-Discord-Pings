@@ -6,6 +6,7 @@ use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\PingRequestButton;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -97,7 +98,9 @@ class PingRequestButtonController extends Controller
             'starter_text' => 'nullable|string|max:2000',
             'cooldown_minutes' => 'nullable|integer|min:0|max:1440',
             'corporation_id' => 'nullable|integer',
-            'role_id' => 'nullable|integer',
+            'alliance_id' => 'nullable|integer',
+            'audience_permissions' => 'nullable|array',
+            'audience_permissions.*' => ['string', Rule::in(array_keys(PingRequestButton::audienceOptions()))],
             'sort_order' => 'nullable|integer|min:0|max:9999',
         ]);
 
@@ -122,7 +125,8 @@ class PingRequestButtonController extends Controller
             'starter_text' => $data['starter_text'] ?? null,
             'cooldown_minutes' => (int) ($data['cooldown_minutes'] ?? 0),
             'corporation_id' => $data['corporation_id'] ?? null,
-            'role_id' => $data['role_id'] ?? null,
+            'alliance_id' => $data['alliance_id'] ?? null,
+            'audience_permissions' => array_values(array_unique($data['audience_permissions'] ?? [])) ?: null,
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'is_active' => $active,
         ];

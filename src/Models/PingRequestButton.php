@@ -2,31 +2,91 @@
 
 namespace DiscordPings\Models;
 
-use DiscordPings\Models\Concerns\VisibleToViewer;
+use DiscordPings\Services\PingRequests\MemberAccount;
 use Illuminate\Database\Eloquent\Model;
 
 class PingRequestButton extends Model
 {
-    use VisibleToViewer;
-
     public const TYPE_EMERGENCY = 'emergency';
     public const TYPE_REQUEST = 'request';
+
+    /** Everyone on the page holds these two already, so ticking one couldn't narrow anything. */
+    private const NEVER_AN_AUDIENCE = ['view', 'line_member'];
 
     protected $table = 'discord_ping_request_buttons';
 
     protected $fillable = [
-        'name', 'webhook_id', 'mention_role_id', 'starter_text', 'type', 'cooldown_minutes',
-        'corporation_id', 'role_id', 'is_active', 'sort_order',
+        'name', 'webhook_id', 'mention_role_id', 'ping_notice', 'starter_text', 'type', 'cooldown_minutes',
+        'corporation_id', 'alliance_id', 'audience_permissions', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'webhook_id' => 'integer',
         'cooldown_minutes' => 'integer',
         'corporation_id' => 'integer',
-        'role_id' => 'integer',
+        'alliance_id' => 'integer',
+        'audience_permissions' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    /**
+     * The Broadcast permissions a button can be limited to. Read from the
+     * registered list, so a permission that gets added or merged later needs
+     * no change here.
+     *
+     * @return array<string, string> labels by full permission name
+     */
+    public static function audienceOptions(): array
+    {
+        $options = [];
+
+        foreach ((array) config('seat.permissions.discordpings', []) as $key => $permission) {
+            if (! in_array($key, self::NEVER_AN_AUDIENCE, true)) {
+                $options['discordpings.' . $key] = trans($permission['label'] ?? $key);
+            }
+        }
+
+        return $options;
+    }
+
+    /**
+     * A button shows when both of these pass, and an empty one passes:
+     *   - the member is in its corporation or its alliance, either will do
+     *   - the member holds any one of its permissions
+     *
+     * Roles and squads still decide who holds those permissions, that just
+     * isn't this query's business.
+     */
+    public function scopeVisibleTo($query, $user)
+    {
+        if ($user && ($user->isAdmin() || $user->can('discordpings.admin'))) {
+            return $query;
+        }
+
+        $member = $user ? MemberAccount::affiliations((int) $user->id) : ['corporations' => [], 'alliances' => []];
+        $held = $user ? array_filter(array_keys(self::audienceOptions()), fn ($permission) => $user->can($permission)) : [];
+
+        return $query
+            ->where(function ($q) use ($member) {
+                $q->where(fn ($open) => $open->whereNull('corporation_id')->whereNull('alliance_id'));
+
+                if (! empty($member['corporations'])) {
+                    $q->orWhereIn('corporation_id', $member['corporations']);
+                }
+
+                if (! empty($member['alliances'])) {
+                    $q->orWhereIn('alliance_id', $member['alliances']);
+                }
+            })
+            ->where(function ($q) use ($held) {
+                $q->whereNull('audience_permissions');
+
+                foreach ($held as $permission) {
+                    $q->orWhereJsonContains('audience_permissions', $permission);
+                }
+            });
+    }
 
     public function webhook()
     {

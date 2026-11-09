@@ -5,7 +5,7 @@ return [
     'view_description' => 'The SeAT Broadcast menu and Help & Documentation, nothing else. Every other permission needs this one as well.',
 
     'line_member_label' => 'Line Member',
-    'line_member_description' => 'Ping Requests: press a button to ask for help or for a fleet, and keep saved forms for it. Each button can still be limited to a corporation or a SeAT role.',
+    'line_member_description' => 'Ping Requests: press a button to ask for help or for a fleet, and keep saved forms for it. Each button can still be limited by Broadcast permission, corporation or alliance.',
 
     'send_label' => 'Send Discord Pings',
     'send_description' => 'Send pings to Discord channels (manual + scheduled). Includes access to the Scheduled Broadcasts list, Calendar, and FC Opportunities planner — but limited to the user\'s OWN scheduled pings. The Fleet Coordinator tier ("Manage All Scheduled Pings") adds visibility and control across everyone\'s.',

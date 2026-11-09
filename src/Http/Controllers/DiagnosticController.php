@@ -313,20 +313,63 @@ class DiagnosticController extends Controller
                 : 'These post without pinging anybody: ' . $noMention->pluck('name')->implode(', '),
         ];
 
-        $limited = $buttons->whereNotNull('role_id');
-        $knownRoles = $limited->isEmpty()
-            ? collect()
-            : DB::table('roles')->whereIn('id', $limited->pluck('role_id')->unique()->all())->pluck('id')->map(fn ($id) => (int) $id);
-        $lostRole = $limited->reject(fn ($button) => $knownRoles->contains($button->role_id));
+        $limited = $buttons->reject(fn ($button) => empty($button->audience_permissions));
+        $known = array_keys(PingRequestButton::audienceOptions());
+        $lost = $limited->filter(fn ($button) => array_diff($button->audience_permissions, $known) !== []);
         $checks[] = [
-            'name'   => 'Ping request role limits still exist',
-            'status' => $lostRole->isEmpty() ? 'ok' : 'warn',
-            'detail' => $lostRole->isEmpty()
-                ? 'Every button limited to a SeAT role points at one that exists'
-                : 'Limited to a SeAT role that was deleted, so only admins can see them: ' . $lostRole->pluck('name')->implode(', '),
+            'name'   => 'Ping request permission limits still exist',
+            'status' => $lost->isEmpty() ? 'ok' : 'warn',
+            'detail' => $lost->isEmpty()
+                ? 'Every permission a button is limited to is one SeAT Broadcast still has'
+                : 'Limited to a permission SeAT Broadcast no longer has: ' . $lost->pluck('name')->implode(', '),
+        ];
+
+        // Line Member is what opens the page, so a role with Send and nothing
+        // else still can't see a button limited to Send.
+        $holders = $this->holdersOf(array_merge(['discordpings.line_member'], $limited->pluck('audience_permissions')->flatten()->unique()->all()));
+        $lineMembers = $holders['discordpings.line_member'] ?? [];
+        $unseen = $buttons->reject(function ($button) use ($holders, $lineMembers) {
+            foreach ($button->audience_permissions ?: [] as $permission) {
+                if (array_intersect($lineMembers, $holders[$permission] ?? []) !== []) {
+                    return true;
+                }
+            }
+
+            return empty($button->audience_permissions) && $lineMembers !== [];
+        });
+        $checks[] = [
+            'name'   => 'Ping request buttons have someone to show to',
+            'status' => $unseen->isEmpty() ? 'ok' : 'warn',
+            'detail' => $unseen->isEmpty()
+                ? 'Every button has at least one person holding Line Member and what the button asks for'
+                : 'Nobody holds Line Member together with what these ask for, so only admins can see them: ' . $unseen->pluck('name')->implode(', '),
         ];
 
         return $checks;
+    }
+
+    /**
+     * SeAT only hands a permission out through roles, so this is everybody
+     * who has one apart from superusers.
+     *
+     * @param string[] $permissions
+     * @return array<string, int[]> user ids by permission
+     */
+    private function holdersOf(array $permissions): array
+    {
+        $holders = [];
+
+        $rows = DB::table('role_user')
+            ->join('permission_role', 'role_user.role_id', '=', 'permission_role.role_id')
+            ->join('permissions', 'permission_role.permission_id', '=', 'permissions.id')
+            ->whereIn('permissions.title', $permissions)
+            ->get(['permissions.title', 'role_user.user_id']);
+
+        foreach ($rows as $row) {
+            $holders[$row->title][] = (int) $row->user_id;
+        }
+
+        return $holders;
     }
 
     /**

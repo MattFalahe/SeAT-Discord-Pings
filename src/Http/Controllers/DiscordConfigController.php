@@ -67,7 +67,8 @@ class DiscordConfigController extends Controller
         // Ping Requests tab.
         $requestButtons = PingRequestButton::with('webhook')->orderBy('sort_order')->orderBy('name')->get();
         $requestCorporations = $this->requestCorporations($requestButtons);
-        $seatRoles = $this->seatRoles($requestButtons);
+        $requestAlliances = $this->requestAlliances($requestButtons);
+        $audienceOptions = PingRequestButton::audienceOptions();
         $pickerRoles = DiscordRoleResolver::listRoles();
 
         return view('discordpings::config.index', compact(
@@ -77,7 +78,7 @@ class DiscordConfigController extends Controller
             'formupOffsetMinutes',
             'alertWebhooks', 'miningAlertWebhooks', 'routingCorpNames',
             'connectorRoles', 'connectorAvailable', 'connectorProviderLabel',
-            'requestButtons', 'requestCorporations', 'seatRoles', 'pickerRoles'
+            'requestButtons', 'requestCorporations', 'requestAlliances', 'audienceOptions', 'pickerRoles'
         ));
     }
 
@@ -115,21 +116,40 @@ class DiscordConfigController extends Controller
         return $names;
     }
 
-    /** @return array<int, string> titles by SeAT role id, including any a button still names */
-    private function seatRoles($buttons): array
+    /**
+     * Alliances a button can be limited to, picked the same way as the
+     * corporations above.
+     *
+     * @return array<int, string> names by alliance id
+     */
+    private function requestAlliances($buttons): array
     {
+        $used = $buttons->pluck('alliance_id')->filter()->unique()->all();
+
         try {
-            $titles = DB::table('roles')->orderBy('title')->pluck('title', 'id')->toArray();
+            $names = DB::table('refresh_tokens')
+                ->join('character_affiliations', 'refresh_tokens.character_id', '=', 'character_affiliations.character_id')
+                ->join('alliances', 'character_affiliations.alliance_id', '=', 'alliances.alliance_id')
+                ->whereNull('refresh_tokens.deleted_at')
+                ->distinct()
+                ->pluck('alliances.name', 'alliances.alliance_id')
+                ->toArray();
+
+            $names += DB::table('alliances')->whereIn('alliance_id', $used)->pluck('name', 'alliance_id')->toArray();
         } catch (\Throwable $e) {
-            Log::warning('[DiscordPings] Could not list SeAT roles for Ping Requests: ' . $e->getMessage());
-            $titles = [];
+            Log::warning('[DiscordPings] Could not list alliances for Ping Requests: ' . $e->getMessage());
+            $names = [];
         }
 
-        foreach ($buttons->pluck('role_id')->filter()->unique() as $roleId) {
-            $titles[$roleId] = $titles[$roleId] ?? 'Deleted role ' . $roleId;
+        $names = array_filter($names);
+
+        foreach ($used as $allianceId) {
+            $names[$allianceId] = $names[$allianceId] ?? 'Alliance ' . $allianceId;
         }
 
-        return $titles;
+        asort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $names;
     }
 
     /**

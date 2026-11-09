@@ -244,7 +244,14 @@ namespace {
     if (!function_exists('config')) {
         function config($key, $default = null)
         {
-            return $default;
+            return $GLOBALS['FAKE_CONFIG'][$key] ?? $default;
+        }
+    }
+
+    if (!function_exists('trans')) {
+        function trans($key)
+        {
+            return 'Translated ' . $key;
         }
     }
 }

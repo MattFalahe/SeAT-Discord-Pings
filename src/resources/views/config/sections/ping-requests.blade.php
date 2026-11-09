@@ -76,14 +76,17 @@
                         @endif
                     </td>
                     <td>
-                        @if(! $button->corporation_id && ! $button->role_id)
+                        @if(empty($button->audience_permissions) && ! $button->corporation_id && ! $button->alliance_id)
                             <span class="text-muted">Every line member</span>
                         @endif
+                        @foreach($button->audience_permissions ?? [] as $permission)
+                            <span class="badge badge-secondary">{{ $audienceOptions[$permission] ?? $permission }}</span>
+                        @endforeach
                         @if($button->corporation_id)
                             <span class="badge badge-info">{{ $requestCorporations[$button->corporation_id] ?? ('Corporation ' . $button->corporation_id) }}</span>
                         @endif
-                        @if($button->role_id)
-                            <span class="badge badge-secondary">{{ $seatRoles[$button->role_id] ?? ('Role ' . $button->role_id) }}</span>
+                        @if($button->alliance_id)
+                            <span class="badge badge-info">{{ $requestAlliances[$button->alliance_id] ?? ('Alliance ' . $button->alliance_id) }}</span>
                         @endif
                     </td>
                     <td>
@@ -109,7 +112,8 @@
                                         'starter_text' => $button->starter_text,
                                         'cooldown_minutes' => $button->cooldown_minutes,
                                         'corporation_id' => $button->corporation_id,
-                                        'role_id' => $button->role_id,
+                                        'alliance_id' => $button->alliance_id,
+                                        'audience_permissions' => $button->audience_permissions ?? [],
                                         'sort_order' => $button->sort_order,
                                         'is_active' => $button->is_active,
                                     ]) }}">
@@ -251,6 +255,21 @@
                         </small>
                     </div>
 
+                    <div class="form-group">
+                        <label class="d-block">Limit to Broadcast permissions</label>
+                        <div class="row">
+                            @foreach($audienceOptions as $permission => $permissionLabel)
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input js-prb-audience" id="prb_audience_{{ $loop->index }}" name="audience_permissions[]" value="{{ $permission }}">
+                                        <label class="custom-control-label" for="prb_audience_{{ $loop->index }}">{{ $permissionLabel }}</label>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <small class="text-muted">Tick one or more and members need any one of them, on top of Line Member. Leave them all empty for every line member.</small>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-4 form-group" id="prb_cooldown_group">
                             <label for="prb_cooldown">Cooldown (minutes)</label>
@@ -268,14 +287,14 @@
                             <small class="text-muted">Only members of this corporation see it.</small>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label for="prb_role">SeAT role</label>
-                            <select class="form-control" id="prb_role" name="role_id">
+                            <label for="prb_alliance">Alliance</label>
+                            <select class="form-control" id="prb_alliance" name="alliance_id">
                                 <option value="">Any</option>
-                                @foreach($seatRoles as $seatRoleId => $seatRoleTitle)
-                                    <option value="{{ $seatRoleId }}">{{ $seatRoleTitle }}</option>
+                                @foreach($requestAlliances as $allianceId => $allianceName)
+                                    <option value="{{ $allianceId }}">{{ $allianceName }}</option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Only members with this role see it.</small>
+                            <small class="text-muted">Or members of this alliance. With both set, either one is enough.</small>
                         </div>
                     </div>
 
@@ -331,7 +350,10 @@ $(document).ready(function () {
         $('#prb_starter_text').val(button && button.starter_text ? button.starter_text : '');
         $('#prb_cooldown').val(button ? button.cooldown_minutes : 15);
         $('#prb_corporation').val(button && button.corporation_id ? String(button.corporation_id) : '');
-        $('#prb_role').val(button && button.role_id ? String(button.role_id) : '');
+        $('#prb_alliance').val(button && button.alliance_id ? String(button.alliance_id) : '');
+        $('.js-prb-audience').each(function () {
+            $(this).prop('checked', !!button && button.audience_permissions.indexOf($(this).val()) !== -1);
+        });
         $('#prb_sort_order').val(button ? button.sort_order : 0);
         $('#prb_is_active').prop('checked', button ? button.is_active : false);
 

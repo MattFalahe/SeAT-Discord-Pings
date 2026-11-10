@@ -36,7 +36,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - ‼️ **PREPING ‼️** broadcast type alongside Fleet / Announcement / Message
 - 🎨 **Visual color picker** for embed colours
 - 📡 **Multi-webhook send** to fan out a single broadcast across channels
-- 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account
+- 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed, then can ask a few follow-up questions, each answer updating that same message; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account
 
 ### With Manager Core + Structure Manager
 
@@ -116,7 +116,7 @@ The Help & Documentation page inside the plugin has a **Permissions** section wi
 | Discord Channels | Pre-registered channels for inline `#channel` links |
 | Staging Locations | Pre-registered staging spots for quick formup-location selection |
 | PAP Types | Configurable PAP categories (Strategic / Peacetime / CTA seeded by default) |
-| Ping Requests | The buttons line members can press: type, webhook, role to ping, section names, cooldown, limits by Broadcast permission, corporation or alliance |
+| Ping Requests | The buttons line members can press: type, webhook, role to ping, sections and their boxes, cooldown, limits by Broadcast permission, corporation or alliance |
 | Structure Timers | Master toggles for pre-event alerts (structure + mining), default formup lead time, MC / SM / MM detection badges |
 | Routing Map | Read-only snapshot of which webhooks will fire for each event right now, with corp scope + master switch state |
 

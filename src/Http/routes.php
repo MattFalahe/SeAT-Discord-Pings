@@ -157,6 +157,10 @@ Route::group([
         ->name('discordpings.config.ping-requests.examples')
         ->middleware('can:discordpings.manage_webhooks');
 
+    Route::post('/config/ping-requests/read-format', 'PingRequestButtonController@readFormat')
+        ->name('discordpings.config.ping-requests.read-format')
+        ->middleware('can:discordpings.manage_webhooks');
+
     Route::put('/config/ping-requests/{id}', 'PingRequestButtonController@update')
         ->name('discordpings.config.ping-requests.update')
         ->middleware('can:discordpings.manage_webhooks');

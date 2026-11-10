@@ -4,6 +4,7 @@ namespace DiscordPings\Http\Controllers;
 
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\PingRequestButton;
+use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
@@ -20,25 +21,25 @@ class PingRequestButtonController extends Controller
             'name' => "Help, I'm tackled",
             'type' => PingRequestButton::TYPE_EMERGENCY,
             'cooldown_minutes' => 0,
-            'starter_text' => "Rorqual Tackled\nRorqual Name:\nSystem: Location In System (Anomaly or Moon):\nName of Cyno (On perch, 300km away):",
+            'sections' => Sections::STARTING_POINTS['Tackled'],
         ],
         [
             'name' => 'I want a mining fleet',
             'type' => PingRequestButton::TYPE_REQUEST,
             'cooldown_minutes' => 60,
-            'starter_text' => "Mining fleet wanted\nSystem:\nOre or ice:\nWhen:",
+            'sections' => Sections::STARTING_POINTS['Mining fleet'],
         ],
         [
             'name' => 'I want a PvP fleet',
             'type' => PingRequestButton::TYPE_REQUEST,
             'cooldown_minutes' => 60,
-            'starter_text' => "PvP fleet wanted\nForming from:\nWhen:\nDoctrine or ship:",
+            'sections' => Sections::STARTING_POINTS['PvP fleet'],
         ],
         [
             'name' => "Help, I'm bored",
             'type' => PingRequestButton::TYPE_REQUEST,
             'cooldown_minutes' => 120,
-            'starter_text' => 'Looking for something to do',
+            'sections' => [['label' => 'Looking for something to do', 'box' => Sections::FIXED, 'live' => false]],
         ],
     ];
 
@@ -88,6 +89,14 @@ class PingRequestButtonController extends Controller
         return redirect()->back()->with('success', $added . ' example buttons added, switched off. Give each one a webhook and switch it on.');
     }
 
+    /** Rows for a format pasted into the form, so the guessing lives in one place. */
+    public function readFormat(Request $request)
+    {
+        $data = $request->validate(['format' => 'nullable|string|max:20000']);
+
+        return response()->json(Sections::fromFormat($data['format'] ?? ''));
+    }
+
     private function validated(Request $request): array
     {
         $data = $request->validate([
@@ -96,7 +105,11 @@ class PingRequestButtonController extends Controller
             'webhook_id' => 'nullable|integer|exists:discord_webhooks,id',
             'mention_role' => 'nullable|string|max:64',
             'ping_notice' => 'nullable|string|max:100',
-            'starter_text' => 'nullable|string|max:2000',
+            // Loose on purpose: clean() trims these to size, so a long label is cut rather than losing the whole form.
+            'sections' => 'nullable|array|max:50',
+            'sections.*.label' => 'nullable|string|max:1000',
+            'sections.*.box' => 'nullable|string|max:20',
+            'sections.*.live' => 'nullable|boolean',
             'cooldown_minutes' => 'nullable|integer|min:0|max:1440',
             'corporation_id' => 'nullable|integer',
             'alliance_id' => 'nullable|integer',
@@ -126,7 +139,9 @@ class PingRequestButtonController extends Controller
             'webhook_id' => $data['webhook_id'] ?? null,
             'mention_role_id' => $roleId,
             'ping_notice' => $notice === '' ? null : $notice,
-            'starter_text' => $data['starter_text'] ?? null,
+            'sections' => Sections::clean($data['sections'] ?? []) ?: null,
+            // Saved as rows from now on, so the old text can't come back as a second version.
+            'starter_text' => null,
             'cooldown_minutes' => (int) ($data['cooldown_minutes'] ?? 0),
             'corporation_id' => $data['corporation_id'] ?? null,
             'alliance_id' => $data['alliance_id'] ?? null,

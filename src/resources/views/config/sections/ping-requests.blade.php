@@ -3,7 +3,28 @@
     // A role in two sources counts under both, because narrowing to a source has to show all of it.
     $pickerSourceCounts = collect($pickerRoles)->pluck('sources')->flatten()->countBy()->sortKeys();
     $pickerSourceColours = ['discord-roles-table' => '#28a745', 'seat-connector' => '#3498db', 'warlof-discord' => '#95a5a6'];
+    $sectionBoxes = \DiscordPings\Services\PingRequests\Sections::BOXES;
+    $sectionStartingPoints = \DiscordPings\Services\PingRequests\Sections::STARTING_POINTS;
 @endphp
+
+@push('head')
+<style>
+    .prb-section-head, .prb-section-row { display: flex; gap: 6px; align-items: center; }
+    .prb-section-head { font-size: 0.8rem; margin-bottom: 4px; }
+    .prb-section-row { margin-bottom: 6px; }
+    .prb-section-head .prb-col-label, .prb-section-row .js-prb-label { flex: 1 1 auto; min-width: 0; }
+    .prb-section-head .prb-col-box, .prb-section-row .js-prb-box { flex: 0 0 165px; }
+    .prb-section-head .prb-col-live, .prb-section-row .js-prb-live { flex: 0 0 140px; }
+    .prb-section-head .prb-col-tools, .prb-section-row .prb-row-tools { flex: 0 0 102px; }
+    .prb-start { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+    @media (max-width: 575.98px) {
+        .prb-section-head { display: none; }
+        .prb-section-row { flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid #454d55; }
+        .prb-section-row .js-prb-label { flex-basis: 100%; }
+        .prb-section-row .js-prb-box, .prb-section-row .js-prb-live { flex: 1 1 0; }
+    }
+</style>
+@endpush
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0">Ping Requests</h4>
@@ -110,7 +131,7 @@
                                         'webhook_id' => $button->webhook_id,
                                         'mention_role' => $button->mention_role_id ? '<@&' . $button->mention_role_id . '>' : '',
                                         'ping_notice' => $button->ping_notice,
-                                        'starter_text' => $button->starter_text,
+                                        'sections' => $button->sectionRows(),
                                         'cooldown_minutes' => $button->cooldown_minutes,
                                         'corporation_id' => $button->corporation_id,
                                         'alliance_id' => $button->alliance_id,
@@ -254,11 +275,31 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="prb_starter_text">Section names (format)</label>
-                        <textarea class="form-control" id="prb_starter_text" name="starter_text" rows="6" maxlength="2000" placeholder="Rorqual Tackled&#10;Rorqual Name:&#10;System: Location In System (Anomaly or Moon):&#10;Name of Cyno (On perch, 300km away):"></textarea>
-                        <small class="text-muted">
-                            Paste your alliance's format. A line ending in a colon becomes a box for the member to fill in, every other line goes out as written.
-                            With no such lines, members get one free text box.
+                        <label class="d-block">Section names (format)</label>
+                        <div class="prb-start">
+                            <span class="text-muted">Start from:</span>
+                            @foreach($sectionStartingPoints as $startName => $startRows)
+                                <button type="button" class="btn btn-sm btn-pings-secondary js-prb-start" data-rows="{{ json_encode($startRows) }}">{{ $startName }}</button>
+                            @endforeach
+                        </div>
+                        <div class="prb-section-head text-muted">
+                            <span class="prb-col-label">Section name</span>
+                            <span class="prb-col-box">Box</span>
+                            <span class="prb-col-live">Filled in</span>
+                            <span class="prb-col-tools"></span>
+                        </div>
+                        <div id="prb_sections"></div>
+                        <button type="button" class="btn btn-sm btn-pings-secondary" id="prb_add_section">
+                            <i class="fas fa-plus"></i> Add a section
+                        </button>
+                        <small class="text-muted d-block mt-2">
+                            Members fill these in from the top down. Paste your alliance's whole format into any section name and each line becomes its own row,
+                            with the box already picked from its wording, so check those. A fixed line goes out as written. With no sections, members get one free text box.
+                        </small>
+                        <small class="text-muted d-block mt-1">
+                            <strong>Filled in:</strong> a saved form keeps the answer, so one press can carry it.
+                            <strong>After the press</strong> is for what's only true at that moment, like Panic or a d-scan, and no saved form keeps it.
+                            An emergency asks it once the message is out and updates that same Discord message. A request asks it in the confirm box.
                         </small>
                     </div>
 
@@ -336,7 +377,182 @@ $(document).ready(function () {
     var $form = $('#pingRequestButtonForm');
     var storeUrl = @json(route('discordpings.config.ping-requests.store'));
     var buttonsUrl = @json(url('discord-pings/config/ping-requests'));
+    var readFormatUrl = @json(route('discordpings.config.ping-requests.read-format'));
     var csrf = @json(csrf_token());
+    var sectionBoxes = @json($sectionBoxes);
+    var mostSections = @json(\DiscordPings\Services\PingRequests\Sections::MOST_ROWS);
+    var longestLabel = @json(\DiscordPings\Services\PingRequests\Sections::LONGEST_LABEL);
+    var $sections = $('#prb_sections');
+
+    function sectionRow(row) {
+        var $box = $('<select class="form-control form-control-sm js-prb-box" aria-label="Box">');
+        var $live = $('<select class="form-control form-control-sm js-prb-live" aria-label="Filled in">')
+            .append($('<option value="0">').text('Saved form'), $('<option value="1">').text('After the press'));
+
+        $.each(sectionBoxes, function (value, label) {
+            $box.append($('<option>').val(value).text(label));
+        });
+
+        var $row = $('<div class="prb-section-row">').append(
+            $('<input type="text" class="form-control form-control-sm js-prb-label" aria-label="Section name">')
+                .attr({ maxlength: longestLabel, placeholder: 'e.g. Ship Tackled, or paste a whole format' })
+                .val(row.label || ''),
+            $box.val(row.box || 'text'),
+            $live.val(row.live ? '1' : '0'),
+            $('<div class="btn-group btn-group-sm prb-row-tools">').append(
+                $('<button type="button" class="btn btn-pings-secondary js-prb-up" title="Move up"><i class="fas fa-arrow-up"></i></button>'),
+                $('<button type="button" class="btn btn-pings-secondary js-prb-down" title="Move down"><i class="fas fa-arrow-down"></i></button>'),
+                $('<button type="button" class="btn btn-pings-secondary js-prb-remove" title="Remove"><i class="fas fa-times"></i></button>')
+            )
+        );
+
+        showFilledIn($row);
+
+        return $row;
+    }
+
+    // A fixed line has no box, so there's nothing to fill in.
+    function showFilledIn($row) {
+        var fixed = $row.find('.js-prb-box').val() === 'fixed';
+
+        $row.find('.js-prb-live').prop('disabled', fixed).css('visibility', fixed ? 'hidden' : '');
+    }
+
+    function refreshSections() {
+        if ($sections.children().length === 0) {
+            $sections.append(sectionRow({}));
+        }
+
+        $('#prb_add_section').prop('disabled', $sections.children().length >= mostSections);
+    }
+
+    function setSections(rows) {
+        $sections.empty();
+        (rows || []).forEach(function (row) {
+            $sections.append(sectionRow(row));
+        });
+        refreshSections();
+    }
+
+    function isEmpty($row) {
+        return $row.find('.js-prb-label').val().trim() === '';
+    }
+
+    // Pasted rows go where the paste was, and an empty row they land on makes way for them.
+    function placeRows($at, rows) {
+        var room = mostSections - $sections.children().length + (isEmpty($at) ? 1 : 0);
+        var $last = $at;
+
+        rows.slice(0, Math.max(0, room)).forEach(function (row) {
+            var $row = sectionRow(row);
+
+            $last.after($row);
+            $last = $row;
+        });
+
+        if (isEmpty($at) && $last !== $at) {
+            $at.remove();
+        }
+
+        refreshSections();
+    }
+
+    $('#prb_add_section').on('click', function () {
+        if ($sections.children().length < mostSections) {
+            var $row = sectionRow({});
+
+            $sections.append($row);
+            refreshSections();
+            $row.find('.js-prb-label').focus();
+        }
+    });
+
+    $(document).on('click', '.js-prb-start', function () {
+        var filled = $sections.children().filter(function () {
+            return !isEmpty($(this));
+        }).length;
+
+        if (filled === 0 || confirm('Replace these sections with ' + $(this).text().trim() + '?')) {
+            setSections($(this).data('rows'));
+        }
+    });
+
+    $(document).on('click', '#prb_sections .js-prb-up', function () {
+        var $row = $(this).closest('.prb-section-row');
+        $row.prev().before($row);
+    });
+
+    $(document).on('click', '#prb_sections .js-prb-down', function () {
+        var $row = $(this).closest('.prb-section-row');
+        $row.next().after($row);
+    });
+
+    $(document).on('click', '#prb_sections .js-prb-remove', function () {
+        $(this).closest('.prb-section-row').remove();
+        refreshSections();
+    });
+
+    // These are only ever true at the moment, so a new one starts out asked after the press.
+    $(document).on('change', '#prb_sections .js-prb-box', function () {
+        var $row = $(this).closest('.prb-section-row');
+
+        if ($(this).val() === 'yesno' || $(this).val() === 'long') {
+            $row.find('.js-prb-live').val('1');
+        }
+
+        showFilledIn($row);
+    });
+
+    // Enter would otherwise save the whole button half done, so it starts the next section instead.
+    $(document).on('keydown', '#prb_sections .js-prb-label', function (event) {
+        if (event.key !== 'Enter') {
+            return;
+        }
+
+        event.preventDefault();
+
+        if ($sections.children().length < mostSections) {
+            var $row = sectionRow({});
+
+            $(this).closest('.prb-section-row').after($row);
+            refreshSections();
+            $row.find('.js-prb-label').focus();
+        }
+    });
+
+    $(document).on('paste', '#prb_sections .js-prb-label', function (event) {
+        var clipboard = event.originalEvent && event.originalEvent.clipboardData;
+        var text = clipboard ? clipboard.getData('text') : '';
+        var $row = $(this).closest('.prb-section-row');
+
+        if (!/[\r\n]/.test(text.trim())) {
+            return;
+        }
+
+        event.preventDefault();
+
+        $.post(readFormatUrl, { _token: csrf, format: text })
+            .done(function (rows) {
+                placeRows($row, rows);
+            })
+            .fail(function () {
+                // Still one row per line, just with every box left as plain text.
+                placeRows($row, text.split(/\r?\n/).filter(function (line) {
+                    return line.trim() !== '';
+                }).map(function (line) {
+                    return { label: line.trim(), box: 'text', live: false };
+                }));
+            });
+    });
+
+    // Numbered as they stand, so the order on screen is the order they're saved in.
+    $form.on('submit', function () {
+        $sections.children('.prb-section-row').each(function (index) {
+            $(this).find('.js-prb-label').attr('name', 'sections[' + index + '][label]');
+            $(this).find('.js-prb-box').attr('name', 'sections[' + index + '][box]');
+            $(this).find('.js-prb-live').attr('name', 'sections[' + index + '][live]');
+        });
+    });
 
     function showTypeHelp() {
         var emergency = $('#prb_type').val() === 'emergency';
@@ -355,7 +571,7 @@ $(document).ready(function () {
         $('#prb_webhook').val(button && button.webhook_id ? String(button.webhook_id) : '');
         $('#prb_mention_role').val(button ? button.mention_role : '');
         $('#prb_ping_notice').val(button && button.ping_notice ? button.ping_notice : '');
-        $('#prb_starter_text').val(button && button.starter_text ? button.starter_text : '');
+        setSections(button ? button.sections : []);
         $('#prb_cooldown').val(button ? button.cooldown_minutes : 15);
         $('#prb_corporation').val(button && button.corporation_id ? String(button.corporation_id) : '');
         $('#prb_alliance').val(button && button.alliance_id ? String(button.alliance_id) : '');

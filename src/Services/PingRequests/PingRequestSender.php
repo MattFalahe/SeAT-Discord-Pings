@@ -29,9 +29,15 @@ class PingRequestSender
     /** Longest Discord's own rate limit is waited out in the request before giving up, in seconds. */
     private const LONGEST_WAIT = 3.0;
 
+    /** How long after an emergency goes out its sender can still add to it, in seconds. */
+    private const DETAILS_WINDOW = 3600;
+
+    /** Far more than one message needs, so a page left open can't keep editing it. */
+    private const MOST_DETAIL_UPDATES = 30;
+
     /**
      * @param array<string, mixed> $answers
-     * @return array{ok: bool, status: string, message: string, retry_in: ?int}
+     * @return array{ok: bool, status: string, message: string, retry_in: ?int, details_token?: ?string}
      */
     public function press(PingRequestButton $button, array $answers, $user, ?string $savedForm = null): array
     {
@@ -43,7 +49,8 @@ class PingRequestSender
             return $this->outcome(false, 'not_configured', 'Not delivered. This button has no working webhook, so let your admins know.');
         }
 
-        $body = Sections::compose($button->sectionRows(), $answers);
+        $rows = $button->sectionRows();
+        $body = Sections::compose($rows, $answers);
         $sender = DiscordUserResolver::senderIdentity($user);
 
         // Only request buttons go through this. An emergency skips the
@@ -55,7 +62,7 @@ class PingRequestSender
             return $this->outcome(false, $held['status'], $held['message'], $held['retry_in']);
         }
 
-        $delivery = $this->post($webhook, RequestMessage::payload(
+        $payload = RequestMessage::payload(
             $button->name,
             $body,
             $button->mention_role_id,
@@ -63,12 +70,22 @@ class PingRequestSender
             $this->color($button, $webhook),
             (string) config('discordpings.app_name', 'SeAT Broadcast'),
             gmdate('Y-m-d\TH:i:s\Z')
-        ));
+        );
 
-        $this->record($button, $webhook, $user, $sender, $body, $savedForm, $delivery['ok'] ? 'sent' : 'failed', $delivery['error'], $delivery['message_id']);
+        $delivery = $this->post($webhook, $payload);
+
+        $historyId = $this->record($button, $webhook, $user, $sender, $body, $savedForm, $delivery['ok'] ? 'sent' : 'failed', $delivery['error'], $delivery['message_id']);
 
         if ($delivery['ok']) {
-            return $this->outcome(true, 'sent', 'Sent to Discord.', $button->isEmergency() ? null : (int) $button->cooldown_minutes * 60);
+            $outcome = $this->outcome(true, 'sent', 'Sent to Discord.', $button->isEmergency() ? null : (int) $button->cooldown_minutes * 60);
+
+            // Asked only once the message is out, so the questions can never hold an emergency up.
+            // A request already asked them in its confirm box.
+            if ($button->isEmergency() && Sections::hasLive($rows)) {
+                $outcome['details_token'] = $this->keepForDetails($webhook, $user, $delivery['message_id'], $historyId, $rows, $answers, $payload['embeds'][0]);
+            }
+
+            return $outcome;
         }
 
         // Nothing reached Discord, so the member shouldn't have to sit out a
@@ -80,6 +97,63 @@ class PingRequestSender
         }
 
         return $this->outcome(false, 'failed', 'Not delivered. Nothing reached Discord, so press again or tell someone directly.');
+    }
+
+    /**
+     * Rebuilds an emergency's message with what its sender knows now and
+     * edits it on Discord, in place of posting another one.
+     *
+     * @param array<string, mixed> $answers every after-the-press answer as it stands, blanks included
+     * @return array{ok: bool, status: string, message: string, retry_in: ?int}
+     */
+    public function addDetails(string $token, array $answers, $user): array
+    {
+        $press = ctype_xdigit($token) ? Cache::get($this->detailsKey($token)) : null;
+
+        if (! is_array($press) || (int) ($press['user_id'] ?? 0) !== (int) $user->id) {
+            return $this->outcome(false, 'expired', 'Not updated. This message can no longer be changed from here, so tell someone directly.');
+        }
+
+        // Not the key the details sit under: the rate limiter keeps its count in the same cache.
+        $counter = 'discordpings:requests:detail-updates:' . $token;
+
+        if (RateLimiter::tooManyAttempts($counter, self::MOST_DETAIL_UPDATES)) {
+            return $this->outcome(false, 'rate_limited', 'Not updated. This message has been changed as often as it can be, so tell someone directly.');
+        }
+
+        RateLimiter::hit($counter, self::DETAILS_WINDOW);
+
+        $webhook = DiscordWebhook::find($press['webhook_id']);
+
+        if (! $webhook || ! $webhook->is_active) {
+            return $this->outcome(false, 'not_configured', 'Not updated. The webhook this went out on is gone or switched off.');
+        }
+
+        $rows = $press['rows'];
+        $live = array_intersect_key($answers, array_flip(Sections::liveKeys($rows)));
+        $body = Sections::compose($rows, array_merge($press['answers'], $live));
+        $delivery = $this->edit($webhook, $press['message_id'], RequestMessage::withBody($press['embed'], $body));
+
+        if (! $delivery['ok']) {
+            Log::warning('[DiscordPings] Could not update a ping request on Discord: ' . $delivery['error'], ['history_id' => $press['history_id'] ?? null]);
+
+            // The message or its webhook is gone on Discord, so every later try would fail the same way.
+            if ($delivery['http_status'] === 404) {
+                Cache::forget($this->detailsKey($token));
+
+                return $this->outcome(false, 'expired', "Not updated. Discord can't find this message any more, so tell someone directly.");
+            }
+
+            if ($delivery['retry_in'] !== null) {
+                return $this->outcome(false, 'failed', 'Not updated. Discord is limiting this channel right now, try again in ' . Cooldown::describe($delivery['retry_in']) . '.', $delivery['retry_in']);
+            }
+
+            return $this->outcome(false, 'failed', 'Not updated. Your message is still on Discord as it was, so try again or tell someone directly.');
+        }
+
+        $this->followInHistory($press['history_id'] ?? null, $body !== '' ? $body : (string) ($press['embed']['title'] ?? ''));
+
+        return $this->outcome(true, 'updated', 'Added to your message on Discord.');
     }
 
     /** How long this member has to wait before this button works again. */
@@ -152,13 +226,37 @@ class PingRequestSender
     }
 
     /**
-     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int}
+     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int, http_status: ?int}
      */
     private function post(DiscordWebhook $webhook, array $payload): array
     {
         $url = $webhook->webhook_url;
         $url .= (str_contains($url, '?') ? '&' : '?') . 'wait=true';
 
+        return $this->deliver('post', $url, $payload);
+    }
+
+    /**
+     * Only the embed goes, so the role in the content is left as it was and
+     * Discord doesn't ping anybody again.
+     *
+     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int, http_status: ?int}
+     */
+    private function edit(DiscordWebhook $webhook, string $messageId, array $embed): array
+    {
+        [$address, $query] = array_pad(explode('?', (string) $webhook->webhook_url, 2), 2, '');
+
+        // A webhook that posts into a thread has to name the thread for an edit too.
+        $url = rtrim($address, '/') . '/messages/' . rawurlencode($messageId) . ($query !== '' ? '?' . $query : '');
+
+        return $this->deliver('patch', $url, ['embeds' => [$embed]]);
+    }
+
+    /**
+     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int, http_status: ?int}
+     */
+    private function deliver(string $verb, string $url, array $payload): array
+    {
         try {
             $client = new Client([
                 'timeout' => self::TIMEOUT,
@@ -166,14 +264,14 @@ class PingRequestSender
                 'http_errors' => false,
             ]);
 
-            $response = $client->post($url, ['json' => $payload]);
+            $response = $client->$verb($url, ['json' => $payload]);
 
             if ($response->getStatusCode() === 429) {
                 $wait = $this->retryAfter($response);
 
                 if ($wait > 0 && $wait <= self::LONGEST_WAIT) {
                     usleep((int) ceil($wait * 1000000));
-                    $response = $client->post($url, ['json' => $payload]);
+                    $response = $client->$verb($url, ['json' => $payload]);
                 }
             }
 
@@ -181,7 +279,7 @@ class PingRequestSender
             $json = json_decode((string) $response->getBody(), true);
 
             if ($status >= 200 && $status < 300) {
-                return ['ok' => true, 'error' => null, 'message_id' => isset($json['id']) ? (string) $json['id'] : null, 'retry_in' => null];
+                return ['ok' => true, 'error' => null, 'message_id' => isset($json['id']) ? (string) $json['id'] : null, 'retry_in' => null, 'http_status' => $status];
             }
 
             $error = 'Discord answered ' . $status . (is_string($json['message'] ?? null) ? ': ' . $json['message'] : '');
@@ -191,9 +289,10 @@ class PingRequestSender
                 'error' => ErrorText::safe($error),
                 'message_id' => null,
                 'retry_in' => $status === 429 ? max(1, (int) ceil($this->retryAfter($response))) : null,
+                'http_status' => $status,
             ];
         } catch (\Throwable $e) {
-            return ['ok' => false, 'error' => ErrorText::safe($e->getMessage()), 'message_id' => null, 'retry_in' => null];
+            return ['ok' => false, 'error' => ErrorText::safe($e->getMessage()), 'message_id' => null, 'retry_in' => null, 'http_status' => null];
         }
     }
 
@@ -209,11 +308,62 @@ class PingRequestSender
         return is_numeric($json['retry_after'] ?? null) ? (float) $json['retry_after'] : 0.0;
     }
 
+    /**
+     * What the details box needs to rebuild the message, kept for the window.
+     * Written after the post like the history row, and just as unable to undo it.
+     */
+    private function keepForDetails(DiscordWebhook $webhook, $user, ?string $messageId, ?int $historyId, array $rows, array $answers, array $embed): ?string
+    {
+        if ($messageId === null) {
+            return null;
+        }
+
+        try {
+            $token = bin2hex(random_bytes(20));
+
+            Cache::put($this->detailsKey($token), [
+                'user_id' => (int) $user->id,
+                'webhook_id' => (int) $webhook->id,
+                'message_id' => $messageId,
+                'history_id' => $historyId,
+                'rows' => $rows,
+                // Only what the button asks. A press can carry any keys at all, and these sit in the cache for an hour.
+                'answers' => array_intersect_key($answers, array_flip(array_merge(Sections::savedKeys($rows), Sections::liveKeys($rows)))),
+                'embed' => $embed,
+            ], self::DETAILS_WINDOW);
+
+            return $token;
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not keep a ping request open for details: ' . ErrorText::safe($e->getMessage()));
+
+            return null;
+        }
+    }
+
+    /** History shows what Discord shows. */
+    private function followInHistory(?int $historyId, string $message): void
+    {
+        if ($historyId === null) {
+            return;
+        }
+
+        try {
+            PingHistory::find($historyId)?->update(['message' => $message]);
+        } catch (\Throwable $e) {
+            Log::error('[DiscordPings] Could not update a ping request in history: ' . ErrorText::safe($e->getMessage()), ['history_id' => $historyId]);
+        }
+    }
+
+    private function detailsKey(string $token): string
+    {
+        return 'discordpings:requests:details:' . $token;
+    }
+
     /** Written after the post, and never allowed to get in its way. */
-    private function record(PingRequestButton $button, DiscordWebhook $webhook, $user, SenderIdentity $sender, string $body, ?string $savedForm, string $status, ?string $error, ?string $messageId = null): void
+    private function record(PingRequestButton $button, DiscordWebhook $webhook, $user, SenderIdentity $sender, string $body, ?string $savedForm, string $status, ?string $error, ?string $messageId = null): ?int
     {
         try {
-            PingHistory::create([
+            $history = PingHistory::create([
                 'webhook_id' => $webhook->id,
                 'user_id' => $user->id,
                 'user_name' => $sender->mainName,
@@ -232,8 +382,12 @@ class PingRequestSender
                 'error_message' => $error,
                 'discord_message_id' => $messageId,
             ]);
+
+            return $history->id !== null ? (int) $history->id : null;
         } catch (\Throwable $e) {
             Log::error('[DiscordPings] Could not record a ping request: ' . ErrorText::safe($e->getMessage()), ['button_id' => $button->id]);
+
+            return null;
         }
     }
 

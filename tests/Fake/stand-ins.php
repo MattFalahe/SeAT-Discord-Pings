@@ -11,6 +11,14 @@ namespace Illuminate\Database\Eloquent {
         public static array $created = [];
         public static ?\Throwable $failCreateWith = null;
 
+        /** @var array<class-string, array<int, Model>> what find() can see, by class and id */
+        public static array $found = [];
+
+        /** @var array<int, array{0: class-string, 1: mixed, 2: array}> every update(), in order, with the row's id */
+        public static array $updated = [];
+
+        private static int $lastId = 0;
+
         protected array $attributes = [];
 
         public function __construct(array $attributes = [])
@@ -28,6 +36,7 @@ namespace Illuminate\Database\Eloquent {
             $this->attributes[$name] = $value;
         }
 
+        /** The row as written goes in $created, and the id a database would give it only on what comes back. */
         public static function create(array $attributes)
         {
             if (self::$failCreateWith) {
@@ -35,7 +44,23 @@ namespace Illuminate\Database\Eloquent {
             }
             self::$created[] = [static::class, $attributes];
 
-            return new static($attributes);
+            $model = new static($attributes + ['id' => ++self::$lastId]);
+            self::$found[static::class][$model->id] = $model;
+
+            return $model;
+        }
+
+        public static function find($id)
+        {
+            return self::$found[static::class][$id] ?? null;
+        }
+
+        public function update(array $attributes): bool
+        {
+            self::$updated[] = [static::class, $this->attributes['id'] ?? null, $attributes];
+            $this->attributes = $attributes + $this->attributes;
+
+            return true;
         }
     }
 }
@@ -44,6 +69,22 @@ namespace Illuminate\Support\Facades {
     class Cache
     {
         public static array $store = [];
+
+        /** @var array<string, int> how long each put() was told to keep its key */
+        public static array $seconds = [];
+
+        public static ?\Throwable $failPutWith = null;
+
+        public static function put(string $key, $value, int $seconds): bool
+        {
+            if (self::$failPutWith) {
+                throw self::$failPutWith;
+            }
+            self::$store[$key] = $value;
+            self::$seconds[$key] = $seconds;
+
+            return true;
+        }
 
         public static function add(string $key, $value, int $seconds): bool
         {
@@ -216,7 +257,10 @@ namespace GuzzleHttp {
         /** @var array<int, array{0: string, 1: array}> every post, in order */
         public static array $posts = [];
 
-        /** @var array<int, object> what the next posts get back; a Throwable is thrown */
+        /** @var array<int, array{0: string, 1: array}> every patch, in order */
+        public static array $patches = [];
+
+        /** @var array<int, object> what the next posts and patches get back, in the order they're made; a Throwable is thrown */
         public static array $replies = [];
 
         public function __construct(array $config = [])
@@ -226,10 +270,23 @@ namespace GuzzleHttp {
         public function post(string $url, array $options = [])
         {
             self::$posts[] = [$url, $options];
+
+            return self::nextReply('post', $url);
+        }
+
+        public function patch(string $url, array $options = [])
+        {
+            self::$patches[] = [$url, $options];
+
+            return self::nextReply('patch', $url);
+        }
+
+        private static function nextReply(string $verb, string $url)
+        {
             $reply = array_shift(self::$replies);
 
             if ($reply === null) {
-                throw new \LogicException('A post nobody expected: ' . $url);
+                throw new \LogicException('A ' . $verb . ' nobody expected: ' . $url);
             }
             if ($reply instanceof \Throwable) {
                 throw $reply;

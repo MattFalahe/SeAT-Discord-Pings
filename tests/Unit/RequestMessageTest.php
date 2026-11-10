@@ -172,4 +172,42 @@ class RequestMessageTest extends TestCase
     {
         $this->assertNotFalse(json_encode($this->payload("bad \xC3\x28 text")));
     }
+
+    public function test_a_new_body_changes_the_description_and_nothing_else(): void
+    {
+        $embed = $this->payload('Rorqual Tackled')['embeds'][0];
+
+        $changed = RequestMessage::withBody($embed, "Rorqual Tackled\nPanic Active? Yes");
+
+        $this->assertSame("Rorqual Tackled\nPanic Active? Yes", $changed['description']);
+        unset($embed['description'], $changed['description']);
+        $this->assertSame($embed, $changed);
+    }
+
+    public function test_an_empty_new_body_takes_the_description_away(): void
+    {
+        $this->assertArrayNotHasKey('description', RequestMessage::withBody($this->payload('Rorqual Tackled')['embeds'][0], ''));
+    }
+
+    public function test_a_new_body_only_gets_the_room_the_rest_of_the_embed_leaves(): void
+    {
+        $embed = $this->payload('hi', self::ROLE, new SenderIdentity(str_repeat('b', 2000), str_repeat('c', 2000)))['embeds'][0];
+
+        $changed = RequestMessage::withBody($embed, str_repeat('a', 9000));
+
+        $total = $this->length($changed['title']) + $this->length($changed['description']);
+        foreach ($changed['fields'] as $field) {
+            $total += $this->length($field['name']) + $this->length($field['value']);
+        }
+
+        $this->assertLessThanOrEqual(6000, $total);
+        $this->assertLessThan(4096, $this->length($changed['description']));
+    }
+
+    public function test_a_new_body_cannot_carry_a_masked_link_either(): void
+    {
+        $changed = RequestMessage::withBody($this->payload('hi')['embeds'][0], '[free isk](https://bad.example)');
+
+        $this->assertSame('[free isk\\](https://bad.example)', $changed['description']);
+    }
 }

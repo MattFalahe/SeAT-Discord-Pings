@@ -56,6 +56,7 @@ class PingRequestController extends Controller
                 'plain' => Sections::compose($rows, []),
                 'freeText' => ! Sections::hasQuestions($rows),
                 'canSave' => Sections::savedKeys($rows) !== [],
+                'asksAfter' => Sections::hasLive($rows),
                 'cooldownMinutes' => (int) $button->cooldown_minutes,
                 'readyIn' => $sender->secondsUntilReady($button, $user),
                 'presets' => ($presets[$button->id] ?? collect())->map(function ($preset) use ($rows) {
@@ -136,6 +137,23 @@ class PingRequestController extends Controller
             Log::error('[DiscordPings] Ping request press failed: ' . ErrorText::safe($e->getMessage()), ['button_id' => $button->id]);
 
             return response()->json(['ok' => false, 'status' => 'failed', 'message' => 'Not delivered. Something went wrong on our side, so press again or tell someone directly.', 'retry_in' => null]);
+        }
+    }
+
+    /** What a member adds to an emergency once it has gone out. The token says which message, and that it is theirs. */
+    public function details(Request $request, $token, PingRequestSender $sender)
+    {
+        $validated = $request->validate([
+            'answers' => 'nullable|array|max:50',
+            'answers.*' => 'nullable|string|max:' . self::MAX_ANSWER_LENGTH,
+        ]);
+
+        try {
+            return response()->json($sender->addDetails((string) $token, $validated['answers'] ?? [], auth()->user()));
+        } catch (\Throwable $e) {
+            Log::error('[DiscordPings] Adding to a ping request failed: ' . ErrorText::safe($e->getMessage()));
+
+            return response()->json(['ok' => false, 'status' => 'failed', 'message' => 'Not updated. Something went wrong on our side, so try again or tell someone directly.', 'retry_in' => null]);
         }
     }
 

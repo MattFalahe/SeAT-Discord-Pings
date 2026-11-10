@@ -27,19 +27,22 @@
     }
 
     /*
-     * Which boxes a form gets: all of them in the confirm box, and on a saved
-     * form only the ones whose answers can be kept.
+     * Which boxes a form gets: 'all' in the confirm box, 'saved' on a saved
+     * form, where only answers that can be kept belong, and 'live' for what
+     * an emergency asks once it has gone out.
      */
-    function buildFields($target, card, answers, savedOnly) {
+    function buildFields($target, card, answers, which) {
         $target.empty();
 
         if (card.freeText) {
-            $target.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, answers[FREE_TEXT]));
+            if (which !== 'live') {
+                $target.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, answers[FREE_TEXT]));
+            }
             return;
         }
 
         questionsOf(card).forEach(function (line) {
-            if (!(savedOnly && line.live)) {
+            if (which === 'all' || line.live === (which === 'live')) {
                 $target.append(field(line, answers[line.key]));
             }
         });
@@ -145,8 +148,9 @@
         $status.removeClass('pr-ok pr-bad').addClass(ok ? 'pr-ok' : 'pr-bad').text(message);
     }
 
+    // Only the card's own line, not the one in its details box.
     function cardStatus(buttonId) {
-        return $('[data-card="' + buttonId + '"] .pr-status');
+        return $('[data-card="' + buttonId + '"] > .card-body > .pr-status');
     }
 
     function post(url, data) {
@@ -231,6 +235,10 @@
         press(card.id, presetId ? { preset_id: presetId } : {})
             .done(function (result) {
                 setStatus($status, result.ok, result.message);
+
+                if (result.ok && result.details_token) {
+                    openDetails(card, result.details_token);
+                }
             })
             .fail(function (xhr) {
                 setStatus($status, false, failureOf(xhr));
@@ -239,6 +247,84 @@
                 setBusy($button, false);
             });
     }
+
+    /*
+     * The questions an emergency asks once it is out, under its card. Every
+     * update carries all the answers, so whichever lands last has the lot.
+     */
+    function openDetails(card, token) {
+        var $box = $('[data-card="' + card.id + '"] .pr-details');
+        var $fields = $('<div class="pr-details-fields">');
+        var details = { token: token, $box: $box, $fields: $fields, sent: null, busy: false, again: false, closed: false };
+
+        $box.empty().append(
+            $('<p class="pr-details-intro">').text('Add what you know now. Each answer updates your message on Discord without pinging anyone again.'),
+            $fields,
+            $('<button type="button" class="btn btn-sm btn-pings-secondary js-pr-details-send">').append($('<i class="fas fa-sync-alt">'), ' Update message'),
+            $('<div class="pr-status pr-details-status" role="status">')
+        );
+
+        buildFields($fields, card, {}, 'live');
+        $box.data('details', details).show();
+    }
+
+    function sendDetails(details) {
+        // A newer press has taken the box over, and this token's message is no longer the one on show.
+        if (!details || details.closed || details.$box.data('details') !== details) {
+            return;
+        }
+
+        var answers = readFields(details.$fields);
+        var state = JSON.stringify(answers);
+        var $status = details.$box.find('.pr-details-status');
+
+        if (state === details.sent) {
+            return;
+        }
+
+        // One at a time, and whatever changed in the meantime goes straight after.
+        if (details.busy) {
+            details.again = true;
+            return;
+        }
+
+        details.busy = true;
+        details.again = false;
+        $status.removeClass('pr-ok pr-bad').text('Updating...');
+
+        post(config.detailsUrl.replace('__TOKEN__', details.token), { answers: answers })
+            .done(function (result) {
+                setStatus($status, result.ok, result.message);
+
+                if (result.ok) {
+                    details.sent = state;
+                } else if (result.status === 'expired' || result.status === 'not_configured' || result.status === 'rate_limited') {
+                    // Left on show so the member can still read what they wrote.
+                    details.closed = true;
+                    details.$box.find('input, textarea, button').prop('disabled', true);
+                }
+            })
+            .fail(function (xhr) {
+                setStatus($status, false, xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : 'Not updated. The page could not reach SeAT, so try again or tell someone directly.');
+            })
+            .always(function () {
+                details.busy = false;
+
+                if (details.again) {
+                    sendDetails(details);
+                }
+            });
+    }
+
+    $(document).on('change pr-picked', '.pr-details [data-key]', function () {
+        sendDetails($(this).closest('.pr-details').data('details'));
+    });
+
+    $(document).on('click', '.js-pr-details-send', function () {
+        sendDetails($(this).closest('.pr-details').data('details'));
+    });
 
     var sending = null;
 
@@ -250,7 +336,7 @@
         $('#prSendTitle').text(card.name);
         $('#prSendStatus').removeClass('pr-ok pr-bad').text('');
         $('#prSendConfirm').prop('disabled', false);
-        buildFields($('#prSendFields'), card, preset ? preset.answers : {}, false);
+        buildFields($('#prSendFields'), card, preset ? preset.answers : {}, 'all');
         refreshPreview();
 
         $('#prSendModal').appendTo('body').modal('show');
@@ -322,7 +408,7 @@
         $('#prPresetTitle').text((preset ? 'Edit saved form: ' : 'Save a form: ') + card.name);
         $('#prPresetName').val(preset ? preset.name : '');
         $('#prPresetStatus').removeClass('pr-ok pr-bad').text('');
-        buildFields($('#prPresetFields'), card, preset ? preset.answers : {}, true);
+        buildFields($('#prPresetFields'), card, preset ? preset.answers : {}, 'saved');
 
         $('#prPresetModal').appendTo('body').modal('show');
     }
@@ -651,7 +737,7 @@
     });
 
     // On the forms and not the document, because the Escape below has to get in before the modal's own.
-    $('#prSendFields, #prPresetFields')
+    $('#prSendFields, #prPresetFields, .pr-details')
         .on('focusin', '[data-lookup="location"]', function () {
             loadSystems();
         })

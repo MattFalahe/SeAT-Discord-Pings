@@ -38,22 +38,12 @@ class RequestMessage
             $fields[] = self::field('Discord', $discord);
         }
 
-        $used = self::length($title);
-        foreach ($fields as $field) {
-            $used += self::length($field['name']) + self::length($field['value']);
-        }
-
-        $embed = [
+        $embed = self::withBody([
             'title' => $title,
             'color' => $color,
             'fields' => $fields,
             'timestamp' => $timestamp,
-        ];
-
-        $description = self::fit(self::plain($body), min(self::DESCRIPTION, max(1, self::TOTAL - $used)));
-        if ($description !== '') {
-            $embed['description'] = $description;
-        }
+        ], $body);
 
         $payload = ['embeds' => [$embed], 'username' => $username];
 
@@ -65,6 +55,28 @@ class RequestMessage
         }
 
         return $payload;
+    }
+
+    /**
+     * The embed with a new body. The first message is built with it, and so is
+     * the edit when a member adds to an emergency. That edit changes nothing
+     * but the embed, so the role isn't pinged a second time.
+     */
+    public static function withBody(array $embed, string $body): array
+    {
+        $used = self::length((string) ($embed['title'] ?? ''));
+        foreach ($embed['fields'] ?? [] as $field) {
+            $used += self::length((string) $field['name']) + self::length((string) $field['value']);
+        }
+
+        unset($embed['description']);
+
+        $description = self::fit(self::plain($body), min(self::DESCRIPTION, max(1, self::TOTAL - $used)));
+        if ($description !== '') {
+            $embed['description'] = $description;
+        }
+
+        return $embed;
     }
 
     /** @return array{name: string, value: string, inline: bool} */

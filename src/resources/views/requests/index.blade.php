@@ -230,6 +230,7 @@
         storePresetUrl: @json(url('discord-pings/requests/__ID__/presets')),
         presetUrl: @json(url('discord-pings/requests/presets/__ID__')),
         systemsUrl: @json(url('discord-pings/requests/systems')),
+        shipsUrl: @json(url('discord-pings/requests/ships')),
         locationsUrl: @json(url('discord-pings/requests/systems/__ID__/locations'))
     };
 </script>

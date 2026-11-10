@@ -11,6 +11,7 @@ use DiscordPings\Services\PingRequests\LocationLookup;
 use DiscordPings\Services\PingRequests\MemberAccount;
 use DiscordPings\Services\PingRequests\PingRequestSender;
 use DiscordPings\Services\PingRequests\Sections;
+use DiscordPings\Services\PingRequests\ShipLookup;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
@@ -89,6 +90,15 @@ class PingRequestController extends Controller
 
         // The map hardly ever changes, but an empty list means the read failed and that mustn't stick for a day.
         return $systems === [] ? $response : $response->header('Cache-Control', 'private, max-age=86400');
+    }
+
+    public function ships(ShipLookup $lookup)
+    {
+        $ships = $lookup->names();
+        $response = response()->json($ships);
+
+        // Kept a day like the systems, and for the same reason an empty list isn't.
+        return $ships === [] ? $response : $response->header('Cache-Control', 'private, max-age=86400');
     }
 
     public function locations($id, LocationLookup $lookup)

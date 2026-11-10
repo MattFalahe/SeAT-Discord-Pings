@@ -6,7 +6,8 @@
     var FREE_TEXT = 'text';
     var LOOKUP_HINTS = {
         location: 'Type 3 letters of a system, then pick a spot or write your own',
-        character: 'Type 3 letters of one of your characters'
+        character: 'Type 3 letters of one of your characters',
+        ship: 'Type 3 letters of a ship'
     };
 
     config.cards.forEach(function (card) {
@@ -374,17 +375,19 @@
     });
 
     /*
-     * Suggestions on the boxes whose section names point at a place or a
-     * character. They only ever offer text, so whatever somebody types for
-     * themselves stays as they typed it.
+     * Suggestions on the boxes set up for a place, a ship or one of the
+     * member's characters. They only ever offer text, so whatever somebody
+     * types for themselves stays as they typed it.
      */
     var MIN_TYPED = 3;
-    var MAX_SYSTEMS = 12;
+    var MAX_SHOWN = 12;
 
     var systems = null;
     var systemsByName = {};
     var systemsRequest = null;
     var spotRequests = {};
+    var ships = null;
+    var shipsRequest = null;
 
     var $menu = $('<div class="pr-suggest-menu">');
     var $suggesting = null;
@@ -408,6 +411,22 @@
         }
 
         return systemsRequest;
+    }
+
+    function loadShips() {
+        if (!shipsRequest) {
+            shipsRequest = $.getJSON(config.shipsUrl)
+                .done(function (names) {
+                    ships = names.map(function (name) {
+                        return { name: name, lower: name.toLowerCase() };
+                    });
+                })
+                .fail(function () {
+                    shipsRequest = null;
+                });
+        }
+
+        return shipsRequest;
     }
 
     function spotsIn(system) {
@@ -489,22 +508,23 @@
         return null;
     }
 
-    function systemsMatching(text) {
+    /* Names that start with what was typed come first, then names that only contain it. */
+    function matching(list, text) {
         var needle = text.trim().toLowerCase();
         var starting = [];
         var containing = [];
 
-        systems.forEach(function (system) {
-            var at = system.lower.indexOf(needle);
+        list.forEach(function (entry) {
+            var at = entry.lower.indexOf(needle);
 
             if (at === 0) {
-                starting.push(system);
+                starting.push(entry);
             } else if (at > 0) {
-                containing.push(system);
+                containing.push(entry);
             }
         });
 
-        return { starting: starting.length, list: starting.concat(containing).slice(0, MAX_SYSTEMS) };
+        return { starting: starting.length, list: starting.concat(containing).slice(0, MAX_SHOWN) };
     }
 
     function squeezed(text) {
@@ -554,7 +574,7 @@
 
         var text = $input.val().replace(/^\s+/, '');
         var system = systemTyped(text);
-        var found = systemsMatching(text);
+        var found = matching(systems, text);
 
         // Some names are how another system's name starts, so a bare name
         // only counts once nothing else starts that way or a space follows it.
@@ -579,6 +599,29 @@
         openMenu($input, [{
             items: found.list.map(function (match) {
                 return { text: match.name, value: match.name + ' ', leadsOn: true };
+            })
+        }]);
+    }
+
+    function suggestShip($input) {
+        if (!ships) {
+            loadShips().done(function () {
+                if (document.activeElement === $input[0]) {
+                    suggestShip($input);
+                }
+            });
+
+            return;
+        }
+
+        if ($input.val().trim().length < MIN_TYPED) {
+            closeMenu();
+            return;
+        }
+
+        openMenu($input, [{
+            items: matching(ships, $input.val()).list.map(function (ship) {
+                return { text: ship.name, value: ship.name };
             })
         }]);
     }
@@ -612,10 +655,17 @@
         .on('focusin', '[data-lookup="location"]', function () {
             loadSystems();
         })
+        .on('focusin', '[data-lookup="ship"]', function () {
+            loadShips();
+        })
         .on('focusout', '[data-lookup]', closeMenu)
         .on('input', '[data-lookup]', function () {
-            if ($(this).attr('data-lookup') === 'location') {
+            var lookup = $(this).attr('data-lookup');
+
+            if (lookup === 'location') {
                 suggestLocation($(this));
+            } else if (lookup === 'ship') {
+                suggestShip($(this));
             } else {
                 suggestCharacter($(this));
             }

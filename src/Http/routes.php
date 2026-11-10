@@ -25,6 +25,10 @@ Route::group([
         ->name('discordpings.requests.locations')
         ->middleware('can:discordpings.line_member');
 
+    Route::get('/requests/ships', 'PingRequestController@ships')
+        ->name('discordpings.requests.ships')
+        ->middleware('can:discordpings.line_member');
+
     Route::post('/requests/{id}/press', 'PingRequestController@press')
         ->name('discordpings.requests.press')
         ->middleware('can:discordpings.line_member');

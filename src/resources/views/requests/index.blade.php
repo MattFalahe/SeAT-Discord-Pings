@@ -19,6 +19,7 @@
     .pr-status.pr-bad { color: var(--pings-danger) !important; }
     .pr-preview { white-space: pre-wrap; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--pings-border); border-radius: 4px; padding: 10px; font-size: 0.875rem; }
     .pr-who { font-size: 0.875rem; }
+    .pr-yesno .btn { min-width: 64px; }
     .pr-suggests { position: relative; }
     /* Solid on purpose, it sits over the boxes below it and a light theme would wash out anything see-through. */
     .pr-suggest-menu { position: absolute; left: 0; right: 0; top: 100%; z-index: 1060; max-height: 260px; overflow-y: auto; background: #1e222b; border: 1px solid #454d55; border-radius: 4px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
@@ -98,9 +99,11 @@
                             </button>
                         </div>
 
-                        <button type="button" class="btn btn-sm btn-pings-secondary js-pr-add-preset" data-button-id="{{ $card['id'] }}">
-                            <i class="fas fa-plus"></i> Save a form
-                        </button>
+                        @if($card['canSave'])
+                            <button type="button" class="btn btn-sm btn-pings-secondary js-pr-add-preset" data-button-id="{{ $card['id'] }}">
+                                <i class="fas fa-plus"></i> Save a form
+                            </button>
+                        @endif
 
                         <div class="pr-status" role="status"></div>
                     </div>
@@ -230,5 +233,5 @@
         locationsUrl: @json(url('discord-pings/requests/systems/__ID__/locations'))
     };
 </script>
-<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=2"></script>
+<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=3"></script>
 @endpush

@@ -3,6 +3,7 @@
 namespace DiscordPings\Models;
 
 use DiscordPings\Services\PingRequests\MemberAccount;
+use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Database\Eloquent\Model;
 
 class PingRequestButton extends Model
@@ -16,7 +17,7 @@ class PingRequestButton extends Model
     protected $table = 'discord_ping_request_buttons';
 
     protected $fillable = [
-        'name', 'webhook_id', 'mention_role_id', 'ping_notice', 'starter_text', 'type', 'cooldown_minutes',
+        'name', 'webhook_id', 'mention_role_id', 'ping_notice', 'starter_text', 'sections', 'type', 'cooldown_minutes',
         'corporation_id', 'alliance_id', 'audience_permissions', 'is_active', 'sort_order',
     ];
 
@@ -26,6 +27,7 @@ class PingRequestButton extends Model
         'corporation_id' => 'integer',
         'alliance_id' => 'integer',
         'audience_permissions' => 'array',
+        'sections' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
@@ -115,5 +117,18 @@ class PingRequestButton extends Model
     public function isEmergency(): bool
     {
         return $this->type === self::TYPE_EMERGENCY;
+    }
+
+    /**
+     * The button's form, a row per section. A button nobody has saved since
+     * sections became rows is read from its old text, the way a paste would be.
+     *
+     * @return array<int, array{label: string, box: string, live: bool}>
+     */
+    public function sectionRows(): array
+    {
+        $rows = $this->sections;
+
+        return is_array($rows) && $rows !== [] ? Sections::clean($rows) : Sections::fromFormat($this->starter_text);
     }
 }

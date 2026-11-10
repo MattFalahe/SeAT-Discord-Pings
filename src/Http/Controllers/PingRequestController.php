@@ -10,7 +10,7 @@ use DiscordPings\Services\PingRequests\ErrorText;
 use DiscordPings\Services\PingRequests\LocationLookup;
 use DiscordPings\Services\PingRequests\MemberAccount;
 use DiscordPings\Services\PingRequests\PingRequestSender;
-use DiscordPings\Services\PingRequests\StarterText;
+use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
@@ -43,23 +43,32 @@ class PingRequestController extends Controller
             ->get()
             ->groupBy('button_id');
 
-        $cards = $buttons->map(fn ($button) => [
-            'id' => $button->id,
-            'name' => $button->name,
-            'emergency' => $button->isEmergency(),
-            'pingNotice' => (string) $button->ping_notice,
-            'lines' => StarterText::lines($button->starter_text),
-            'plain' => StarterText::compose($button->starter_text, []),
-            'freeText' => ! StarterText::hasQuestions($button->starter_text),
-            'cooldownMinutes' => (int) $button->cooldown_minutes,
-            'readyIn' => $sender->secondsUntilReady($button, $user),
-            'presets' => ($presets[$button->id] ?? collect())->map(fn ($preset) => [
-                'id' => $preset->id,
-                'name' => $preset->name,
-                'answers' => (object) ($preset->answers ?? []),
-                'preview' => StarterText::compose($button->starter_text, $preset->answers ?? []),
-            ])->values()->all(),
-        ])->all();
+        $cards = $buttons->map(function ($button) use ($presets, $sender, $user) {
+            $rows = $button->sectionRows();
+
+            return [
+                'id' => $button->id,
+                'name' => $button->name,
+                'emergency' => $button->isEmergency(),
+                'pingNotice' => (string) $button->ping_notice,
+                'lines' => Sections::lines($rows),
+                'plain' => Sections::compose($rows, []),
+                'freeText' => ! Sections::hasQuestions($rows),
+                'canSave' => Sections::savedKeys($rows) !== [],
+                'cooldownMinutes' => (int) $button->cooldown_minutes,
+                'readyIn' => $sender->secondsUntilReady($button, $user),
+                'presets' => ($presets[$button->id] ?? collect())->map(function ($preset) use ($rows) {
+                    $answers = Sections::savedAnswers($rows, $preset->answers ?? []);
+
+                    return [
+                        'id' => $preset->id,
+                        'name' => $preset->name,
+                        'answers' => (object) $answers,
+                        'preview' => Sections::compose($rows, $answers),
+                    ];
+                })->values()->all(),
+            ];
+        })->all();
 
         $recent = PingHistory::where('user_id', $user->id)
             ->memberRequests()
@@ -109,7 +118,7 @@ class PingRequestController extends Controller
         $preset = empty($validated['preset_id']) ? null : $this->ownPreset($validated['preset_id'], $button->id);
 
         // What was typed in the confirm box wins for this send. The saved form itself stays as it was.
-        $answers = $validated['answers'] ?? ($preset->answers ?? []);
+        $answers = $validated['answers'] ?? Sections::savedAnswers($button->sectionRows(), $preset->answers ?? []);
 
         try {
             return response()->json($sender->press($button, $answers, $user, $preset->name ?? null));
@@ -178,7 +187,8 @@ class PingRequestController extends Controller
     }
 
     /**
-     * Only answers to what the button actually asks get stored.
+     * Only answers to what the button actually asks get stored, and never one
+     * that's asked after the press.
      *
      * @return array{name: string, answers: array<string, string>}
      */
@@ -190,14 +200,9 @@ class PingRequestController extends Controller
             'answers.*' => 'nullable|string|max:' . self::MAX_ANSWER_LENGTH,
         ]);
 
-        $asked = array_filter(array_column(StarterText::lines($button->starter_text), 'key'));
-        if (! StarterText::hasQuestions($button->starter_text)) {
-            $asked = [StarterText::FREE_TEXT];
-        }
-
         return [
             'name' => trim($validated['name']),
-            'answers' => array_intersect_key($validated['answers'] ?? [], array_flip($asked)),
+            'answers' => Sections::savedAnswers($button->sectionRows(), $validated['answers'] ?? []),
         ];
     }
 }

@@ -21,37 +21,77 @@
 
     function questionsOf(card) {
         return card.lines.filter(function (line) {
-            return line.kind === 'question';
+            return line.key !== null;
         });
     }
 
-    function buildFields($target, card, answers) {
+    /*
+     * Which boxes a form gets: all of them in the confirm box, and on a saved
+     * form only the ones whose answers can be kept.
+     */
+    function buildFields($target, card, answers, savedOnly) {
         $target.empty();
 
         if (card.freeText) {
-            $target.append(field('Your message', FREE_TEXT, answers[FREE_TEXT], true));
+            $target.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, answers[FREE_TEXT]));
             return;
         }
 
         questionsOf(card).forEach(function (line) {
-            $target.append(field(line.text, line.key, answers[line.key], false, line.lookup));
+            if (!(savedOnly && line.live)) {
+                $target.append(field(line, answers[line.key]));
+            }
         });
     }
 
-    function field(label, key, value, multiline, lookup) {
-        var $input = multiline ? $('<textarea rows="4">') : $('<input type="text">');
+    function field(line, value) {
+        var $group = $('<div class="form-group">').append($('<label>').text(line.text));
 
-        $input.addClass('form-control').attr('data-key', key).attr('maxlength', 1000).val(value || '');
-
-        if (lookup) {
-            $input.attr({ 'data-lookup': lookup, autocomplete: 'off', placeholder: LOOKUP_HINTS[lookup] });
+        if (line.box === 'yesno') {
+            return $group.append(yesNo(line.key, value));
         }
 
-        return $('<div class="form-group">')
-            .toggleClass('pr-suggests', !!lookup)
-            .append($('<label>').text(label))
-            .append($input);
+        var $input = line.box === 'long' ? $('<textarea rows="4">') : $('<input type="text">');
+
+        $input.addClass('form-control').attr('data-key', line.key).attr('maxlength', 1000).val(value || '');
+
+        if (LOOKUP_HINTS[line.box]) {
+            $input.attr({ 'data-lookup': line.box, autocomplete: 'off', placeholder: LOOKUP_HINTS[line.box] });
+            $group.addClass('pr-suggests');
+        }
+
+        return $group.append($input);
     }
+
+    /* Two buttons and not a dropdown, so answering takes one click. Clicking the lit one again clears it. */
+    function yesNo(key, value) {
+        var $answer = $('<input type="hidden">').attr('data-key', key).val(value === 'Yes' || value === 'No' ? value : '');
+        var $buttons = $('<div class="btn-group pr-yesno" role="group">');
+
+        ['Yes', 'No'].forEach(function (choice) {
+            $buttons.append($('<button type="button" class="btn btn-sm">').attr('data-answer', choice).text(choice));
+        });
+
+        showYesNo($buttons, $answer.val());
+
+        return $('<div>').append($buttons, $answer);
+    }
+
+    function showYesNo($buttons, choice) {
+        $buttons.find('.btn').each(function () {
+            var on = $(this).attr('data-answer') === choice;
+
+            $(this).toggleClass('btn-pings-primary', on).toggleClass('btn-pings-secondary', !on).attr('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+
+    $(document).on('click', '.pr-yesno .btn', function () {
+        var $answer = $(this).closest('.form-group').find('[data-key]');
+        var choice = $answer.val() === $(this).attr('data-answer') ? '' : $(this).attr('data-answer');
+
+        $answer.val(choice).trigger('pr-picked');
+        showYesNo($(this).parent(), choice);
+    });
 
     function readFields($target) {
         var answers = {};
@@ -63,19 +103,33 @@
         return answers;
     }
 
-    // The same rule the server applies, so what the box shows is what goes out.
+    // The same rules the server applies, so what the box shows is what goes out.
+    function answerOf(line, answer) {
+        answer = typeof answer === 'string' ? answer : '';
+
+        if (line.box === 'yesno') {
+            return answer === 'Yes' || answer === 'No' ? answer : '';
+        }
+
+        if (line.box === 'long') {
+            return answer.replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+        }
+
+        return answer.replace(/\s*[\r\n]+\s*/g, ' ').trim();
+    }
+
     function compose(card, answers) {
         var out = [];
 
         card.lines.forEach(function (line) {
-            if (line.kind === 'text') {
+            if (line.key === null) {
                 out.push(line.text);
                 return;
             }
 
-            var answer = (answers[line.key] || '').replace(/\s*[\r\n]+\s*/g, ' ').trim();
+            var answer = answerOf(line, answers[line.key]);
             if (answer !== '') {
-                out.push(line.text + ' ' + answer);
+                out.push((/[:?]$/.test(line.text) ? line.text : line.text + ':') + (answer.indexOf('\n') !== -1 ? '\n' : ' ') + answer);
             }
         });
 
@@ -195,7 +249,7 @@
         $('#prSendTitle').text(card.name);
         $('#prSendStatus').removeClass('pr-ok pr-bad').text('');
         $('#prSendConfirm').prop('disabled', false);
-        buildFields($('#prSendFields'), card, preset ? preset.answers : {});
+        buildFields($('#prSendFields'), card, preset ? preset.answers : {}, false);
         refreshPreview();
 
         $('#prSendModal').appendTo('body').modal('show');
@@ -267,7 +321,7 @@
         $('#prPresetTitle').text((preset ? 'Edit saved form: ' : 'Save a form: ') + card.name);
         $('#prPresetName').val(preset ? preset.name : '');
         $('#prPresetStatus').removeClass('pr-ok pr-bad').text('');
-        buildFields($('#prPresetFields'), card, preset ? preset.answers : {});
+        buildFields($('#prPresetFields'), card, preset ? preset.answers : {}, true);
 
         $('#prPresetModal').appendTo('body').modal('show');
     }

@@ -43,7 +43,7 @@ class PingRequestSender
             return $this->outcome(false, 'not_configured', 'Not delivered. This button has no working webhook, so let your admins know.');
         }
 
-        $body = StarterText::compose($button->starter_text, $answers);
+        $body = Sections::compose($button->sectionRows(), $answers);
         $sender = DiscordUserResolver::senderIdentity($user);
 
         // Only request buttons go through this. An emergency skips the

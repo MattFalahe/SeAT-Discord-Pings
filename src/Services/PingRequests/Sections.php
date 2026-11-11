@@ -232,6 +232,26 @@ class Sections
      */
     public static function compose(array $rows, array $answers): string
     {
+        return trim(implode("\n", self::parts($rows, $answers, false)));
+    }
+
+    /**
+     * The same message the way Discord shows it: each section's name in bold
+     * and a blank line between sections, so a long form doesn't run together.
+     * Labels and answers are escaped, so a stray star or underscore in either
+     * can't carry the bold on into the rest of the message. Fixed lines go out
+     * exactly as the admin wrote them.
+     *
+     * @param array<string, mixed> $answers
+     */
+    public static function forDiscord(array $rows, array $answers): string
+    {
+        return trim(implode("\n\n", self::parts($rows, $answers, true)));
+    }
+
+    /** @return string[] */
+    private static function parts(array $rows, array $answers, bool $discord): array
+    {
         $out = [];
 
         foreach (self::lines($rows) as $line) {
@@ -242,20 +262,37 @@ class Sections
 
             $answer = self::answer($line['box'], $answers[$line['key']] ?? null);
 
-            if ($answer !== '') {
-                $out[] = self::prompt($line['text']) . (str_contains($answer, "\n") ? "\n" : ' ') . $answer;
+            if ($answer === '') {
+                continue;
             }
+
+            $prompt = self::prompt($line['text']);
+            $gap = str_contains($answer, "\n") ? "\n" : ' ';
+
+            $out[] = $discord
+                ? '**' . self::literal($prompt) . '**' . $gap . self::literal($answer)
+                : $prompt . $gap . $answer;
         }
 
         if (! self::hasQuestions($rows)) {
             $typed = is_string($answers[self::FREE_TEXT] ?? null) ? trim($answers[self::FREE_TEXT]) : '';
 
             if ($typed !== '') {
-                $out[] = str_replace(["\r\n", "\r"], "\n", $typed);
+                $typed = str_replace(["\r\n", "\r"], "\n", $typed);
+                $out[] = $discord ? self::literal($typed) : $typed;
             }
         }
 
-        return trim(implode("\n", $out));
+        return $out;
+    }
+
+    /** Shows on Discord exactly as typed, with nothing in it read as formatting. */
+    private static function literal(string $text): string
+    {
+        $text = (string) preg_replace('/[\\\\*_~`|]/', '\\\\$0', $text);
+
+        // A quote, a heading or a list only counts at the start of a line, and ">>>" would quote everything after it.
+        return (string) preg_replace('/^([ \t]*)([>#-])/m', '$1\\\\$2', $text);
     }
 
     /** @return string[] */

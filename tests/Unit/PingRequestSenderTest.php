@@ -429,6 +429,17 @@ class PingRequestSenderTest extends TestCase
         $this->assertSame([], Cache::$store);
     }
 
+    public function test_on_discord_section_names_are_bold_and_history_keeps_plain_text(): void
+    {
+        $keys = $this->keys();
+        Client::$replies = [$this->reply()];
+
+        $this->press($this->tackled(), [$keys['Tackled Pilot Name'] => 'Some Pilot', $keys['Ship Tackled'] => 'Rorqual'], 'Main');
+
+        $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Ship Tackled:** Rorqual", Client::$posts[0][1]['json']['embeds'][0]['description']);
+        $this->assertSame("Tackled Pilot Name: Some Pilot\nShip Tackled: Rorqual", $this->history()[0]['message']);
+    }
+
     public function test_an_answer_edits_the_message_that_went_out(): void
     {
         $token = $this->pressTackled();
@@ -441,7 +452,7 @@ class PingRequestSenderTest extends TestCase
         $this->assertCount(1, Client::$posts);
         $this->assertCount(1, Client::$patches);
         $this->assertSame(self::ADDRESS . '/messages/999', Client::$patches[0][0]);
-        $this->assertSame('Panic Active? Yes', $this->editedDescription());
+        $this->assertSame('**Panic Active?** Yes', $this->editedDescription());
     }
 
     /** No content and no allowed_mentions, so Discord keeps the role line as it was and pings nobody. */
@@ -458,7 +469,7 @@ class PingRequestSenderTest extends TestCase
 
         $sent = Client::$posts[0][1]['json']['embeds'][0];
         $edited = $edit['embeds'][0];
-        $this->assertSame("Tackled Pilot Name: Some Pilot\nPanic Active? Yes", $edited['description']);
+        $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Panic Active?** Yes", $edited['description']);
 
         unset($sent['description'], $edited['description']);
         $this->assertSame($sent, $edited);
@@ -474,8 +485,8 @@ class PingRequestSenderTest extends TestCase
         $this->addDetails($token, [$keys['Panic Active?'] => 'No', $keys['Cyno Inhibitor active?'] => 'Yes']);
         $this->addDetails($token, [$keys['Panic Active?'] => '', $keys['Cyno Inhibitor active?'] => 'Yes', $keys['Grid Dscan'] => "3 Loki\n2 Sabre"]);
 
-        $this->assertSame("Panic Active? No\nCyno Inhibitor active? Yes", $this->editedDescription(1));
-        $this->assertSame("Cyno Inhibitor active? Yes\nGrid Dscan:\n3 Loki\n2 Sabre", $this->editedDescription(2));
+        $this->assertSame("**Panic Active?** No\n\n**Cyno Inhibitor active?** Yes", $this->editedDescription(1));
+        $this->assertSame("**Cyno Inhibitor active?** Yes\n\n**Grid Dscan:**\n3 Loki\n2 Sabre", $this->editedDescription(2));
     }
 
     public function test_only_what_is_asked_after_the_press_can_be_changed(): void
@@ -486,7 +497,7 @@ class PingRequestSenderTest extends TestCase
 
         $this->addDetails($token, [$keys['Tackled Pilot Name'] => 'Someone Else', 'qdeadbeef0000' => 'stray', $keys['Panic Active?'] => 'Yes']);
 
-        $this->assertSame("Tackled Pilot Name: Some Pilot\nPanic Active? Yes", $this->editedDescription());
+        $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Panic Active?** Yes", $this->editedDescription());
     }
 
     public function test_only_the_buttons_own_answers_are_kept_for_the_details(): void

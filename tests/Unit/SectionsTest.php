@@ -225,6 +225,62 @@ class SectionsTest extends TestCase
         $this->assertSame('', Sections::compose([], []));
     }
 
+    public function test_on_discord_each_section_name_is_bold_with_a_line_between(): void
+    {
+        $rows = Sections::fromFormat(self::ALLIANCE_FORMAT);
+        [$name, $system, $cyno] = $this->keys($rows);
+
+        $this->assertSame(
+            "Rorqual Tackled\n\n**Rorqual Name:** Matt Falahe\n\n**System: Location In System (Anomaly or Moon):** RD-FWY X - Moon 1\n\n**Name of Cyno (On perch, 300km away):** Digital Justice",
+            Sections::forDiscord($rows, [$name => 'Matt Falahe', $system => 'RD-FWY X - Moon 1', $cyno => 'Digital Justice'])
+        );
+    }
+
+    public function test_on_discord_long_text_still_starts_under_its_name(): void
+    {
+        $rows = [$this->row('Grid Dscan', Sections::LONG), $this->row('Panic Active?', Sections::YES_NO, true)];
+        [$dscan, $panic] = $this->keys($rows);
+
+        $this->assertSame("**Grid Dscan:**\n5 Revelation\n20 Ishtar\n\n**Panic Active?** Yes", Sections::forDiscord($rows, [$dscan => "5 Revelation\r\n20 Ishtar", $panic => 'Yes']));
+    }
+
+    /** A stray star, underscore or quote mark can't carry formatting on into the next section. */
+    public function test_on_discord_what_was_typed_shows_as_typed(): void
+    {
+        $rows = [$this->row('Ship *name*'), $this->row('Grid Dscan', Sections::LONG), $this->row('Pilot', Sections::CHARACTER)];
+        [$ship, $dscan, $pilot] = $this->keys($rows);
+
+        $this->assertSame(
+            "**Ship \\*name\\*:** Rorqual \\*\\*\n\n**Grid Dscan:**\n\\>>> 3 Loki\n\\# 2 Sabre\n\\- my\\_alt \\~\\~ \\|\\| \\`x\\` \\\\\n\n**Pilot:** Matt Falahe",
+            Sections::forDiscord($rows, [$ship => 'Rorqual **', $dscan => ">>> 3 Loki\n# 2 Sabre\n- my_alt ~~ || `x` \\", $pilot => 'Matt Falahe'])
+        );
+    }
+
+    public function test_on_discord_a_fixed_line_goes_out_as_the_admin_wrote_it(): void
+    {
+        $rows = [$this->row('**URGENT** Rorqual tackled', Sections::FIXED), $this->row('System', Sections::LOCATION)];
+        [$system] = $this->keys($rows);
+
+        $this->assertSame("**URGENT** Rorqual tackled\n\n**System:** Jita", Sections::forDiscord($rows, [$system => 'Jita']));
+    }
+
+    public function test_on_discord_the_free_box_keeps_its_lines_and_shows_as_typed(): void
+    {
+        $this->assertSame(
+            "Help, I am bored\n\nAnyone up for a \\*roam\\*?\nOut of Jita",
+            Sections::forDiscord([$this->row('Help, I am bored', Sections::FIXED)], [Sections::FREE_TEXT => "Anyone up for a *roam*?\r\nOut of Jita"])
+        );
+    }
+
+    public function test_on_discord_an_empty_section_is_still_left_out(): void
+    {
+        $rows = Sections::fromFormat(self::ALLIANCE_FORMAT);
+        [$name, $system] = $this->keys($rows);
+
+        $this->assertSame("Rorqual Tackled\n\n**Rorqual Name:** Matt Falahe", Sections::forDiscord($rows, [$name => 'Matt Falahe', $system => '  ']));
+        $this->assertSame('', Sections::forDiscord([], []));
+    }
+
     public function test_answers_it_does_not_ask_for_are_ignored(): void
     {
         $this->assertSame('Rorqual Tackled', Sections::compose(Sections::fromFormat(self::ALLIANCE_FORMAT), ['qnotaquestion' => '@everyone', 'other' => ['nested']]));

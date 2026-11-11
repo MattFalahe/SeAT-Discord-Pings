@@ -64,7 +64,7 @@ class PingRequestSender
 
         $payload = RequestMessage::payload(
             $button->name,
-            $body,
+            Sections::forDiscord($rows, $answers),
             $button->mention_role_id,
             $sender,
             $this->color($button, $webhook),
@@ -131,8 +131,8 @@ class PingRequestSender
 
         $rows = $press['rows'];
         $live = array_intersect_key($answers, array_flip(Sections::liveKeys($rows)));
-        $body = Sections::compose($rows, array_merge($press['answers'], $live));
-        $delivery = $this->edit($webhook, $press['message_id'], RequestMessage::withBody($press['embed'], $body));
+        $answers = array_merge($press['answers'], $live);
+        $delivery = $this->edit($webhook, $press['message_id'], RequestMessage::withBody($press['embed'], Sections::forDiscord($rows, $answers)));
 
         if (! $delivery['ok']) {
             Log::warning('[DiscordPings] Could not update a ping request on Discord: ' . $delivery['error'], ['history_id' => $press['history_id'] ?? null]);
@@ -151,6 +151,7 @@ class PingRequestSender
             return $this->outcome(false, 'failed', 'Not updated. Your message is still on Discord as it was, so try again or tell someone directly.');
         }
 
+        $body = Sections::compose($rows, $answers);
         $this->followInHistory($press['history_id'] ?? null, $body !== '' ? $body : (string) ($press['embed']['title'] ?? ''));
 
         return $this->outcome(true, 'updated', 'Added to your message on Discord.');

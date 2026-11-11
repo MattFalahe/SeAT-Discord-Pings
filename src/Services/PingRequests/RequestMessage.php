@@ -123,11 +123,23 @@ class RequestMessage
     /**
      * Stops [text](url) from becoming a link. The message appears under the
      * Broadcast name, so a link dressed up as something else would be taken
-     * at face value. Escaping the bracket leaves the address showing in full.
+     * at face value. Escaping the brackets leaves the address showing in full.
      */
     private static function plain(string $text): string
     {
-        return (string) preg_replace('/\\\\*\]\(/', '\\\\](', mb_scrub($text, 'UTF-8'));
+        $text = mb_scrub($text, 'UTF-8');
+
+        // Without a "](" there's no link to stop, so the text goes out as typed,
+        // brackets in a link included.
+        if (! str_contains($text, '](')) {
+            return $text;
+        }
+
+        // The "[" needs escaping too, because the markdown Discord is built on
+        // takes a backslash before the "]" as part of the link text and still
+        // makes the link. Backslashes already in front of either go first, so
+        // one typed there can't cancel ours out.
+        return (string) preg_replace(['/\\\\*\[/', '/\\\\*\]\(/'], ['\\\\[', '\\\\]('], $text);
     }
 
     private static function fit(string $text, int $limit): string

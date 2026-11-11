@@ -3,6 +3,7 @@
 namespace DiscordPings\Tests\Unit;
 
 use DiscordPings\Services\PingRequests\RequestMessage;
+use DiscordPings\Services\PingRequests\Sections;
 use DiscordPings\Services\PingRequests\SenderIdentity;
 use PHPUnit\Framework\TestCase;
 
@@ -160,11 +161,37 @@ class RequestMessageTest extends TestCase
     public static function maskedLinks(): array
     {
         return [
-            'plain' => ['[free isk](https://bad.example)', '[free isk\\](https://bad.example)'],
-            'already escaped' => ['[free isk\\](https://bad.example)', '[free isk\\](https://bad.example)'],
-            'escaped twice' => ['[free isk\\\\](https://bad.example)', '[free isk\\](https://bad.example)'],
-            'two of them' => ['[a](b) [c](d)', '[a\\](b) [c\\](d)'],
+            'plain' => ['[free isk](https://bad.example)', '\\[free isk\\](https://bad.example)'],
+            'already escaped' => ['[free isk\\](https://bad.example)', '\\[free isk\\](https://bad.example)'],
+            'escaped twice' => ['[free isk\\\\](https://bad.example)', '\\[free isk\\](https://bad.example)'],
+            'a backslash in front' => ['\\[free isk](https://bad.example)', '\\[free isk\\](https://bad.example)'],
+            'two backslashes in front' => ['\\\\[free isk](https://bad.example)', '\\[free isk\\](https://bad.example)'],
+            'an address as the text' => ['[https://good.example](https://bad.example)', '\\[https://good.example\\](https://bad.example)'],
+            'brackets inside' => ['[[free isk]](https://bad.example)', '\\[\\[free isk]\\](https://bad.example)'],
+            'two of them' => ['[a](b) [c](d)', '\\[a\\](b) \\[c\\](d)'],
             'brackets that are not a link' => ['[Rorqual Tackled] (now)', '[Rorqual Tackled] (now)'],
+            'a link with brackets in it' => ['https://x.example/?ids[]=1', 'https://x.example/?ids[]=1'],
+        ];
+    }
+
+    /** @dataProvider typedMaskedLinks */
+    public function test_a_masked_link_typed_into_a_section_stops_being_a_link(string $typed): void
+    {
+        $rows = [['label' => 'Grid Dscan', 'box' => Sections::TEXT, 'live' => false]];
+        $key = Sections::lines($rows)[0]['key'];
+
+        $body = Sections::forDiscord($rows, [$key => $typed]);
+
+        $this->assertSame('**Grid Dscan:** \\[free isk\\](https://bad.example)', $this->payload($body)['embeds'][0]['description']);
+    }
+
+    /** What a member types goes through Sections first, which doubles any backslash they typed. */
+    public static function typedMaskedLinks(): array
+    {
+        return [
+            'plain' => ['[free isk](https://bad.example)'],
+            'a backslash in front' => ['\\[free isk](https://bad.example)'],
+            'a backslash before the closing bracket' => ['[free isk\\](https://bad.example)'],
         ];
     }
 
@@ -172,8 +199,8 @@ class RequestMessageTest extends TestCase
     {
         $fields = $this->fields($this->payload('hi', self::ROLE, new SenderIdentity('[x](y)', '[x](y)')));
 
-        $this->assertSame('[x\\](y)', $fields['Sent by']);
-        $this->assertSame('[x\\](y)', $fields['Corporation']);
+        $this->assertSame('\\[x\\](y)', $fields['Sent by']);
+        $this->assertSame('\\[x\\](y)', $fields['Corporation']);
     }
 
     public function test_broken_text_still_makes_a_message_that_can_be_sent(): void
@@ -216,7 +243,7 @@ class RequestMessageTest extends TestCase
     {
         $changed = RequestMessage::withBody($this->payload('hi')['embeds'][0], '[free isk](https://bad.example)');
 
-        $this->assertSame('[free isk\\](https://bad.example)', $changed['description']);
+        $this->assertSame('\\[free isk\\](https://bad.example)', $changed['description']);
     }
 
     /** A countdown readers' own Discord keeps current, in their own local time. */

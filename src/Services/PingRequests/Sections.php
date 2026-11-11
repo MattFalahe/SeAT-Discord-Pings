@@ -42,6 +42,12 @@ class Sections
     public const LONGEST_LABEL = 200;
 
     /**
+     * A link the way Discord finds one in a message: in angle brackets, or from
+     * its scheme to the next space, less a full stop or bracket at the end.
+     */
+    private const LINK = '~(<[^: >]+:/[^ >]+>|(?:https?|steam)://[^\s<]+[^<.,:;"\')\]\s])~';
+
+    /**
      * Ready-made forms Settings can start a button from. The live rows are the
      * ones that are only true at the moment it happens, so no saved form keeps them.
      */
@@ -238,9 +244,9 @@ class Sections
     /**
      * The same message the way Discord shows it: each section's name in bold
      * and a blank line between sections, so a long form doesn't run together.
-     * Labels and answers are escaped, so a stray star or underscore in either
-     * can't carry the bold on into the rest of the message. Fixed lines go out
-     * exactly as the admin wrote them.
+     * Labels and answers are escaped, links apart, so a stray star or underscore
+     * in either can't carry the bold on into the rest of the message. Fixed
+     * lines go out exactly as the admin wrote them.
      *
      * @param array<string, mixed> $answers
      */
@@ -289,10 +295,19 @@ class Sections
     /** Shows on Discord exactly as typed, with nothing in it read as formatting. */
     private static function literal(string $text): string
     {
-        $text = (string) preg_replace('/[\\\\*_~`|]/', '\\\\$0', $text);
+        // Discord reads a link as one piece, so nothing in it can start formatting,
+        // and a backslash put in one ends up in the address. Only what's around
+        // the links is escaped.
+        $pieces = preg_split(self::LINK, $text, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$text];
+
+        foreach ($pieces as $i => $piece) {
+            if ($i % 2 === 0) {
+                $pieces[$i] = (string) preg_replace('/[\\\\*_~`|]/', '\\\\$0', $piece);
+            }
+        }
 
         // A quote, a heading or a list only counts at the start of a line, and ">>>" would quote everything after it.
-        return (string) preg_replace('/^([ \t]*)([>#-])/m', '$1\\\\$2', $text);
+        return (string) preg_replace('/^([ \t]*)([>#-])/m', '$1\\\\$2', implode('', $pieces));
     }
 
     /** @return string[] */

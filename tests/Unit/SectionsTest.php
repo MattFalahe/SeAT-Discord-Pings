@@ -256,6 +256,41 @@ class SectionsTest extends TestCase
         );
     }
 
+    /** @dataProvider links */
+    public function test_on_discord_a_link_is_left_as_typed(string $typed, string $sent): void
+    {
+        $rows = [$this->row('Grid Dscan')];
+        [$dscan] = $this->keys($rows);
+
+        $this->assertSame('**Grid Dscan:** ' . $sent, Sections::forDiscord($rows, [$dscan => $typed]));
+    }
+
+    /** Discord reads a link up to the next space, so a backslash put in one would send it somewhere else. */
+    public static function links(): array
+    {
+        return [
+            'a screenshot' => ['https://cdn.discordapp.com/attachments/1/2/image_1.png', 'https://cdn.discordapp.com/attachments/1/2/image_1.png'],
+            'everything else it would escape' => ['https://x.example/a*b~c|d`e\\f', 'https://x.example/a*b~c|d`e\\f'],
+            'the text around it' => ['see https://x.example/a_b for _this_', 'see https://x.example/a_b for \\_this\\_'],
+            'a full stop after it' => ['https://x.example/a_b.', 'https://x.example/a_b.'],
+            'in brackets' => ['(https://x.example/a_b) *', '(https://x.example/a_b) \\*'],
+            'in angle brackets' => ['<https://x.example/a_b>', '<https://x.example/a_b>'],
+            'two of them' => ['https://a.example/x_1 https://b.example/y_2', 'https://a.example/x_1 https://b.example/y_2'],
+            'without a scheme' => ['www.my_site.example', 'www.my\\_site.example'],
+        ];
+    }
+
+    public function test_on_discord_a_link_in_long_text_leaves_the_other_lines_escaped(): void
+    {
+        $rows = [$this->row('Grid Dscan', Sections::LONG)];
+        [$dscan] = $this->keys($rows);
+
+        $this->assertSame(
+            "**Grid Dscan:**\nhttps://dscan.example/v/a_1\n\\> 3 Loki\n\\- 2 Sabre\\_s",
+            Sections::forDiscord($rows, [$dscan => "https://dscan.example/v/a_1\n> 3 Loki\n- 2 Sabre_s"])
+        );
+    }
+
     public function test_on_discord_a_fixed_line_goes_out_as_the_admin_wrote_it(): void
     {
         $rows = [$this->row('**URGENT** Rorqual tackled', Sections::FIXED), $this->row('System', Sections::LOCATION)];

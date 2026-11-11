@@ -26,7 +26,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Only the role set on the button can be pinged, whatever a member types, and member text can't hide a link behind other words
 - A press waits for Discord's answer, so "Sent to Discord" means it got there. If it didn't, the member is told and the cooldown is handed back
 - Requests are not broadcasts: they don't publish `pings.broadcast.sent`, so HR Manager won't take a member asking for help for an active FC
-- **Settings > Ping Requests** is the new tab for all of this. **Load examples** adds four buttons to start from, switched off and with no webhook
+- **Settings > Ping Requests** is the new tab for all of this. **Load examples** adds four buttons to start from, switched off and with no webhook. Buttons can be deleted one at a time, ticked and deleted together with **Delete selected**, or all at once with **Delete all**, and the forms members saved for them go too
 
 **🔐 Line Member permission**
 - `discordpings.line_member` is the permission for the member side of the plugin. `discordpings.view` is still the menu and Help & Documentation, and its description now says so

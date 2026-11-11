@@ -278,6 +278,39 @@ class RequestMessageTest extends TestCase
         $this->assertSame($embed, RequestMessage::closed($embed, 1762603500));
     }
 
+    /** How fresh the news is, in each reader's own time, with a "how long ago" their Discord keeps current. */
+    public function test_an_update_says_when_under_the_countdown(): void
+    {
+        $embed = $this->live();
+
+        $updated = RequestMessage::updated($embed, 1762603500);
+
+        $this->assertSame("Until <t:1762603800:t> (<t:1762603800:R>)\nLast updated at <t:1762603500:t> (<t:1762603500:R>)", $updated['fields'][0]['value']);
+        $updated['fields'][0]['value'] = $embed['fields'][0]['value'];
+        $this->assertSame($embed, $updated);
+    }
+
+    public function test_a_later_update_replaces_the_time_before(): void
+    {
+        $twice = RequestMessage::updated(RequestMessage::updated($this->live(), 1762603500), 1762603560);
+
+        $this->assertSame("Until <t:1762603800:t> (<t:1762603800:R>)\nLast updated at <t:1762603560:t> (<t:1762603560:R>)", $twice['fields'][0]['value']);
+    }
+
+    public function test_closing_keeps_the_time_of_the_last_update(): void
+    {
+        $closed = RequestMessage::closed(RequestMessage::updated($this->live(), 1762603500), 1762603560);
+
+        $this->assertSame("Closed by the sender at <t:1762603560:t>\nLast updated at <t:1762603500:t> (<t:1762603500:R>)", $closed['fields'][0]['value']);
+    }
+
+    public function test_updating_a_message_with_no_countdown_changes_nothing(): void
+    {
+        $embed = $this->payload()['embeds'][0];
+
+        $this->assertSame($embed, RequestMessage::updated($embed, 1762603500));
+    }
+
     public function test_a_new_body_keeps_the_countdown(): void
     {
         $embed = $this->live();

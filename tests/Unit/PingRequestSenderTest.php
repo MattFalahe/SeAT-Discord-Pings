@@ -566,9 +566,48 @@ class PingRequestSenderTest extends TestCase
         $sent = Client::$posts[0][1]['json']['embeds'][0];
         $edited = $edit['embeds'][0];
         $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Panic Active?** Yes", $edited['description']);
+        $this->assertStringStartsWith($sent['fields'][0]['value'] . "\nLast updated at ", $edited['fields'][0]['value']);
 
-        unset($sent['description'], $edited['description']);
+        unset($sent['description'], $edited['description'], $sent['fields'][0]['value'], $edited['fields'][0]['value']);
         $this->assertSame($sent, $edited);
+    }
+
+    public function test_an_update_says_when_it_was_made(): void
+    {
+        $token = $this->pressTackled();
+        $countdown = Client::$posts[0][1]['json']['embeds'][0]['fields'][0]['value'];
+        Client::$replies = [$this->reply()];
+
+        $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes']);
+
+        $live = Client::$patches[0][1]['json']['embeds'][0]['fields'][0];
+        $this->assertSame(RequestMessage::LIVE, $live['name']);
+        $this->assertMatchesRegularExpression('/^' . preg_quote($countdown, '/') . '\nLast updated at <t:(\d+):t> \(<t:\1:R>\)$/', $live['value']);
+        $this->assertEqualsWithDelta(time(), (int) preg_replace('/^.*\nLast updated at <t:(\d+):t>.*$/s', '$1', $live['value']), 2);
+    }
+
+    public function test_closing_keeps_when_it_was_last_updated(): void
+    {
+        $token = $this->pressTackled();
+        Client::$replies = [$this->reply(), $this->reply()];
+
+        $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes']);
+        $lastUpdate = explode("\n", Client::$patches[0][1]['json']['embeds'][0]['fields'][0]['value'])[1];
+        $this->close($token);
+
+        $this->assertMatchesRegularExpression('/^Closed by the sender at <t:\d+:t>\n' . preg_quote($lastUpdate, '/') . '$/', Client::$patches[1][1]['json']['embeds'][0]['fields'][0]['value']);
+    }
+
+    /** Discord still shows the message as it was, so closing it mustn't claim an update that never landed. */
+    public function test_an_update_discord_did_not_take_is_not_kept(): void
+    {
+        $token = $this->pressTackled();
+        Client::$replies = [$this->reply(500, ['message' => 'Server Error']), $this->reply()];
+
+        $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes']);
+        $this->close($token);
+
+        $this->assertMatchesRegularExpression('/^Closed by the sender at <t:\d+:t>$/', Client::$patches[1][1]['json']['embeds'][0]['fields'][0]['value']);
     }
 
     public function test_each_update_replaces_the_one_before(): void
@@ -694,7 +733,7 @@ class PingRequestSenderTest extends TestCase
         $closed = Client::$patches[1][1]['json'];
         $this->assertSame(['embeds'], array_keys($closed));
         $this->assertSame('**Panic Active?** Yes', $closed['embeds'][0]['description']);
-        $this->assertMatchesRegularExpression('/^Closed by the sender at <t:\d+:t>$/', $closed['embeds'][0]['fields'][0]['value']);
+        $this->assertMatchesRegularExpression('/^Closed by the sender at <t:\d+:t>\nLast updated at <t:(\d+):t> \(<t:\1:R>\)$/', $closed['embeds'][0]['fields'][0]['value']);
 
         $this->assertSame('expired', $this->addDetails($token, [$keys['Panic Active?'] => 'No'])['status']);
         $this->assertSame([], $this->openFor());

@@ -96,9 +96,26 @@ class RequestMessage
      */
     public static function closed(array $embed, int $at): array
     {
+        return self::liveLine($embed, 0, 'Closed by the sender at <t:' . $at . ':t>');
+    }
+
+    /**
+     * Under the countdown, when the sender last added to it and how long ago,
+     * so whoever reads it can tell fresh news from old at a glance.
+     */
+    public static function updated(array $embed, int $at): array
+    {
+        return self::liveLine($embed, 1, 'Last updated at <t:' . $at . ':t> (<t:' . $at . ':R>)');
+    }
+
+    /** The countdown or the close goes on the first line of Live updates, the last update on the second. */
+    private static function liveLine(array $embed, int $line, string $text): array
+    {
         foreach ($embed['fields'] ?? [] as $i => $field) {
             if (($field['name'] ?? null) === self::LIVE) {
-                $embed['fields'][$i]['value'] = 'Closed by the sender at <t:' . $at . ':t>';
+                $lines = explode("\n", (string) ($field['value'] ?? ''), 2);
+                $lines[$line] = $text;
+                $embed['fields'][$i]['value'] = implode("\n", $lines);
             }
         }
 

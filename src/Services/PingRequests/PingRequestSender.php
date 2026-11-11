@@ -141,7 +141,8 @@ class PingRequestSender
 
         $rows = $press['rows'];
         $answers = array_merge($press['answers'], array_intersect_key($answers, array_flip($press['open'])));
-        $delivery = $this->edit($webhook, $press['message_id'], RequestMessage::withBody($press['embed'], Sections::forDiscord($rows, $answers)));
+        $embed = RequestMessage::withBody(RequestMessage::updated($press['embed'], time()), Sections::forDiscord($rows, $answers));
+        $delivery = $this->edit($webhook, $press['message_id'], $embed);
 
         if (! $delivery['ok']) {
             Log::warning('[DiscordPings] Could not update a ping request on Discord: ' . $delivery['error'], ['history_id' => $press['history_id'] ?? null]);
@@ -160,7 +161,7 @@ class PingRequestSender
             return $this->outcome(false, 'failed', 'Not updated. Your message is still on Discord as it was, so try again or tell someone directly.');
         }
 
-        $this->keepAnswers($token, $answers);
+        $this->keepUpdate($token, $answers, $embed);
 
         $body = Sections::compose($rows, $answers);
         $this->followInHistory($press['history_id'] ?? null, $body !== '' ? $body : (string) ($press['embed']['title'] ?? ''));
@@ -506,8 +507,11 @@ class PingRequestSender
         ];
     }
 
-    /** So a reload shows the answers as they stand. The ten minutes don't start again. */
-    private function keepAnswers(string $token, array $answers): void
+    /**
+     * So a reload shows the answers as they stand, and a close keeps the time
+     * of the last update Discord took. The ten minutes don't start again.
+     */
+    private function keepUpdate(string $token, array $answers, array $embed): void
     {
         try {
             $press = Cache::get($this->detailsKey($token));
@@ -518,6 +522,7 @@ class PingRequestSender
             }
 
             $press['answers'] = $answers;
+            $press['embed'] = $embed;
             Cache::put($this->detailsKey($token), $press, (int) $press['closes_at'] - time());
         } catch (\Throwable $e) {
             Log::warning('[DiscordPings] Could not keep the answers to a ping request: ' . ErrorText::safe($e->getMessage()));

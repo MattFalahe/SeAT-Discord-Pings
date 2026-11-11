@@ -7,6 +7,7 @@ use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -75,6 +76,39 @@ class PingRequestButtonController extends Controller
         PingRequestButton::findOrFail($id)->delete();
 
         return redirect()->back()->with('success', 'Button deleted, along with the forms members had saved for it.');
+    }
+
+    /**
+     * The ticked buttons, or every one. The saved forms go with them through
+     * the foreign key, the same as when one is deleted on its own.
+     */
+    public function destroyMany(Request $request)
+    {
+        $data = $request->validate([
+            'all' => 'sometimes|boolean',
+            'ids' => 'sometimes|array',
+            'ids.*' => 'integer',
+        ]);
+
+        if ($request->boolean('all')) {
+            $buttons = PingRequestButton::all();
+        } elseif (! empty($data['ids'])) {
+            $buttons = PingRequestButton::whereIn('id', $data['ids'])->get();
+        } else {
+            return redirect()->back()->with('error', 'Nothing deleted. Tick the buttons you want to delete first.');
+        }
+
+        if ($buttons->isEmpty()) {
+            return redirect()->back()->with('error', 'Nothing deleted. Those buttons were already gone.');
+        }
+
+        DB::transaction(function () use ($buttons) {
+            $buttons->each->delete();
+        });
+
+        return redirect()->back()->with('success', $buttons->count() === 1
+            ? 'Button deleted, along with the forms members had saved for it.'
+            : $buttons->count() . ' buttons deleted, along with the forms members had saved for them.');
     }
 
     public function loadExamples()

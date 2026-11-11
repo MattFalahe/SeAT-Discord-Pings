@@ -17,6 +17,9 @@
     .prb-section-head .prb-col-live, .prb-section-row .js-prb-live { flex: 0 0 140px; }
     .prb-section-head .prb-col-tools, .prb-section-row .prb-row-tools { flex: 0 0 102px; }
     .prb-start { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+    .prb-tick-col { width: 1%; }
+    .prb-head { gap: 6px; }
+    .prb-head-tools { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
     @media (max-width: 575.98px) {
         .prb-section-head { display: none; }
         .prb-section-row { flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid #454d55; }
@@ -26,9 +29,9 @@
 </style>
 @endpush
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3 prb-head">
     <h4 class="mb-0">Ping Requests</h4>
-    <div>
+    <div class="prb-head-tools">
         @if($requestButtons->isEmpty())
             <form method="POST" action="{{ route('discordpings.config.ping-requests.examples') }}" style="display: inline;">
                 @csrf
@@ -36,6 +39,13 @@
                     <i class="fas fa-magic"></i> Load examples
                 </button>
             </form>
+        @else
+            <button type="button" class="btn btn-danger js-prb-delete-ticked" disabled>
+                <i class="fas fa-trash"></i> Delete selected <span class="js-prb-ticked-count"></span>
+            </button>
+            <button type="button" class="btn btn-danger js-prb-delete-all">
+                <i class="fas fa-trash-alt"></i> Delete all
+            </button>
         @endif
         <button type="button" class="btn btn-pings-primary js-add-request-button">
             <i class="fas fa-plus"></i> Add Button
@@ -52,6 +62,14 @@
     <table class="table table-striped table-hover" style="width:100%">
         <thead>
             <tr>
+                <th class="prb-tick-col">
+                    @if($requestButtons->isNotEmpty())
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input js-prb-tick-all" id="prb_tick_all" autocomplete="off">
+                            <label class="custom-control-label" for="prb_tick_all"><span class="sr-only">Tick every button</span></label>
+                        </div>
+                    @endif
+                </th>
                 <th>Button</th>
                 <th>Webhook</th>
                 <th>Pings</th>
@@ -64,6 +82,12 @@
         <tbody>
             @forelse($requestButtons as $button)
                 <tr>
+                    <td class="prb-tick-col">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input js-prb-tick" id="prb_tick_{{ $button->id }}" value="{{ $button->id }}" autocomplete="off">
+                            <label class="custom-control-label" for="prb_tick_{{ $button->id }}"><span class="sr-only">Tick {{ $button->name }}</span></label>
+                        </div>
+                    </td>
                     <td>
                         <strong>{{ $button->name }}</strong>
                         <br>
@@ -157,12 +181,17 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted">No buttons yet. Add one, or load the examples to start from.</td>
+                    <td colspan="8" class="text-center text-muted">No buttons yet. Add one, or load the examples to start from.</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 </div>
+
+<form method="POST" action="{{ route('discordpings.config.ping-requests.destroy-many') }}" id="prb_delete_many" class="d-none">
+    @csrf
+    @method('DELETE')
+</form>
 
 {{-- Moved to the body before it opens. The wrapper class comes along so the button styles still apply out there. --}}
 <div class="modal fade discord-pings-wrapper" id="pingRequestButtonModal" tabindex="-1">
@@ -610,6 +639,66 @@ $(document).ready(function () {
                 alert(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Could not switch that button.');
             });
     });
+
+    var $deleteMany = $('#prb_delete_many');
+
+    function tickedIds() {
+        return $('.js-prb-tick:checked').map(function () {
+            return this.value;
+        }).get();
+    }
+
+    function refreshTicks() {
+        var all = $('.js-prb-tick').length;
+        var ticked = tickedIds().length;
+
+        $('.js-prb-tick-all').prop('checked', all > 0 && ticked === all).prop('indeterminate', ticked > 0 && ticked < all);
+        $('.js-prb-delete-ticked').prop('disabled', ticked === 0);
+        $('.js-prb-ticked-count').text(ticked > 0 ? '(' + ticked + ')' : '');
+    }
+
+    function deleteMany(fields, question) {
+        if (! confirm(question)) {
+            return;
+        }
+
+        $deleteMany.find('.js-prb-delete-field').remove();
+        fields.forEach(function (field) {
+            $deleteMany.append($('<input type="hidden" class="js-prb-delete-field">').attr('name', field.name).val(field.value));
+        });
+        $deleteMany[0].submit();
+    }
+
+    $('.js-prb-tick-all').on('change', function () {
+        $('.js-prb-tick').prop('checked', this.checked);
+        refreshTicks();
+    });
+
+    $('.js-prb-tick').on('change', refreshTicks);
+
+    $('.js-prb-delete-ticked').on('click', function () {
+        var ids = tickedIds();
+
+        if (ids.length === 0) {
+            return;
+        }
+
+        deleteMany(ids.map(function (id) {
+            return { name: 'ids[]', value: id };
+        }), ids.length === 1
+            ? 'Delete the ticked button? Any forms members saved for it go with it.'
+            : 'Delete the ' + ids.length + ' ticked buttons? Any forms members saved for them go with them.');
+    });
+
+    $('.js-prb-delete-all').on('click', function () {
+        var all = $('.js-prb-tick').length;
+
+        deleteMany([{ name: 'all', value: '1' }], all === 1
+            ? 'Delete the only button? Any forms members saved for it go with it.'
+            : 'Delete all ' + all + ' buttons? Any forms members saved for them go with them.');
+    });
+
+    refreshTicks();
 
     $(document).on('click', '.js-toggle-inline-role-picker', function () {
         var $picker = $('#' + $(this).attr('data-picker-id'));

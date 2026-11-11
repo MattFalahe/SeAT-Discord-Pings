@@ -273,6 +273,18 @@ class SourceTest extends TestCase
         $this->assertSame($total, $gated);
     }
 
+    /** Deleting every button at once is one request, so the button settings can't have a single route left open. */
+    public function test_every_button_setting_needs_manage_webhooks(): void
+    {
+        $routes = file_get_contents(self::SRC . 'Http/routes.php');
+
+        $total = preg_match_all("/'PingRequestButtonController@\w+'/", $routes);
+        $gated = preg_match_all("/'PingRequestButtonController@\w+'\)\s*->name\('[a-z.-]+'\)\s*->middleware\('can:discordpings\.manage_webhooks'\)/", $routes);
+
+        $this->assertGreaterThan(0, $total);
+        $this->assertSame($total, $gated);
+    }
+
     /** Resend posts as an FC broadcast, which is the one thing a member's request must never become. */
     public function test_a_ping_request_can_never_be_resent(): void
     {

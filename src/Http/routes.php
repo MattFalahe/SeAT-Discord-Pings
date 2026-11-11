@@ -178,6 +178,10 @@ Route::group([
         ->name('discordpings.config.ping-requests.toggle')
         ->middleware('can:discordpings.manage_webhooks');
 
+    Route::delete('/config/ping-requests', 'PingRequestButtonController@destroyMany')
+        ->name('discordpings.config.ping-requests.destroy-many')
+        ->middleware('can:discordpings.manage_webhooks');
+
     Route::delete('/config/ping-requests/{id}', 'PingRequestButtonController@destroy')
         ->name('discordpings.config.ping-requests.destroy')
         ->middleware('can:discordpings.manage_webhooks');

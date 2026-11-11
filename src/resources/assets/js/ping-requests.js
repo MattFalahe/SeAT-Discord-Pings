@@ -27,22 +27,19 @@
     }
 
     /*
-     * Which boxes a form gets: 'all' in the confirm box, 'saved' on a saved
-     * form, where only answers that can be kept belong, and 'live' for what
-     * an emergency asks once it has gone out.
+     * Which boxes a form gets: 'all' in the confirm box, and 'saved' on a
+     * saved form, where only answers that can be kept belong.
      */
     function buildFields($target, card, answers, which) {
         $target.empty();
 
         if (card.freeText) {
-            if (which !== 'live') {
-                $target.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, answers[FREE_TEXT]));
-            }
+            $target.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, answers[FREE_TEXT]));
             return;
         }
 
         questionsOf(card).forEach(function (line) {
-            if (which === 'all' || line.live === (which === 'live')) {
+            if (which === 'all' || !line.live) {
                 $target.append(field(line, answers[line.key]));
             }
         });
@@ -148,9 +145,8 @@
         $status.removeClass('pr-ok pr-bad').addClass(ok ? 'pr-ok' : 'pr-bad').text(message);
     }
 
-    // Only the card's own line, not the one in its details box.
     function cardStatus(buttonId) {
-        return $('[data-card="' + buttonId + '"] > .card-body > .pr-status');
+        return $('[data-card="' + buttonId + '"] .pr-status');
     }
 
     function post(url, data) {
@@ -236,8 +232,8 @@
             .done(function (result) {
                 setStatus($status, result.ok, result.message);
 
-                if (result.ok && result.details_token) {
-                    openDetails(card, result.details_token);
+                if (result.ok && result.active) {
+                    showActive(result.active, true);
                 }
             })
             .fail(function (xhr) {
@@ -249,36 +245,155 @@
     }
 
     /*
-     * The questions an emergency asks once it is out, under its card. Every
-     * update carries all the answers, so whichever lands last has the lot.
+     * Emergencies that can still be added to, each with the questions it has
+     * left. The server keeps them until they close, so a reload brings them
+     * back. Every update carries all the answers, so whichever lands last has
+     * the lot.
      */
-    function openDetails(card, token) {
-        var $box = $('[data-card="' + card.id + '"] .pr-details');
-        var $fields = $('<div class="pr-details-fields">');
-        var details = { token: token, $box: $box, $fields: $fields, sent: null, busy: false, again: false, closed: false };
+    var actives = [];
+    var ticker = null;
 
-        $box.empty().append(
-            $('<p class="pr-details-intro">').text('Add what you know now. Each answer updates your message on Discord without pinging anyone again.'),
+    function clock(seconds) {
+        var rest = seconds % 60;
+
+        return Math.floor(seconds / 60) + ':' + (rest < 10 ? '0' : '') + rest;
+    }
+
+    function showActive(entry, fresh) {
+        var $fields = $('<div class="pr-active-fields">');
+        var $left = $('<span class="pr-active-left">');
+        var $close = $('<button type="button" class="btn btn-sm btn-pings-secondary pr-active-close js-pr-active-close">')
+            .append($('<i class="fas fa-times">'), ' Close');
+        var $item = $('<div class="pr-active-item">').append(
+            $('<div class="pr-active-head">').append(
+                $('<span class="pr-active-name">').append(
+                    $('<i class="fas fa-exclamation-triangle">'), ' ', $('<strong>').text(entry.button),
+                    entry.savedForm ? $('<span class="text-muted pr-active-form">').text(entry.savedForm) : null
+                ),
+                $close
+            ),
+            $('<div class="pr-active-when">').append(
+                $('<span class="text-muted">').append('Sent ', $('<span class="eve-time" data-show-local>').attr('data-eve-time', entry.sentAt).text(entry.sentAt.substr(11, 5) + ' EVE')),
+                $left
+            ),
             $fields,
             $('<button type="button" class="btn btn-sm btn-pings-secondary js-pr-details-send">').append($('<i class="fas fa-sync-alt">'), ' Update message'),
             $('<div class="pr-status pr-details-status" role="status">')
         );
+        var details = {
+            token: entry.token,
+            $item: $item,
+            $fields: $fields,
+            $left: $left,
+            $close: $close,
+            // From how long the server said was left, so a clock that's off on this computer doesn't matter.
+            deadline: Date.now() + entry.closesIn * 1000,
+            sent: null,
+            busy: false,
+            again: false,
+            closing: false,
+            closed: false
+        };
 
-        buildFields($fields, card, {}, 'live');
-        $box.data('details', details).show();
+        if (entry.freeText) {
+            $fields.append(field({ text: 'Your message', key: FREE_TEXT, box: 'long' }, entry.answers[FREE_TEXT]));
+        } else {
+            entry.lines.forEach(function (line) {
+                $fields.append(field(line, entry.answers[line.key]));
+            });
+        }
+
+        // What the server already has counts as sent, so nothing goes out until something changes.
+        details.sent = JSON.stringify(readFields($fields));
+
+        $item.data('details', details);
+        $('#prActiveList').prepend($('<div class="col-xl-4 col-lg-6 col-12 mb-3 pr-active-col">').append($item));
+        $('#prActive').removeClass('d-none');
+        actives.push(details);
+
+        if (window.EveTime) {
+            window.EveTime.convert($item[0]);
+        }
+
+        countDown();
+        ticker = ticker || setInterval(countDown, 1000);
+
+        if (fresh) {
+            var top = $('#prActive')[0].getBoundingClientRect().top;
+
+            if (top < 0 || top > window.innerHeight - 120) {
+                $('#prActive')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
-    function sendDetails(details) {
-        // A newer press has taken the box over, and this token's message is no longer the one on show.
-        if (!details || details.closed || details.$box.data('details') !== details) {
+    function countDown() {
+        var now = Date.now();
+
+        actives.forEach(function (details) {
+            if (details.closed) {
+                return;
+            }
+
+            var left = Math.ceil((details.deadline - now) / 1000);
+
+            if (left <= 0) {
+                closeHere(details, 'Closed. Ten minutes have passed, so nothing more can be added to this message. Press the button again if you need to.', false);
+                return;
+            }
+
+            details.$left.text('Closes in ' + clock(left));
+        });
+    }
+
+    function lockFields(details, locked) {
+        details.$item.find('input, textarea, .pr-yesno .btn, .js-pr-details-send').prop('disabled', locked);
+    }
+
+    /* Left on show, faded, so the member can still read what they wrote. */
+    function closeHere(details, message, failed) {
+        var $status = details.$item.find('.pr-details-status');
+
+        details.closed = true;
+        details.$item.addClass('pr-closed');
+        lockFields(details, true);
+        details.$left.text('Closed');
+        details.$close.empty().append($('<i class="fas fa-times">'), ' Dismiss');
+
+        if (failed) {
+            setStatus($status, false, message);
+        } else {
+            $status.removeClass('pr-ok pr-bad').text(message);
+        }
+    }
+
+    function removeActive(details) {
+        actives = actives.filter(function (other) {
+            return other !== details;
+        });
+
+        details.$item.closest('.pr-active-col').remove();
+
+        if (actives.length === 0) {
+            $('#prActive').addClass('d-none');
+            clearInterval(ticker);
+            ticker = null;
+        }
+    }
+
+    function sendDetails(details, asked) {
+        if (!details || details.closed || details.closing) {
             return;
         }
 
         var answers = readFields(details.$fields);
         var state = JSON.stringify(answers);
-        var $status = details.$box.find('.pr-details-status');
+        var $status = details.$item.find('.pr-details-status');
 
         if (state === details.sent) {
+            if (asked && !details.busy) {
+                setStatus($status, true, 'Your message on Discord already says this.');
+            }
             return;
         }
 
@@ -299,9 +414,7 @@
                 if (result.ok) {
                     details.sent = state;
                 } else if (result.status === 'expired' || result.status === 'not_configured' || result.status === 'rate_limited') {
-                    // Left on show so the member can still read what they wrote.
-                    details.closed = true;
-                    details.$box.find('input, textarea, button').prop('disabled', true);
+                    closeHere(details, result.message, true);
                 }
             })
             .fail(function (xhr) {
@@ -312,18 +425,79 @@
             .always(function () {
                 details.busy = false;
 
-                if (details.again) {
+                if (details.closing) {
+                    sendClose(details);
+                } else if (details.again) {
                     sendDetails(details);
                 }
             });
     }
 
-    $(document).on('change pr-picked', '.pr-details [data-key]', function () {
-        sendDetails($(this).closest('.pr-details').data('details'));
+    function sendClose(details) {
+        var $status = details.$item.find('.pr-details-status');
+
+        $status.removeClass('pr-ok pr-bad').text('Closing...');
+
+        post(config.closeUrl.replace('__TOKEN__', details.token))
+            .done(function (result) {
+                if (result.ok && result.status === 'closed') {
+                    removeActive(details);
+                } else if (result.ok) {
+                    closeHere(details, result.message, true);
+                    details.$close.prop('disabled', false);
+                } else {
+                    stillOpen(details, result.message);
+                }
+            })
+            .fail(function (xhr) {
+                stillOpen(details, xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : 'Not closed. The page could not reach SeAT, so try again.');
+            });
+    }
+
+    function stillOpen(details, message) {
+        details.closing = false;
+        details.$close.prop('disabled', false);
+
+        if (!details.closed) {
+            lockFields(details, false);
+        }
+
+        setStatus(details.$item.find('.pr-details-status'), false, message);
+    }
+
+    $(document).on('change pr-picked', '.pr-active-item [data-key]', function () {
+        sendDetails($(this).closest('.pr-active-item').data('details'));
     });
 
     $(document).on('click', '.js-pr-details-send', function () {
-        sendDetails($(this).closest('.pr-details').data('details'));
+        sendDetails($(this).closest('.pr-active-item').data('details'), true);
+    });
+
+    $(document).on('click', '.js-pr-active-close', function () {
+        var details = $(this).closest('.pr-active-item').data('details');
+
+        if (details.closed) {
+            removeActive(details);
+            return;
+        }
+
+        if (details.closing || !confirm('Close this request? Your message stays on Discord, but nothing more can be added to it.')) {
+            return;
+        }
+
+        // Nothing typed from here on would get there, so it can't be typed.
+        details.closing = true;
+        details.$close.prop('disabled', true);
+        lockFields(details, true);
+        details.$item.find('.pr-details-status').removeClass('pr-ok pr-bad').text('Closing...');
+
+        // An update already on its way goes first. Sent together, whichever
+        // edit landed last would win on Discord, and that could undo the close.
+        if (!details.busy) {
+            sendClose(details);
+        }
     });
 
     var sending = null;
@@ -737,7 +911,7 @@
     });
 
     // On the forms and not the document, because the Escape below has to get in before the modal's own.
-    $('#prSendFields, #prPresetFields, .pr-details')
+    $('#prSendFields, #prPresetFields, #prActiveList')
         .on('focusin', '[data-lookup="location"]', function () {
             loadSystems();
         })
@@ -779,6 +953,11 @@
             if (!card.emergency && card.readyIn > 0) {
                 startCooldown(cards[card.id], card.readyIn);
             }
+        });
+
+        // They come newest first and each one goes on top, so the oldest goes in first.
+        config.active.slice().reverse().forEach(function (entry) {
+            showActive(entry, false);
         });
     });
 })(jQuery);

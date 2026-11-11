@@ -38,6 +38,11 @@ Route::group([
         ->middleware('can:discordpings.line_member')
         ->where('token', '[0-9a-f]{40}');
 
+    Route::post('/requests/details/{token}/close', 'PingRequestController@close')
+        ->name('discordpings.requests.close')
+        ->middleware('can:discordpings.line_member')
+        ->where('token', '[0-9a-f]{40}');
+
     Route::post('/requests/{id}/presets', 'PingRequestController@storePreset')
         ->name('discordpings.requests.presets.store')
         ->middleware('can:discordpings.line_member');

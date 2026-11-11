@@ -6,6 +6,7 @@ use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\PingHistory;
 use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Services\PingRequests\PingRequestSender;
+use DiscordPings\Services\PingRequests\RequestMessage;
 use DiscordPings\Services\PingRequests\Sections;
 use GuzzleHttp\Client;
 use Illuminate\Database\Eloquent\Model;
@@ -32,6 +33,7 @@ class PingRequestSenderTest extends TestCase
         Cache::$store = [];
         Cache::$seconds = [];
         Cache::$failPutWith = null;
+        Cache::$failLockWith = null;
         RateLimiter::$hits = [];
         Log::$lines = [];
         Schema::$tables = [];
@@ -108,19 +110,40 @@ class PingRequestSenderTest extends TestCase
         return array_column(Sections::lines($this->tackled()->sectionRows()), 'key', 'text');
     }
 
-    /** Presses the general format and hands back what the details box gets. */
-    private function pressTackled(array $answers = [], ?DiscordWebhook $webhook = null): string
+    /** Presses the general format and hands back the token its Active requests entry carries. */
+    private function pressTackled(array $answers = [], ?DiscordWebhook $webhook = null, ?string $savedForm = null): string
     {
         $webhook ??= $this->webhook();
         Model::$found[DiscordWebhook::class][$webhook->id] = $webhook;
         Client::$replies[] = $this->reply();
 
-        return $this->press($this->tackled(PingRequestButton::TYPE_EMERGENCY, ['webhook' => $webhook]), $answers)['details_token'];
+        return $this->press($this->tackled(PingRequestButton::TYPE_EMERGENCY, ['webhook' => $webhook]), $answers, $savedForm)['active']['token'];
     }
 
     private function addDetails(string $token, array $answers, ?object $user = null): array
     {
         return (new PingRequestSender())->addDetails($token, $answers, $user ?? $this->user);
+    }
+
+    private function close(string $token, ?object $user = null): array
+    {
+        return (new PingRequestSender())->close($token, $user ?? $this->user);
+    }
+
+    private function openFor(?object $user = null): array
+    {
+        return (new PingRequestSender())->openFor($user ?? $this->user);
+    }
+
+    private function someoneElse(): object
+    {
+        return (object) ['id' => 8, 'name' => 'Someone Else', 'main_character_id' => 90000002];
+    }
+
+    /** Moves when a kept request closes, the way time passing would. */
+    private function closesIn(string $token, int $seconds): void
+    {
+        Cache::$store['discordpings:requests:details:' . $token]['closes_at'] = time() + $seconds;
     }
 
     private function editedDescription(int $edit = 0): string
@@ -160,7 +183,8 @@ class PingRequestSenderTest extends TestCase
 
         $this->press($this->button(PingRequestButton::TYPE_EMERGENCY));
 
-        $this->assertSame([], Cache::$store);
+        // Only the request kept open for the member, and the list it's on.
+        $this->assertSame([], array_values(preg_grep('/^discordpings:requests:(details:[0-9a-f]{40}|open:7)$/', array_keys(Cache::$store), PREG_GREP_INVERT)));
         $this->assertSame([], RateLimiter::$hits);
     }
 
@@ -391,31 +415,79 @@ class PingRequestSenderTest extends TestCase
         $this->assertSame(0x5865F2, Client::$posts[1][1]['json']['embeds'][0]['color']);
     }
 
-    public function test_an_emergency_that_asks_after_the_press_hands_back_a_token(): void
+    public function test_an_emergency_that_asks_after_the_press_stays_open_for_ten_minutes(): void
     {
         Client::$replies = [$this->reply()];
 
-        $result = $this->press($this->tackled());
-        $token = $result['details_token'];
+        $result = $this->press($this->tackled(), [], 'Main');
+        $token = $result['active']['token'];
 
         $this->assertTrue($result['ok']);
+        $this->assertStringContainsString('Active requests', $result['message']);
         $this->assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $token);
-        $this->assertSame(3600, Cache::$seconds['discordpings:requests:details:' . $token]);
-        // Still no cooldown and no counters, only what the details box needs.
-        $this->assertSame(['discordpings:requests:details:' . $token], array_keys(Cache::$store));
+        $this->assertEqualsWithDelta(600, Cache::$seconds['discordpings:requests:details:' . $token], 2);
+        $this->assertEqualsWithDelta(600, $result['active']['closesIn'], 2);
+        // Still no cooldown and no counters, only the request and the list it's on.
+        $this->assertSame(['discordpings:requests:details:' . $token, 'discordpings:requests:open:7'], array_keys(Cache::$store));
         $this->assertSame([], RateLimiter::$hits);
     }
 
-    public function test_only_an_emergency_with_something_to_ask_after_gets_one(): void
+    public function test_with_no_saved_form_every_section_waits_to_be_filled_in(): void
     {
+        Client::$replies = [$this->reply()];
+
+        $active = $this->press($this->tackled())['active'];
+
+        $this->assertSame(array_values($this->keys()), array_column($active['lines'], 'key'));
+        $this->assertFalse($active['freeText']);
+        $this->assertNull($active['savedForm']);
+    }
+
+    public function test_from_a_saved_form_only_what_comes_after_the_press_is_asked(): void
+    {
+        $keys = $this->keys();
+        Client::$replies = [$this->reply()];
+
+        $active = $this->press($this->tackled(), [$keys['Tackled Pilot Name'] => 'Some Pilot'], 'Main')['active'];
+
+        $this->assertSame([$keys['Panic Active?'], $keys['Cyno Inhibitor active?'], $keys['Grid Dscan']], array_column($active['lines'], 'key'));
+        $this->assertSame('Main', $active['savedForm']);
+    }
+
+    public function test_from_a_saved_form_with_nothing_asked_after_nothing_stays_open(): void
+    {
+        Client::$replies = [$this->reply()];
+
+        $result = $this->press($this->button(PingRequestButton::TYPE_EMERGENCY, ['sections' => Sections::STARTING_POINTS['Mining fleet']]), [], 'Main');
+
+        $this->assertTrue($result['ok']);
+        $this->assertArrayNotHasKey('active', $result);
+        $this->assertSame('Sent to Discord.', $result['message']);
+        $this->assertSame([], Cache::$store);
+    }
+
+    public function test_a_plain_emergency_sent_with_no_form_gets_a_box_for_a_message(): void
+    {
+        Model::$found[DiscordWebhook::class][3] = $this->webhook();
         Client::$replies = [$this->reply(), $this->reply()];
 
-        $plain = $this->press($this->button(PingRequestButton::TYPE_EMERGENCY));
-        $request = $this->press($this->tackled(PingRequestButton::TYPE_REQUEST));
+        $active = $this->press($this->button(PingRequestButton::TYPE_EMERGENCY))['active'];
+        $this->addDetails($active['token'], [Sections::FREE_TEXT => "5 Loki on grid\n2 Sabre"]);
 
-        $this->assertArrayNotHasKey('details_token', $plain);
-        $this->assertArrayNotHasKey('details_token', $request);
-        $this->assertSame([], preg_grep('/:details:/', array_keys(Cache::$store)));
+        $this->assertTrue($active['freeText']);
+        $this->assertSame([], $active['lines']);
+        $this->assertSame("Rorqual Tackled\n\n5 Loki on grid\n2 Sabre", $this->editedDescription());
+    }
+
+    public function test_a_request_never_stays_open(): void
+    {
+        Client::$replies = [$this->reply()];
+
+        $result = $this->press($this->tackled(PingRequestButton::TYPE_REQUEST));
+
+        $this->assertArrayNotHasKey('active', $result);
+        $this->assertSame([], preg_grep('/:(details|open):/', array_keys(Cache::$store)));
+        $this->assertNotContains(RequestMessage::LIVE, array_column(Client::$posts[0][1]['json']['embeds'][0]['fields'], 'name'));
     }
 
     public function test_an_emergency_that_never_arrived_has_nothing_to_add_to(): void
@@ -425,8 +497,32 @@ class PingRequestSenderTest extends TestCase
         $result = $this->press($this->tackled());
 
         $this->assertFalse($result['ok']);
-        $this->assertArrayNotHasKey('details_token', $result);
+        $this->assertArrayNotHasKey('active', $result);
         $this->assertSame([], Cache::$store);
+    }
+
+    /** Discord's own time format, so every reader sees their local time and a countdown that keeps itself current. */
+    public function test_the_message_says_until_when_it_can_change(): void
+    {
+        Client::$replies = [$this->reply()];
+
+        $active = $this->press($this->tackled())['active'];
+        $closesAt = time() + $active['closesIn'];
+        $live = Client::$posts[0][1]['json']['embeds'][0]['fields'][0];
+
+        $this->assertSame(RequestMessage::LIVE, $live['name']);
+        $this->assertFalse($live['inline']);
+        $this->assertMatchesRegularExpression('/^Until <t:(\d+):t> \(<t:\1:R>\)$/', $live['value']);
+        $this->assertEqualsWithDelta($closesAt, (int) preg_replace('/\D.*$/', '', substr($live['value'], 9)), 2);
+    }
+
+    public function test_from_a_saved_form_with_nothing_to_add_the_message_has_no_countdown(): void
+    {
+        Client::$replies = [$this->reply()];
+
+        $this->press($this->button(PingRequestButton::TYPE_EMERGENCY, ['sections' => Sections::STARTING_POINTS['Mining fleet']]), [], 'Main');
+
+        $this->assertSame(['Sent by', 'Corporation'], array_column(Client::$posts[0][1]['json']['embeds'][0]['fields'], 'name'));
     }
 
     public function test_on_discord_section_names_are_bold_and_history_keeps_plain_text(): void
@@ -459,7 +555,7 @@ class PingRequestSenderTest extends TestCase
     public function test_the_edit_changes_the_embed_and_nothing_else(): void
     {
         $keys = $this->keys();
-        $token = $this->pressTackled([$keys['Tackled Pilot Name'] => 'Some Pilot']);
+        $token = $this->pressTackled([$keys['Tackled Pilot Name'] => 'Some Pilot'], null, 'Main');
         Client::$replies = [$this->reply()];
 
         $this->addDetails($token, [$keys['Panic Active?'] => 'Yes']);
@@ -489,15 +585,177 @@ class PingRequestSenderTest extends TestCase
         $this->assertSame("**Cyno Inhibitor active?** Yes\n\n**Grid Dscan:**\n3 Loki\n2 Sabre", $this->editedDescription(2));
     }
 
-    public function test_only_what_is_asked_after_the_press_can_be_changed(): void
+    public function test_from_a_saved_form_only_what_is_asked_after_the_press_can_be_changed(): void
     {
         $keys = $this->keys();
-        $token = $this->pressTackled([$keys['Tackled Pilot Name'] => 'Some Pilot']);
+        $token = $this->pressTackled([$keys['Tackled Pilot Name'] => 'Some Pilot'], null, 'Main');
         Client::$replies = [$this->reply()];
 
         $this->addDetails($token, [$keys['Tackled Pilot Name'] => 'Someone Else', 'qdeadbeef0000' => 'stray', $keys['Panic Active?'] => 'Yes']);
 
         $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Panic Active?** Yes", $this->editedDescription());
+    }
+
+    public function test_with_no_saved_form_every_section_can_be_filled_in_after(): void
+    {
+        $keys = $this->keys();
+        $token = $this->pressTackled();
+        Client::$replies = [$this->reply()];
+
+        $this->addDetails($token, [$keys['Tackled Pilot Name'] => 'Some Pilot', 'qdeadbeef0000' => 'stray', $keys['Panic Active?'] => 'Yes']);
+
+        $this->assertSame("**Tackled Pilot Name:** Some Pilot\n\n**Panic Active?** Yes", $this->editedDescription());
+    }
+
+    public function test_pressing_again_keeps_the_first_one_open(): void
+    {
+        $keys = $this->keys();
+        $first = $this->pressTackled();
+        $second = $this->pressTackled();
+        Client::$replies = [$this->reply(), $this->reply()];
+
+        $this->assertTrue($this->addDetails($first, [$keys['Panic Active?'] => 'Yes'])['ok']);
+        $this->assertTrue($this->addDetails($second, [$keys['Panic Active?'] => 'No'])['ok']);
+        $this->assertCount(2, Client::$posts);
+        $this->assertEqualsCanonicalizing([$first, $second], array_column($this->openFor(), 'token'));
+    }
+
+    public function test_the_open_ones_come_back_after_a_reload_with_their_answers(): void
+    {
+        $keys = $this->keys();
+        $first = $this->pressTackled();
+        $second = $this->pressTackled([], null, 'Main');
+        Cache::$store['discordpings:requests:details:' . $first]['sent_at'] -= 60;
+        Client::$replies = [$this->reply()];
+
+        $this->addDetails($first, [$keys['Panic Active?'] => 'Yes', $keys['Ship Tackled'] => 'Rorqual']);
+        $open = $this->openFor();
+
+        $this->assertSame([$second, $first], array_column($open, 'token'));
+        $this->assertSame("Help, I'm tackled", $open[1]['button']);
+        $this->assertSame([$keys['Panic Active?'] => 'Yes', $keys['Ship Tackled'] => 'Rorqual'], array_filter((array) $open[1]['answers']));
+        $this->assertCount(7, $open[1]['lines']);
+        $this->assertCount(3, $open[0]['lines']);
+    }
+
+    public function test_presses_in_the_same_second_still_come_back_newest_first(): void
+    {
+        $first = $this->pressTackled();
+        $second = $this->pressTackled();
+        $third = $this->pressTackled();
+
+        foreach ([$first, $second, $third] as $token) {
+            Cache::$store['discordpings:requests:details:' . $token]['sent_at'] = 1762603200;
+        }
+
+        $this->assertSame([$third, $second, $first], array_column($this->openFor(), 'token'));
+    }
+
+    public function test_nobody_else_sees_the_open_ones(): void
+    {
+        $this->pressTackled();
+
+        $this->assertSame([], $this->openFor($this->someoneElse()));
+    }
+
+    public function test_an_answer_does_not_start_the_ten_minutes_again(): void
+    {
+        $token = $this->pressTackled();
+        $this->closesIn($token, 120);
+        Client::$replies = [$this->reply()];
+
+        $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes']);
+
+        $this->assertEqualsWithDelta(120, Cache::$seconds['discordpings:requests:details:' . $token], 2);
+        $this->assertEqualsWithDelta(120, $this->openFor()[0]['closesIn'], 2);
+    }
+
+    public function test_once_its_time_is_up_it_can_neither_be_added_to_nor_listed(): void
+    {
+        $token = $this->pressTackled();
+        $this->closesIn($token, -1);
+
+        $this->assertSame('expired', $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes'])['status']);
+        $this->assertSame([], $this->openFor());
+        $this->assertSame([], Client::$patches);
+    }
+
+    public function test_closing_tells_discord_and_stops_any_more_updates(): void
+    {
+        $keys = $this->keys();
+        $token = $this->pressTackled();
+        Client::$replies = [$this->reply(), $this->reply()];
+
+        $this->addDetails($token, [$keys['Panic Active?'] => 'Yes']);
+        $result = $this->close($token);
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('closed', $result['status']);
+        $closed = Client::$patches[1][1]['json'];
+        $this->assertSame(['embeds'], array_keys($closed));
+        $this->assertSame('**Panic Active?** Yes', $closed['embeds'][0]['description']);
+        $this->assertMatchesRegularExpression('/^Closed by the sender at <t:\d+:t>$/', $closed['embeds'][0]['fields'][0]['value']);
+
+        $this->assertSame('expired', $this->addDetails($token, [$keys['Panic Active?'] => 'No'])['status']);
+        $this->assertSame([], $this->openFor());
+        $this->assertArrayNotHasKey('discordpings:requests:open:7', Cache::$store);
+        $this->assertCount(2, Client::$patches);
+    }
+
+    public function test_closing_one_leaves_the_others_open(): void
+    {
+        $first = $this->pressTackled();
+        $second = $this->pressTackled();
+        Client::$replies = [$this->reply()];
+
+        $this->close($first);
+
+        $this->assertSame([$second], array_column($this->openFor(), 'token'));
+    }
+
+    public function test_nobody_else_can_close_it(): void
+    {
+        $token = $this->pressTackled();
+
+        $result = $this->close($token, $this->someoneElse());
+
+        $this->assertSame('closed', $result['status']);
+        $this->assertSame([], Client::$patches);
+        $this->assertSame([$token], array_column($this->openFor(), 'token'));
+    }
+
+    public function test_closing_one_that_has_already_gone_changes_nothing(): void
+    {
+        $result = $this->close(str_repeat('ab', 20));
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('closed', $result['status']);
+        $this->assertSame([], Client::$patches);
+    }
+
+    public function test_a_close_discord_cannot_take_still_closes_it_here(): void
+    {
+        $token = $this->pressTackled();
+        Client::$replies = [$this->reply(500, ['message' => 'Server Error'])];
+
+        $result = $this->close($token);
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame('closed_here', $result['status']);
+        $this->assertSame('expired', $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes'])['status']);
+        $this->assertStringNotContainsString(self::TOKEN, implode("\n", Log::$lines));
+    }
+
+    public function test_a_list_that_cannot_be_written_still_hands_the_request_back(): void
+    {
+        Cache::$failLockWith = new \RuntimeException('Lock wait timeout');
+        Client::$replies = [$this->reply()];
+
+        $result = $this->press($this->tackled());
+
+        $this->assertNotNull($result['active']);
+        $this->assertStringContainsString('Could not list', implode("\n", Log::$lines));
+        $this->assertSame([], $this->openFor());
     }
 
     public function test_only_the_buttons_own_answers_are_kept_for_the_details(): void
@@ -575,7 +833,7 @@ class PingRequestSenderTest extends TestCase
     public function test_updates_stop_once_a_message_has_had_its_share(): void
     {
         $token = $this->pressTackled();
-        RateLimiter::$hits['discordpings:requests:detail-updates:' . $token] = 30;
+        RateLimiter::$hits['discordpings:requests:detail-updates:' . $token] = 50;
 
         $result = $this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes']);
 
@@ -673,7 +931,9 @@ class PingRequestSenderTest extends TestCase
         $result = $this->press($this->tackled());
 
         $this->assertTrue($result['ok']);
-        $this->assertNull($result['details_token']);
+        $this->assertNull($result['active']);
+        // Nothing to point the member at, so it doesn't.
+        $this->assertSame('Sent to Discord.', $result['message']);
         $this->assertStringContainsString('Could not keep', implode("\n", Log::$lines));
     }
 }

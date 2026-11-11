@@ -10,7 +10,9 @@ class RequestMessageTest extends TestCase
 {
     private const ROLE = '1227722401236652123';
 
-    private function payload(string $body = 'Rorqual Tackled', ?string $role = self::ROLE, ?SenderIdentity $sender = null, string $title = "Help, I'm tackled"): array
+    private const UNTIL = 1762603800;
+
+    private function payload(string $body = 'Rorqual Tackled', ?string $role = self::ROLE, ?SenderIdentity $sender = null, string $title = "Help, I'm tackled", ?int $liveUntil = null): array
     {
         return RequestMessage::payload(
             $title,
@@ -19,8 +21,14 @@ class RequestMessageTest extends TestCase
             $sender ?? new SenderIdentity('Matt Falahe', 'Minc Corp'),
             0xDC3545,
             'SeAT Broadcast',
-            '2026-11-08T12:00:00Z'
+            '2026-11-08T12:00:00Z',
+            $liveUntil
         );
+    }
+
+    private function live(): array
+    {
+        return $this->payload('Rorqual Tackled', self::ROLE, null, "Help, I'm tackled", self::UNTIL)['embeds'][0];
     }
 
     /** @return array<string, string> field values by field name */
@@ -209,5 +217,44 @@ class RequestMessageTest extends TestCase
         $changed = RequestMessage::withBody($this->payload('hi')['embeds'][0], '[free isk](https://bad.example)');
 
         $this->assertSame('[free isk\\](https://bad.example)', $changed['description']);
+    }
+
+    /** A countdown readers' own Discord keeps current, in their own local time. */
+    public function test_a_message_that_can_still_change_says_until_when_before_anything_else(): void
+    {
+        $fields = $this->live()['fields'];
+
+        $this->assertSame(['name' => 'Live updates', 'value' => 'Until <t:1762603800:t> (<t:1762603800:R>)', 'inline' => false], $fields[0]);
+        $this->assertSame(['Live updates', 'Sent by', 'Corporation'], array_column($fields, 'name'));
+    }
+
+    public function test_a_message_that_cannot_change_has_no_countdown(): void
+    {
+        $this->assertSame(['Sent by', 'Corporation'], array_keys($this->fields($this->payload())));
+    }
+
+    public function test_closing_swaps_the_countdown_and_leaves_the_rest(): void
+    {
+        $embed = $this->live();
+
+        $closed = RequestMessage::closed($embed, 1762603500);
+
+        $this->assertSame('Closed by the sender at <t:1762603500:t>', $closed['fields'][0]['value']);
+        $closed['fields'][0]['value'] = $embed['fields'][0]['value'];
+        $this->assertSame($embed, $closed);
+    }
+
+    public function test_closing_a_message_with_no_countdown_changes_nothing(): void
+    {
+        $embed = $this->payload()['embeds'][0];
+
+        $this->assertSame($embed, RequestMessage::closed($embed, 1762603500));
+    }
+
+    public function test_a_new_body_keeps_the_countdown(): void
+    {
+        $embed = $this->live();
+
+        $this->assertSame($embed['fields'], RequestMessage::withBody($embed, '**Panic Active?** Yes')['fields']);
     }
 }

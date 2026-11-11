@@ -105,6 +105,23 @@ namespace Illuminate\Support\Facades {
         {
             unset(self::$store[$key]);
         }
+
+        public static ?\Throwable $failLockWith = null;
+
+        /** Runs the work straight away, the way a lock nobody else is holding would. */
+        public static function lock(string $name, int $seconds = 0): object
+        {
+            return new class {
+                public function block(int $seconds, ?callable $callback = null)
+                {
+                    if (Cache::$failLockWith) {
+                        throw Cache::$failLockWith;
+                    }
+
+                    return $callback ? $callback() : true;
+                }
+            };
+        }
     }
 
     class RateLimiter

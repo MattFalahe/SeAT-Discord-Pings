@@ -20,9 +20,17 @@
     .pr-preview { white-space: pre-wrap; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--pings-border); border-radius: 4px; padding: 10px; font-size: 0.875rem; }
     .pr-who { font-size: 0.875rem; }
     .pr-yesno .btn { min-width: 64px; }
-    .pr-details { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--pings-border); }
-    .pr-details-intro { font-size: 0.875rem; margin-bottom: 8px; }
-    .pr-details .form-group { margin-bottom: 10px; }
+    .pr-active-intro { font-size: 0.875rem; margin-bottom: 12px; }
+    .pr-active-item { height: 100%; padding: 10px 12px; border: 1px solid var(--pings-border); border-left: 4px solid var(--pings-danger); border-radius: 4px; }
+    .pr-active-item.pr-closed { opacity: 0.6; }
+    .pr-active-head { display: flex; align-items: flex-start; gap: 8px; }
+    .pr-active-name { flex: 1 1 auto; min-width: 0; font-size: 1rem; overflow-wrap: anywhere; }
+    .pr-active-form { margin-left: 6px; font-size: 0.875rem; }
+    /* The plugin's buttons go full width on a phone, and this one shares its row with the name. */
+    .pr-active-head .pr-active-close { flex: none; width: auto; margin: 0; }
+    .pr-active-when { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 2px 0 10px; font-size: 0.875rem; }
+    .pr-active-left { font-variant-numeric: tabular-nums; }
+    .pr-active-item .form-group { margin-bottom: 10px; }
     .pr-suggests { position: relative; }
     /* Solid on purpose, it sits over the boxes below it and a light theme would wash out anything see-through. */
     .pr-suggest-menu { position: absolute; left: 0; right: 0; top: 100%; z-index: 1060; max-height: 260px; overflow-y: auto; background: #1e222b; border: 1px solid #454d55; border-radius: 4px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45); }
@@ -48,6 +56,21 @@
             <i class="fas fa-info-circle"></i>
             A red button posts to Discord the moment you press it. The others show you what will be posted first.
             Every message says who sent it: <strong>{{ $who }}</strong>
+        </div>
+    </div>
+
+    {{-- Kept on the server until each one closes, so a reload or another tab finds them again. --}}
+    <div class="card card-dark pr-active-requests {{ count($active) > 0 ? '' : 'd-none' }}" id="prActive">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-satellite-dish"></i> Active requests</h3>
+        </div>
+        <div class="card-body pb-0">
+            <p class="pr-active-intro">
+                Add what you know as it happens. Each answer updates your message on Discord without pinging anyone again.
+                A request stays here for 10 minutes after it went out, even if you reload the page, or until you close it.
+                Pressing a red button again always sends a new message.
+            </p>
+            <div class="row" id="prActiveList"></div>
         </div>
     </div>
 
@@ -95,7 +118,7 @@
                         <div class="pr-press-row">
                             <button type="button" class="btn {{ $card['emergency'] ? 'btn-danger' : 'btn-pings-primary' }} js-pr-press" data-button-id="{{ $card['id'] }}">
                                 @if($card['emergency'])
-                                    <i class="fas fa-bolt"></i> {{ count($card['presets']) > 0 ? 'Send with no saved form' : 'Send now' }}
+                                    <i class="fas fa-bolt"></i> Send now, fill in after
                                 @else
                                     <i class="fas fa-paper-plane"></i> Fill in and send
                                 @endif
@@ -109,11 +132,6 @@
                         @endif
 
                         <div class="pr-status" role="status"></div>
-
-                        @if($card['emergency'] && $card['asksAfter'])
-                            {{-- Filled in once a press has gone out, with what the button asks after it. --}}
-                            <div class="pr-details" style="display: none;"></div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -232,10 +250,12 @@
 <script>
     window.PING_REQUESTS = {
         cards: @json($cards),
+        active: @json($active),
         characters: @json($characters),
         csrf: @json(csrf_token()),
         pressUrl: @json(url('discord-pings/requests/__ID__/press')),
         detailsUrl: @json(url('discord-pings/requests/details/__TOKEN__')),
+        closeUrl: @json(url('discord-pings/requests/details/__TOKEN__/close')),
         storePresetUrl: @json(url('discord-pings/requests/__ID__/presets')),
         presetUrl: @json(url('discord-pings/requests/presets/__ID__')),
         systemsUrl: @json(url('discord-pings/requests/systems')),
@@ -243,5 +263,5 @@
         locationsUrl: @json(url('discord-pings/requests/systems/__ID__/locations'))
     };
 </script>
-<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=4"></script>
+<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=5"></script>
 @endpush

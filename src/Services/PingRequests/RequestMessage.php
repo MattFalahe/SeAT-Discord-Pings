@@ -17,6 +17,12 @@ class RequestMessage
     private const FIELD_VALUE = 1024;
     private const TOTAL = 6000;
 
+    /** The field that tells whoever reads the message that it can still change, and until when. */
+    public const LIVE = 'Live updates';
+
+    /**
+     * @param int|null $liveUntil when the sender stops being able to add to it, for a message they still can
+     */
     public static function payload(
         string $title,
         string $body,
@@ -24,14 +30,19 @@ class RequestMessage
         SenderIdentity $sender,
         int $color,
         string $username,
-        string $timestamp
+        string $timestamp,
+        ?int $liveUntil = null
     ): array {
         $title = self::fit($title, self::TITLE);
 
-        $fields = [
-            self::field('Sent by', $sender->mainName !== '' ? $sender->mainName : 'Unknown'),
-            self::field('Corporation', $sender->corporation ?: 'Unknown corporation'),
-        ];
+        $fields = [];
+
+        if ($liveUntil !== null) {
+            $fields[] = self::field(self::LIVE, self::liveUntil($liveUntil), false);
+        }
+
+        $fields[] = self::field('Sent by', $sender->mainName !== '' ? $sender->mainName : 'Unknown');
+        $fields[] = self::field('Corporation', $sender->corporation ?: 'Unknown corporation');
 
         $discord = $sender->discordLine();
         if ($discord !== null) {
@@ -79,10 +90,34 @@ class RequestMessage
         return $embed;
     }
 
-    /** @return array{name: string, value: string, inline: bool} */
-    private static function field(string $name, string $value): array
+    /**
+     * Swaps the countdown for when the sender closed it, so nobody waits on an
+     * update that isn't coming. Everything else stays as it was.
+     */
+    public static function closed(array $embed, int $at): array
     {
-        return ['name' => $name, 'value' => self::fit(self::plain($value), self::FIELD_VALUE), 'inline' => true];
+        foreach ($embed['fields'] ?? [] as $i => $field) {
+            if (($field['name'] ?? null) === self::LIVE) {
+                $embed['fields'][$i]['value'] = 'Closed by the sender at <t:' . $at . ':t>';
+            }
+        }
+
+        return $embed;
+    }
+
+    /**
+     * In Discord's own time format, so every reader sees their own local time
+     * and a countdown their app keeps current without the message being edited.
+     */
+    private static function liveUntil(int $until): string
+    {
+        return 'Until <t:' . $until . ':t> (<t:' . $until . ':R>)';
+    }
+
+    /** @return array{name: string, value: string, inline: bool} */
+    private static function field(string $name, string $value, bool $inline = true): array
+    {
+        return ['name' => $name, 'value' => self::fit(self::plain($value), self::FIELD_VALUE), 'inline' => $inline];
     }
 
     /**

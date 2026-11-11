@@ -30,14 +30,15 @@ class PingRequestSender
     private const LONGEST_WAIT = 3.0;
 
     /** How long after an emergency goes out its sender can still add to it, in seconds. */
-    private const DETAILS_WINDOW = 3600;
+    private const DETAILS_WINDOW = 600;
 
-    /** Far more than one message needs, so a page left open can't keep editing it. */
-    private const MOST_DETAIL_UPDATES = 30;
+    /** Far more than one message needs, even with every section filled in after the press, so a page left open can't keep editing it. */
+    private const MOST_DETAIL_UPDATES = 50;
 
     /**
      * @param array<string, mixed> $answers
-     * @return array{ok: bool, status: string, message: string, retry_in: ?int, details_token?: ?string}
+     * @param string|null $savedForm the name of the saved form it was sent with, null for none
+     * @return array{ok: bool, status: string, message: string, retry_in: ?int, active?: ?array}
      */
     public function press(PingRequestButton $button, array $answers, $user, ?string $savedForm = null): array
     {
@@ -62,6 +63,12 @@ class PingRequestSender
             return $this->outcome(false, $held['status'], $held['message'], $held['retry_in']);
         }
 
+        // Asked only once the message is out, so the questions can never hold an emergency up.
+        // A request already asked everything in its confirm box.
+        $open = $button->isEmergency() ? $this->openAfter($rows, $savedForm) : [];
+        $sentAt = time();
+        $closesAt = $open !== [] ? $sentAt + self::DETAILS_WINDOW : null;
+
         $payload = RequestMessage::payload(
             $button->name,
             Sections::forDiscord($rows, $answers),
@@ -69,7 +76,8 @@ class PingRequestSender
             $sender,
             $this->color($button, $webhook),
             (string) config('discordpings.app_name', 'SeAT Broadcast'),
-            gmdate('Y-m-d\TH:i:s\Z')
+            gmdate('Y-m-d\TH:i:s\Z', $sentAt),
+            $closesAt
         );
 
         $delivery = $this->post($webhook, $payload);
@@ -79,10 +87,12 @@ class PingRequestSender
         if ($delivery['ok']) {
             $outcome = $this->outcome(true, 'sent', 'Sent to Discord.', $button->isEmergency() ? null : (int) $button->cooldown_minutes * 60);
 
-            // Asked only once the message is out, so the questions can never hold an emergency up.
-            // A request already asked them in its confirm box.
-            if ($button->isEmergency() && Sections::hasLive($rows)) {
-                $outcome['details_token'] = $this->keepForDetails($webhook, $user, $delivery['message_id'], $historyId, $rows, $answers, $payload['embeds'][0]);
+            if ($closesAt !== null) {
+                $outcome['active'] = $this->keepOpen($button, $webhook, $user, $delivery['message_id'], $historyId, $rows, $answers, $open, $savedForm, $payload['embeds'][0], $sentAt, $closesAt);
+
+                if ($outcome['active'] !== null) {
+                    $outcome['message'] = 'Sent to Discord. Add what you know under Active requests.';
+                }
             }
 
             return $outcome;
@@ -110,8 +120,8 @@ class PingRequestSender
     {
         $press = ctype_xdigit($token) ? Cache::get($this->detailsKey($token)) : null;
 
-        if (! is_array($press) || (int) ($press['user_id'] ?? 0) !== (int) $user->id) {
-            return $this->outcome(false, 'expired', 'Not updated. This message can no longer be changed from here, so tell someone directly.');
+        if (! $this->isOpenFor($press, $user)) {
+            return $this->outcome(false, 'expired', 'Not updated. This request has closed, so press its button again if you need to.');
         }
 
         // Not the key the details sit under: the rate limiter keeps its count in the same cache.
@@ -130,8 +140,7 @@ class PingRequestSender
         }
 
         $rows = $press['rows'];
-        $live = array_intersect_key($answers, array_flip(Sections::liveKeys($rows)));
-        $answers = array_merge($press['answers'], $live);
+        $answers = array_merge($press['answers'], array_intersect_key($answers, array_flip($press['open'])));
         $delivery = $this->edit($webhook, $press['message_id'], RequestMessage::withBody($press['embed'], Sections::forDiscord($rows, $answers)));
 
         if (! $delivery['ok']) {
@@ -151,10 +160,87 @@ class PingRequestSender
             return $this->outcome(false, 'failed', 'Not updated. Your message is still on Discord as it was, so try again or tell someone directly.');
         }
 
+        $this->keepAnswers($token, $answers);
+
         $body = Sections::compose($rows, $answers);
         $this->followInHistory($press['history_id'] ?? null, $body !== '' ? $body : (string) ($press['embed']['title'] ?? ''));
 
         return $this->outcome(true, 'updated', 'Added to your message on Discord.');
+    }
+
+    /**
+     * The member is done with it early. Their message on Discord says so,
+     * and nothing more can be added to it from any page.
+     *
+     * @return array{ok: bool, status: string, message: string, retry_in: ?int}
+     */
+    public function close(string $token, $user): array
+    {
+        $press = ctype_xdigit($token) ? Cache::get($this->detailsKey($token)) : null;
+
+        // Closed already, run out, or never theirs: either way there's nothing left to close.
+        if (! $this->isOpenFor($press, $user)) {
+            return $this->outcome(true, 'closed', 'Closed.');
+        }
+
+        Cache::forget($this->detailsKey($token));
+
+        try {
+            $this->changeOpenList($user, function (array $open) use ($token) {
+                unset($open[$token]);
+
+                return $open;
+            });
+        } catch (\Throwable $e) {
+            // The list only says where to look, and with the details gone there's nothing to find there.
+        }
+
+        $webhook = DiscordWebhook::find($press['webhook_id']);
+        $embed = RequestMessage::withBody(RequestMessage::closed($press['embed'], time()), Sections::forDiscord($press['rows'], $press['answers']));
+        $delivery = $webhook && $webhook->is_active
+            ? $this->edit($webhook, $press['message_id'], $embed)
+            : ['ok' => false, 'error' => 'The webhook is gone or switched off'];
+
+        if (! $delivery['ok']) {
+            Log::warning('[DiscordPings] Could not mark a ping request closed on Discord: ' . $delivery['error'], ['history_id' => $press['history_id'] ?? null]);
+
+            return $this->outcome(true, 'closed_here', 'Closed here, but Discord could not be updated, so your message there still shows when it would have closed.');
+        }
+
+        return $this->outcome(true, 'closed', 'Closed. Your message on Discord now says so.');
+    }
+
+    /**
+     * The member's emergencies that can still be added to, newest first, so
+     * the page can show them again after a reload or in another tab.
+     *
+     * @return array<int, array>
+     */
+    public function openFor($user): array
+    {
+        $found = [];
+
+        try {
+            $list = Cache::get($this->openListKey($user));
+
+            // Read backwards, so two presses in the same second still sort newest first.
+            foreach (is_array($list) ? array_reverse($list, true) : [] as $token => $closesAt) {
+                $token = (string) $token;
+                $press = ctype_xdigit($token) ? Cache::get($this->detailsKey($token)) : null;
+
+                if ($this->isOpenFor($press, $user)) {
+                    $found[] = [$token, $press];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not read the open ping requests: ' . ErrorText::safe($e->getMessage()));
+
+            return [];
+        }
+
+        usort($found, fn ($a, $b) => (int) $b[1]['sent_at'] <=> (int) $a[1]['sent_at']);
+
+        return array_map(fn ($pair) => $this->entry($pair[0], $pair[1]), $found);
     }
 
     /** How long this member has to wait before this button works again. */
@@ -310,10 +396,30 @@ class PingRequestSender
     }
 
     /**
-     * What the details box needs to rebuild the message, kept for the window.
-     * Written after the post like the history row, and just as unable to undo it.
+     * What can still be filled in once an emergency is out. Sent from a saved
+     * form, that's what the button asks after the press. Sent with no form,
+     * nothing has been said yet, so it's every section.
+     *
+     * @return string[]
      */
-    private function keepForDetails(DiscordWebhook $webhook, $user, ?string $messageId, ?int $historyId, array $rows, array $answers, array $embed): ?string
+    private function openAfter(array $rows, ?string $savedForm): array
+    {
+        if ($savedForm === null) {
+            return array_merge(Sections::savedKeys($rows), Sections::liveKeys($rows));
+        }
+
+        return Sections::liveKeys($rows);
+    }
+
+    /**
+     * What the member needs to add to the message later, kept until it
+     * closes and listed under their account, so a reload or another tab finds
+     * it again. Written after the post like the history row, and just as
+     * unable to undo it.
+     *
+     * @return array|null the entry as the page shows it
+     */
+    private function keepOpen(PingRequestButton $button, DiscordWebhook $webhook, $user, ?string $messageId, ?int $historyId, array $rows, array $answers, array $open, ?string $savedForm, array $embed, int $sentAt, int $closesAt): ?array
     {
         if ($messageId === null) {
             return null;
@@ -321,24 +427,113 @@ class PingRequestSender
 
         try {
             $token = bin2hex(random_bytes(20));
-
-            Cache::put($this->detailsKey($token), [
+            $press = [
                 'user_id' => (int) $user->id,
                 'webhook_id' => (int) $webhook->id,
                 'message_id' => $messageId,
                 'history_id' => $historyId,
+                'button' => (string) $button->name,
+                'saved_form' => $savedForm,
                 'rows' => $rows,
-                // Only what the button asks. A press can carry any keys at all, and these sit in the cache for an hour.
+                'open' => $open,
+                // Only what the button asks. A press can carry any keys at all.
                 'answers' => array_intersect_key($answers, array_flip(array_merge(Sections::savedKeys($rows), Sections::liveKeys($rows)))),
                 'embed' => $embed,
-            ], self::DETAILS_WINDOW);
+                'sent_at' => $sentAt,
+                'closes_at' => $closesAt,
+            ];
 
-            return $token;
+            Cache::put($this->detailsKey($token), $press, max(1, $closesAt - time()));
         } catch (\Throwable $e) {
             Log::warning('[DiscordPings] Could not keep a ping request open for details: ' . ErrorText::safe($e->getMessage()));
 
             return null;
         }
+
+        try {
+            $this->changeOpenList($user, function (array $list) use ($token, $closesAt) {
+                $list[$token] = $closesAt;
+
+                return $list;
+            });
+        } catch (\Throwable $e) {
+            // The page that pressed still has it. Only a reload won't find it.
+            Log::warning('[DiscordPings] Could not list a ping request as open: ' . ErrorText::safe($e->getMessage()));
+        }
+
+        return $this->entry($token, $press);
+    }
+
+    /**
+     * One change at a time, so two presses landing together can't each write
+     * the list back without the other. Anything that has closed is dropped on
+     * the way through.
+     */
+    private function changeOpenList($user, callable $change): void
+    {
+        $key = $this->openListKey($user);
+
+        Cache::lock($key . ':lock', 10)->block(3, function () use ($key, $change) {
+            $now = time();
+            $list = Cache::get($key);
+            $list = $change(array_filter(is_array($list) ? $list : [], fn ($closesAt) => is_int($closesAt) && $closesAt > $now));
+
+            if ($list === []) {
+                Cache::forget($key);
+            } else {
+                Cache::put($key, $list, max(1, max($list) - $now));
+            }
+        });
+    }
+
+    /** One open emergency the way the page shows it: what it still asks, and the answers as they stand. */
+    private function entry(string $token, array $press): array
+    {
+        $freeText = ! Sections::hasQuestions($press['rows']);
+
+        return [
+            'token' => $token,
+            'button' => $press['button'],
+            'savedForm' => $press['saved_form'],
+            'sentAt' => gmdate('Y-m-d\TH:i:s\Z', (int) $press['sent_at']),
+            'closesIn' => max(0, (int) $press['closes_at'] - time()),
+            'freeText' => $freeText,
+            'lines' => $freeText ? [] : array_values(array_filter(
+                Sections::lines($press['rows']),
+                fn ($line) => in_array($line['key'], $press['open'], true)
+            )),
+            'answers' => (object) array_intersect_key($press['answers'], array_flip($press['open'])),
+        ];
+    }
+
+    /** So a reload shows the answers as they stand. The ten minutes don't start again. */
+    private function keepAnswers(string $token, array $answers): void
+    {
+        try {
+            $press = Cache::get($this->detailsKey($token));
+
+            // Closed while the edit was on its way, so it stays closed.
+            if (! is_array($press) || (int) ($press['closes_at'] ?? 0) <= time()) {
+                return;
+            }
+
+            $press['answers'] = $answers;
+            Cache::put($this->detailsKey($token), $press, (int) $press['closes_at'] - time());
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not keep the answers to a ping request: ' . ErrorText::safe($e->getMessage()));
+        }
+    }
+
+    private function isOpenFor($press, $user): bool
+    {
+        return is_array($press)
+            && (int) ($press['user_id'] ?? 0) === (int) $user->id
+            && (int) ($press['closes_at'] ?? 0) > time();
+    }
+
+    private function openListKey($user): string
+    {
+        return 'discordpings:requests:open:' . (int) $user->id;
     }
 
     /** History shows what Discord shows. */

@@ -358,6 +358,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <p>{!! trans('discordpings::help.recent_changes_intro') !!}</p>
                 <ul>
                     <li>{!! trans('discordpings::help.recent_changes_ping_requests') !!}</li>
+                    <li>{!! trans('discordpings::help.recent_changes_emergency_details') !!}</li>
                 </ul>
             </div>
 
@@ -528,7 +529,18 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <p>{!! trans('discordpings::help.ping_requests_access_desc') !!}</p>
 
                 <h4>{{ trans('discordpings::help.ping_requests_emergency_title') }}</h4>
-                <p>{{ trans('discordpings::help.ping_requests_emergency_desc') }}</p>
+                <p>{!! trans('discordpings::help.ping_requests_emergency_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.ping_requests_details_title') }}</h4>
+                <div class="success-box">
+                    <i class="fas fa-sync-alt"></i>
+                    <div>{!! trans('discordpings::help.ping_requests_details_highlight') !!}</div>
+                </div>
+                <p>{!! trans('discordpings::help.ping_requests_details_desc') !!}</p>
+                <div class="info-box">
+                    <i class="fas fa-clock"></i>
+                    <div>{!! trans('discordpings::help.ping_requests_details_window') !!}</div>
+                </div>
 
                 <h4>{{ trans('discordpings::help.ping_requests_request_title') }}</h4>
                 <p>{{ trans('discordpings::help.ping_requests_request_desc') }}</p>
@@ -1096,7 +1108,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
             <div class="help-card">
                 <h3><i class="fas fa-question-circle"></i> {{ trans('discordpings::help.faq') }}</h3>
 
-                @for($i = 1; $i <= 13; $i++)
+                @for($i = 1; $i <= 14; $i++)
                     <div class="faq-item">
                         <div class="faq-question">
                             <span>{{ trans('discordpings::help.faq_q' . $i) }}</span>

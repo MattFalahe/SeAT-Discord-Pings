@@ -36,7 +36,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - ‼️ **PREPING ‼️** broadcast type alongside Fleet / Announcement / Message
 - 🎨 **Visual color picker** for embed colours
 - 📡 **Multi-webhook send** to fan out a single broadcast across channels
-- 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed, then can ask a few follow-up questions, each answer updating that same message; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account
+- 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed, then stays under Active requests for 10 minutes so the sender can add to it, each answer updating that same message without a second ping; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account
 
 ### With Manager Core + Structure Manager
 

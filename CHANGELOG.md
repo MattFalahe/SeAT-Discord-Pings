@@ -50,7 +50,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 ### 📖 Documentation
 
 - **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h
-- Help & Documentation has a Ping Requests section and a Line Member recipe. The permission list now uses the name SeAT shows for View
+- Help & Documentation has a Ping Requests section, a Live Updates box under Key Features and a Line Member recipe, and its NEW badges now mark what 2.0.2 adds. The permission list now uses the name SeAT shows for View
 
 ### 🧪 Under the hood
 

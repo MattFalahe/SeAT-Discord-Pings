@@ -374,8 +374,8 @@ return [
     'whats_new' => 'What\'s New',
     'whats_new_intro' => 'Recent updates and new features added to SeAT Broadcast.',
 
-    // v2.0.0 markers + What's New callout (Overview section)
-    'v2_badge'  => 'NEW in v2.0.0',
+    // NEW badge on this release's features + the v2.0.0 What's New callout (Overview section)
+    'v2_badge'  => 'NEW in v2.0.2',
     'mc_badge'  => 'Requires Manager Core',
     'whats_new_v2_title'  => 'What\'s New in v2.0.0: The Planning HUB Era',
     'whats_new_v2_intro'  => 'SeAT Broadcast steps up from a standalone Discord webhook sender into the <strong>Planning HUB</strong> for fleet commanders. With <strong>Manager Core</strong> and <strong>Structure Manager</strong> installed, structure timers and fleet ops flow onto the Broadcasts Calendar and a dedicated <strong>FC Opportunities</strong> board, and one click on any op opens a pre-filled form-up broadcast.',

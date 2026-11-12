@@ -159,6 +159,7 @@
                     </a>
                     <a href="#" class="nav-link" data-section="ping-requests">
                         <i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="sending-pings">
                         <i class="fas fa-paper-plane"></i> {{ trans('discordpings::help.sending_pings') }}
@@ -177,19 +178,15 @@
                     </a>
                     <a href="#" class="nav-link" data-section="structure-timers">
                         <i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.structure_timers') }}
-                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="mining-extractions">
                         <i class="fas fa-gem"></i> {{ trans('discordpings::help.mining_extractions_title') }}
-                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="fc-opportunities">
                         <i class="fas fa-bullseye"></i> {{ trans('discordpings::help.fc_opportunities') }}
-                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="published-events">
                         <i class="fas fa-broadcast-tower"></i> {{ trans('discordpings::help.published_events') }}
-                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="configuration">
                         <i class="fas fa-cog"></i> {{ trans('discordpings::help.configuration') }}
@@ -401,19 +398,17 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         <p>{{ trans('discordpings::help.feature_config_desc') }}</p>
                     </div>
                     <div class="feature-item">
-                        <h5><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.feature_structure_timers_title') }}
-                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
-                        </h5>
+                        <h5><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.feature_structure_timers_title') }}</h5>
                         <p>{{ trans('discordpings::help.feature_structure_timers_desc') }}</p>
                     </div>
                     <div class="feature-item">
-                        <h5><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.feature_fc_opportunities_title') }}
-                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
-                        </h5>
+                        <h5><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.feature_fc_opportunities_title') }}</h5>
                         <p>{{ trans('discordpings::help.feature_fc_opportunities_desc') }}</p>
                     </div>
                     <div class="feature-item">
-                        <h5><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.feature_ping_requests_title') }}</h5>
+                        <h5><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.feature_ping_requests_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
                         <p>{{ trans('discordpings::help.feature_ping_requests_desc') }}</p>
                     </div>
                 </div>
@@ -522,7 +517,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
         {{-- Ping Requests --}}
         <div class="help-section" id="ping-requests">
             <div class="help-card">
-                <h3><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}</h3>
+                <h3><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h3>
                 <p>{{ trans('discordpings::help.ping_requests_intro') }}</p>
 
                 <h4>{{ trans('discordpings::help.ping_requests_access_title') }}</h4>
@@ -728,7 +725,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
         <div class="help-section" id="structure-timers">
             <div class="help-card">
                 <h3><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.structure_timers') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                     <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
                 </h3>
                 <p>{!! trans('discordpings::help.structure_timers_intro') !!}</p>
@@ -759,7 +755,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
         <div class="help-section" id="mining-extractions">
             <div class="help-card">
                 <h3><i class="fas fa-gem"></i> {{ trans('discordpings::help.mining_extractions_title') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                     <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
                 </h3>
                 <p>{!! trans('discordpings::help.mining_extractions_intro') !!}</p>
@@ -782,7 +777,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
         <div class="help-section" id="fc-opportunities">
             <div class="help-card">
                 <h3><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.fc_opportunities') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                     <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
                 </h3>
                 <p>{{ trans('discordpings::help.fc_opportunities_intro') }}</p>
@@ -816,7 +810,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
         <div class="help-section" id="published-events">
             <div class="help-card">
                 <h3><i class="fas fa-broadcast-tower"></i> {{ trans('discordpings::help.published_events') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                     <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
                 </h3>
                 <p>{!! trans('discordpings::help.published_events_intro') !!}</p>
@@ -854,15 +847,15 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.configuration_pap_types') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_pap_types_desc') }}</p>
 
-                <h4>{{ trans('discordpings::help.configuration_ping_requests') }}</h4>
+                <h4>{{ trans('discordpings::help.configuration_ping_requests') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
                 <p>{{ trans('discordpings::help.configuration_ping_requests_desc') }}</p>
 
                 <h4>{{ trans('discordpings::help.configuration_structure_timers') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_structure_timers_desc') }}</p>
 
-                <h4>{{ trans('discordpings::help.configuration_routing_map') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
-                </h4>
+                <h4>{{ trans('discordpings::help.configuration_routing_map') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_routing_map_desc') }}</p>
             </div>
         </div>
@@ -873,7 +866,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h3><i class="fas fa-th-large"></i> {{ trans('discordpings::help.pages_guide') }}</h3>
                 <p>{{ trans('discordpings::help.pages_guide_intro') }}</p>
 
-                <h4><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.page_ping_requests') }}</h4>
+                <h4><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.page_ping_requests') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
                 <p>{{ trans('discordpings::help.page_ping_requests_desc') }}</p>
 
                 <h4><i class="fas fa-paper-plane"></i> {{ trans('discordpings::help.page_send') }}</h4>
@@ -889,7 +884,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <p>{{ trans('discordpings::help.page_calendar_desc') }}</p>
 
                 <h4><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.page_opportunities') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                     <span class="mc-badge">{{ trans('discordpings::help.mc_badge') }}</span>
                 </h4>
                 <p>{{ trans('discordpings::help.page_opportunities_desc') }}</p>
@@ -906,9 +900,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <p><i class="fas fa-info-circle"></i> <strong>Requires:</strong> Manage Webhooks permission to access the Settings page.</p>
                 </div>
 
-                <h4><i class="fas fa-stethoscope"></i> {{ trans('discordpings::help.page_diagnostic') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
-                </h4>
+                <h4><i class="fas fa-stethoscope"></i> {{ trans('discordpings::help.page_diagnostic') }}</h4>
                 <p>{{ trans('discordpings::help.page_diagnostic_desc') }}</p>
                 <div class="warning-box">
                     <p><i class="fas fa-shield-alt"></i> <strong>Admin-only:</strong> Requires the <strong>Plugin Admin</strong> permission. Intentionally NOT in the sidebar nav to hide troubleshooting clutter from daily ops. Reach via <code>/discord-pings/diagnostic</code>.</p>
@@ -1017,7 +1009,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
 
                 <div class="feature-grid">
                     <div class="feature-item" style="border-left: 4px solid #17a2b8;">
-                        <h5><i class="fas fa-hand-paper"></i> Line Member</h5>
+                        <h5><i class="fas fa-hand-paper"></i> Line Member
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
                         <p>Flies in fleets and sometimes needs help.</p>
                         <ul style="margin-bottom: 0;">
                             <li><code>discordpings.view</code></li>
@@ -1155,9 +1149,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution3') }}</li>
                 </ul>
 
-                <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_fc_opps_empty_title') }}
-                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
-                </h4>
+                <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_fc_opps_empty_title') }}</h4>
                 <ul>
                     <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution1') }}</li>
                     <li>{{ trans('discordpings::help.issue_fc_opps_empty_solution2') }}</li>

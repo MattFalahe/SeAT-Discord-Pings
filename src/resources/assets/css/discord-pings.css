@@ -2639,7 +2639,7 @@ div.discord-pings-wrapper div.tab-pane {
 }
 
 /* ============================================
-   v2.0.0 markers + What's-New callout (help page)
+   Version markers + What's-New callout (help page)
    ============================================ */
 
 /* Inline "NEW in v2" badge — appears next to a feature title */
@@ -2673,7 +2673,7 @@ div.discord-pings-wrapper div.tab-pane {
 }
 
 /* "Requires Manager Core" badge — indigo gradient so it reads as a
-   different kind of marker than the green "NEW in v2.0.0" badge. */
+   different kind of marker than the green "NEW" badge. */
 .mc-badge {
     display: inline-block;
     background: linear-gradient(135deg, var(--pings-primary-start) 0%, var(--pings-primary-end) 100%);

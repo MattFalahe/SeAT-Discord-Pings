@@ -51,6 +51,8 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 - **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h
 - Help & Documentation has a Ping Requests section, a Live Updates box under Key Features and a Line Member recipe, and its NEW badges now mark what 2.0.2 adds. The permission list now uses the name SeAT shows for View
+- **Plugins & Ecosystem** in Help: every plugin SeAT Broadcast works with, crucial and optional, and whether this server has it. Key Features gives each feature that needs another plugin a box of its own, marked red while Manager Core is missing and yellow while only an optional plugin is
+- Help and Settings no longer say structure timers show on the Calendar. They've been on FC Opportunities since 2.0.0, where **Form-up** sends a broadcast straight away and **Schedule** plans one for later
 
 ### 🧪 Under the hood
 

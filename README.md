@@ -72,7 +72,9 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - **Laravel** 10.0+
 - **Discord webhook URLs**
 - **Queue worker + scheduler** running for scheduled pings and EventBus delivery
-- *Optional* — Manager Core, Structure Manager, Mining Manager (for the cross-plugin integrations described above), seat-connector with its Discord driver (adds the sender's Discord name to Ping Requests)
+- *Optional* — Manager Core, Structure Manager, Mining Manager and HR Manager (for the cross-plugin integrations described above), seat-connector with its Discord driver (adds the sender's Discord name to Ping Requests, and your Discord roles to pick from in Settings), seat-fitting (doctrines to pick from on the broadcast forms)
+
+Help & Documentation has a Plugins & Ecosystem page that shows which of them this server has, and Key Features marks each feature whose plugin is missing.
 
 ## Installation
 

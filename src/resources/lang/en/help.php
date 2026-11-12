@@ -50,7 +50,9 @@ return [
     'feature_fc_opportunities_desc' => 'A focused board of upcoming structure timers and ops needing FC action, with countdowns and one-click form-up broadcasts. Requires Manager Core and Structure Manager.',
 
     'feature_ping_requests_title' => 'Ping Requests',
-    'feature_ping_requests_desc' => 'Buttons for line members to call for help or ask for a fleet. Each posts to its own channel and role and says who sent it, and an emergency can be added to after it has gone out, without a second ping.',
+    'feature_ping_requests_desc' => 'Buttons for line members to call for help or ask for a fleet. Each posts to its own channel and role and says who sent it.',
+    'feature_live_updates_title' => 'Live Updates',
+    'feature_live_updates_desc' => 'An emergency with questions left to answer stays under Active requests for 10 minutes after it goes out, or until the sender closes it. Each answer edits the message already on Discord without pinging anyone again, and its Live updates line counts down to the close and says when it was last updated.',
 
     // Recent changes (the latest update of this major version only)
     'recent_changes_title' => 'In this update (2.0.2)',

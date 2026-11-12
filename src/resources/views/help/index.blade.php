@@ -411,6 +411,12 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         </h5>
                         <p>{{ trans('discordpings::help.feature_ping_requests_desc') }}</p>
                     </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-sync-alt"></i> {{ trans('discordpings::help.feature_live_updates_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
+                        <p>{{ trans('discordpings::help.feature_live_updates_desc') }}</p>
+                    </div>
                 </div>
             </div>
 

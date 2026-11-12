@@ -133,6 +133,145 @@
     .recent-changes-box a {
         color: #a5b4fc !important;
     }
+
+    /* Features and plugins that need another plugin. Red: a crucial plugin is
+       missing. Yellow: only an optional one is. Each pulses a few times as it
+       comes into view and then stays marked, so it is noticed without
+       blinking beside the text being read. */
+    .help-card h4.eco-heading {
+        margin-top: 30px;
+    }
+    .feature-item.eco-box {
+        position: relative;
+        overflow: hidden;
+    }
+    .feature-item.eco-hub {
+        grid-column: 1 / -1;
+    }
+    .feature-item.eco-hub p + p {
+        margin-top: 8px;
+    }
+    .feature-item.eco-on {
+        border-color: rgba(28, 200, 138, 0.55);
+    }
+    .feature-item.eco-red {
+        border: 2px solid #dc3545;
+        background: rgba(220, 53, 69, 0.12);
+    }
+    .feature-item.eco-yellow {
+        border: 2px solid #ffc107;
+        background: rgba(255, 193, 7, 0.1);
+    }
+    .feature-item.eco-red h5 > i { color: #f87171; }
+    .feature-item.eco-yellow h5 > i { color: #fbbf24; }
+
+    /* The tint darkens the box enough that the usual grey falls below
+       readable contrast, on yellow most of all. */
+    .feature-item.eco-red h5,
+    .feature-item.eco-yellow h5 {
+        color: #f9fafb !important;
+    }
+    .feature-item.eco-red p,
+    .feature-item.eco-yellow p {
+        color: #f3f4f6 !important;
+    }
+    .eco-banner {
+        display: block;
+        margin: -15px -15px 12px;
+        padding: 5px 15px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .eco-red .eco-banner {
+        background: #dc3545;
+        color: #ffffff !important;
+    }
+    .eco-yellow .eco-banner {
+        background: #ffc107;
+        color: #1f2937 !important;
+    }
+    .feature-item p.eco-note {
+        color: #f3f4f6 !important;
+        font-weight: 600;
+        margin-top: 10px;
+    }
+    .eco-tag {
+        margin-top: 10px;
+    }
+    .eco-group {
+        margin-top: 10px;
+    }
+    .help-card p.eco-group-line {
+        color: #9ca3af !important;
+        margin-top: -4px;
+    }
+    .eco-divider {
+        border: 0;
+        border-top: 2px dashed rgba(139, 156, 247, 0.35);
+        margin: 28px 0 18px;
+    }
+    .eco-plugin {
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(102, 126, 234, 0.25);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+    .eco-plugin-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .eco-plugin-head > i {
+        color: var(--pings-primary-start);
+        width: 20px;
+        text-align: center;
+    }
+    .eco-plugin-head strong {
+        font-size: 1.05rem;
+    }
+    .eco-badges {
+        margin-left: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .eco-badges .badge {
+        font-size: 0.8rem;
+    }
+    .eco-plugin p {
+        margin-bottom: 6px;
+    }
+    .eco-link {
+        color: #8b9cf7 !important;
+        font-size: 0.9rem;
+    }
+    .eco-red.eco-pulsing,
+    .badge-danger.eco-pulsing {
+        animation: eco-pulse-red 1.6s ease-out 3;
+    }
+    .eco-yellow.eco-pulsing {
+        animation: eco-pulse-yellow 1.6s ease-out 3;
+    }
+    @keyframes eco-pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.75); }
+        70% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    @keyframes eco-pulse-yellow {
+        0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.75); }
+        70% { box-shadow: 0 0 0 12px rgba(255, 193, 7, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .eco-pulsing {
+            animation: none !important;
+        }
+    }
 </style>
 @endpush
 
@@ -156,6 +295,10 @@
                     </a>
                     <a href="#" class="nav-link" data-section="getting-started">
                         <i class="fas fa-rocket"></i> {{ trans('discordpings::help.getting_started') }}
+                    </a>
+                    <a href="#" class="nav-link" data-section="plugins">
+                        <i class="fas fa-puzzle-piece"></i> {{ trans('discordpings::help.plugins') }}
+                        <span class="v2-badge v2-badge-nav">{{ trans('discordpings::help.v2_badge') }}</span>
                     </a>
                     <a href="#" class="nav-link" data-section="ping-requests">
                         <i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.ping_requests') }}
@@ -398,14 +541,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         <p>{{ trans('discordpings::help.feature_config_desc') }}</p>
                     </div>
                     <div class="feature-item">
-                        <h5><i class="fas fa-satellite-dish"></i> {{ trans('discordpings::help.feature_structure_timers_title') }}</h5>
-                        <p>{{ trans('discordpings::help.feature_structure_timers_desc') }}</p>
-                    </div>
-                    <div class="feature-item">
-                        <h5><i class="fas fa-bullseye"></i> {{ trans('discordpings::help.feature_fc_opportunities_title') }}</h5>
-                        <p>{{ trans('discordpings::help.feature_fc_opportunities_desc') }}</p>
-                    </div>
-                    <div class="feature-item">
                         <h5><i class="fas fa-hand-paper"></i> {{ trans('discordpings::help.feature_ping_requests_title') }}
                             <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                         </h5>
@@ -418,6 +553,8 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         <p>{{ trans('discordpings::help.feature_live_updates_desc') }}</p>
                     </div>
                 </div>
+
+                @include('discordpings::help.partials.ecosystem-features')
             </div>
 
             {{-- View alone only opens this page, so someone holding just that has nothing to link to. --}}
@@ -518,6 +655,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{{ trans('discordpings::help.getting_started_step6') }}</li>
                 </ol>
             </div>
+        </div>
+
+        {{-- Plugins & Ecosystem --}}
+        <div class="help-section" id="plugins">
+            @include('discordpings::help.partials.ecosystem-plugins')
         </div>
 
         {{-- Ping Requests --}}
@@ -1214,6 +1356,29 @@ $(document).ready(function() {
         $(this).toggleClass('open');
         $(this).next('.faq-answer').toggleClass('open');
     });
+
+    // A link inside a section that opens another one.
+    $('.help-content').on('click', 'a[data-goto]', function(e) {
+        e.preventDefault();
+        $('.help-nav .nav-link[data-section="' + $(this).data('goto') + '"]').click();
+    });
+
+    // A missing plugin pulses a few times as it comes into view, then stays
+    // marked. A section is hidden until it is picked, so each one waits
+    // until it can be seen.
+    if ('IntersectionObserver' in window) {
+        var pulse = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('eco-pulsing');
+                    pulse.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('.eco-pulse').forEach(function(el) {
+            pulse.observe(el);
+        });
+    }
 
     // Search
     var searchTimeout;

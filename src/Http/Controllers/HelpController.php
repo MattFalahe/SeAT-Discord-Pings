@@ -2,6 +2,7 @@
 
 namespace DiscordPings\Http\Controllers;
 
+use DiscordPings\Services\Ecosystem\PluginStatus;
 use DiscordPings\Services\VersionChecker;
 use Illuminate\Routing\Controller;
 
@@ -17,6 +18,9 @@ class HelpController extends Controller
         // the Help page meaningfully or break the render.
         $versionStatus = app(VersionChecker::class)->getStatus();
 
-        return view('discordpings::help.index', compact('versionStatus'));
+        return view('discordpings::help.index', [
+            'versionStatus' => $versionStatus,
+            'ecosystem' => PluginStatus::forHelp(),
+        ]);
     }
 }

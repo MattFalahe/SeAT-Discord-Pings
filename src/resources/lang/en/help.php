@@ -44,10 +44,6 @@ return [
     'feature_history_desc' => 'Full audit trail of all sent broadcasts with status tracking and resend capability.',
     'feature_config_title' => 'Settings',
     'feature_config_desc' => 'Manage webhooks, Discord roles, channels, staging locations, PAP types, ping request buttons, and Structure Timers integration from the Settings page.',
-    'feature_structure_timers_title' => 'Structure Timer Calendar',
-    'feature_structure_timers_desc' => 'With Manager Core and Structure Manager installed, structure timers and manual fleet ops flow onto the calendar automatically via the EventBus.',
-    'feature_fc_opportunities_title' => 'FC Opportunities Board',
-    'feature_fc_opportunities_desc' => 'A focused board of upcoming structure timers and ops needing FC action, with countdowns and one-click form-up broadcasts. Requires Manager Core and Structure Manager.',
 
     'feature_ping_requests_title' => 'Ping Requests',
     'feature_ping_requests_desc' => 'Buttons for line members to call for help or ask for a fleet. Each posts to its own channel and role and says who sent it.',
@@ -94,6 +90,9 @@ return [
     'getting_started_step4' => 'Use Templates to save frequently used broadcast formats.',
     'getting_started_step5' => 'Schedule recurring broadcasts using the Scheduled Broadcasts page.',
     'getting_started_step6' => 'With Manager Core and Structure Manager installed, the Calendar also shows structure timers and the FC Opportunities sidebar entry appears for one-click form-up broadcasts.',
+
+    // Plugins & Ecosystem
+    'plugins' => 'Plugins & Ecosystem',
 
     // Sending Pings
     'sending_pings' => 'Sending Broadcasts',

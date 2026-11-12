@@ -9,10 +9,10 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 
 /**
- * FC Opportunities: an FC-focused board listing upcoming structure timers
- * and fleet ops ingested via Manager Core. Each row offers a one-click
- * "Schedule formup ping" that opens the Scheduled Broadcast form pre-filled
- * from the op, plus links into Structure Manager and the Broadcasts Calendar.
+ * FC Opportunities: an FC-focused board listing upcoming structure timers,
+ * fleet ops and moon extractions ingested via Manager Core. Each row opens
+ * the Send form (Form-up) or the Scheduled Broadcast form (Schedule)
+ * pre-filled from the op, and links back to the plugin it came from.
  *
  * Honors the per-event corp/role visibility contract: an FC only sees ops
  * scoped to their corporation/role (or globally scoped ones).

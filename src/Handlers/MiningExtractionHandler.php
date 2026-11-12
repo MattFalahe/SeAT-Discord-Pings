@@ -21,7 +21,7 @@ use DiscordPings\Models\TacticalEvent;
  *   - extraction_expired  → flip to status='elapsed' (window closed)
  *
  * Key differences from StructureTimerHandler:
- *   - eve_time on the calendar row = window_closes_at (the actual deadline),
+ *   - eve_time on the board's row = window_closes_at (the actual deadline),
  *     not chunk_arrival_time. FCs care about WHEN the mining window ends,
  *     not when it opened (the window runs 48h to 96h depending on the
  *     refinery's moon rigs, plenty of lead time). Mining Manager works the
@@ -239,7 +239,7 @@ class MiningExtractionHandler
     }
 
     /**
-     * Build a human-readable notes blob shown in the calendar modal.
+     * Build a human-readable notes blob kept with the event.
      */
     private function buildNotes(array $payload): string
     {

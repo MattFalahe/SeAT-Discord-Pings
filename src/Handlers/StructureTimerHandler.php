@@ -64,12 +64,12 @@ class StructureTimerHandler
             switch ($action) {
                 case 'dismissed':
                 case 'recovered':
-                    // Timer is no longer a live concern — drop it off the calendar.
+                    // Timer is no longer a live concern — drop it off the board.
                     $event->update(['status' => 'dismissed']);
                     break;
 
                 case 'elapsed':
-                    // Keep it on the calendar but dimmed.
+                    // Keep it on the board but dimmed.
                     $event->update(['status' => 'elapsed', 'is_elapsed' => true]);
                     break;
 

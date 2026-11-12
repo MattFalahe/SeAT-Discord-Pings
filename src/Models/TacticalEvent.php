@@ -46,7 +46,7 @@ class TacticalEvent extends Model
 
     /**
      * Scheduled pings an FC has set up for this op (form-up broadcasts
-     * created from the Calendar modal or the FC Opportunities board).
+     * created from the Schedule button on FC Opportunities).
      * Pure informational correlation — pruning a tactical event does
      * NOT cascade-delete its scheduled-ping rows.
      */
@@ -56,7 +56,7 @@ class TacticalEvent extends Model
     }
 
     /**
-     * Active timers — still relevant, shown solid on the calendar.
+     * Active timers — still relevant, shown solid on FC Opportunities.
      */
     public function scopeActive($query)
     {
@@ -64,8 +64,9 @@ class TacticalEvent extends Model
     }
 
     /**
-     * Everything that belongs on the calendar — active plus elapsed (elapsed
-     * renders dimmed). Dismissed timers are hidden.
+     * Everything FC Opportunities shows — active plus elapsed (elapsed
+     * renders dimmed). Dismissed timers are hidden. The name is from when
+     * timers were on the Calendar.
      */
     public function scopeOnCalendar($query)
     {

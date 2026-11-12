@@ -413,7 +413,7 @@
                     <h4>Structure Timer Integration</h4>
                     <p class="text-muted">
                         When Manager Core and Structure Manager are installed, structure timers and
-                        fleet ops appear automatically on the Broadcasts Calendar, and flagged webhooks
+                        fleet ops appear automatically on the FC Opportunities board, and flagged webhooks
                         can send pre-timer reminder pings. This integration is optional.
                     </p>
 
@@ -437,7 +437,7 @@
                         <div class="alert-pings-styled alert-pings-info">
                             <i class="fas fa-info-circle"></i>
                             Install Manager Core and Structure Manager to activate this integration.
-                            Structure timers will then flow onto the calendar automatically.
+                            Structure timers will then show on FC Opportunities automatically.
                             Install Mining Manager (v2.0.1+) too to also surface moon extractions.
                         </div>
                     @endif
@@ -458,7 +458,7 @@
                                 When enabled, webhooks flagged with "Receive structure timer alerts" (on the
                                 Webhooks tab) get an automatic Discord reminder at T-24h and T-1h before each
                                 structure timer. Turn this off to stop all pre-timer pings without un-flagging
-                                individual webhooks. The calendar keeps showing timers either way.
+                                individual webhooks. FC Opportunities keeps showing timers either way.
                             </small>
                         </div>
 
@@ -475,7 +475,7 @@
                                 When enabled, webhooks flagged with "Receive mining extraction alerts" get a
                                 single Discord alert at T-2h before the fleet-able window closes on each moon
                                 extraction. Requires Mining Manager v2.0.1+. Turn off to silence mining alerts
-                                without un-flagging webhooks; mining extractions still appear on the calendar.
+                                without un-flagging webhooks; mining extractions still show on FC Opportunities.
                             </small>
                         </div>
 
@@ -486,9 +486,9 @@
                                    value="{{ $formupOffsetMinutes ?? 30 }}"
                                    style="max-width: 200px;">
                             <small class="text-muted">
-                                When an FC clicks "Schedule formup ping" from a tactical event (Calendar modal
-                                or FC Opportunities board), the broadcast is pre-scheduled this many minutes
-                                before the timer. Defaults to 30. Range: 5 minutes to 12 hours.
+                                When an FC clicks "Schedule" on an FC Opportunities row, the broadcast
+                                is pre-scheduled this many minutes before the timer. Defaults to 30.
+                                Range: 5 minutes to 12 hours.
                             </small>
                         </div>
 

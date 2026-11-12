@@ -39,7 +39,7 @@ return [
     'feature_scheduled_title' => 'Scheduled Broadcasts',
     'feature_scheduled_desc' => 'Schedule one-time or recurring broadcasts at specific times with automatic sending.',
     'feature_calendar_title' => 'Calendar View',
-    'feature_calendar_desc' => 'Visual calendar showing scheduled broadcasts, sent history, and (with Manager Core) structure timers from Structure Manager.',
+    'feature_calendar_desc' => 'Visual calendar showing scheduled broadcasts and sent history.',
     'feature_history_title' => 'Broadcast History',
     'feature_history_desc' => 'Full audit trail of all sent broadcasts with status tracking and resend capability.',
     'feature_config_title' => 'Settings',
@@ -89,7 +89,7 @@ return [
     'getting_started_step3' => 'Navigate to Send Broadcast to compose and send your first ping.',
     'getting_started_step4' => 'Use Templates to save frequently used broadcast formats.',
     'getting_started_step5' => 'Schedule recurring broadcasts using the Scheduled Broadcasts page.',
-    'getting_started_step6' => 'With Manager Core and Structure Manager installed, the Calendar also shows structure timers and the FC Opportunities sidebar entry appears for one-click form-up broadcasts.',
+    'getting_started_step6' => 'With Manager Core and Structure Manager installed, the FC Opportunities sidebar entry appears, listing structure timers and fleet ops with one-click form-up broadcasts.',
 
     // Plugins & Ecosystem
     'plugins' => 'Plugins & Ecosystem',
@@ -175,7 +175,7 @@ return [
     'structure_timers_how_title' => 'How It Works',
     'structure_timers_how_desc' => 'SeAT Broadcast subscribes to Structure Manager\'s timer events through Manager Core\'s EventBus. Every structure timer (auto-detected reinforcement timers, anchoring, fuel-expiry timers) and every manually entered fleet op is ingested as it is created, updated, or dismissed. No manual entry or syncing is needed.',
     'structure_timers_planner_title' => 'Where Timers Appear',
-    'structure_timers_planner_desc' => 'Ingested timers surface on the <strong>FC Opportunities</strong> board with live countdowns, severity colour-coding, op-type icons (⚔️ hostile, 🛡️ defense, generic for auto-detected timers), and a one-click "Form-up" button that opens the Scheduled Broadcast form pre-filled for the op. Click "SM" on any row to deep-link straight to the structure in Structure Manager. Elapsed timers drop off the board automatically.',
+    'structure_timers_planner_desc' => 'Ingested timers surface on the <strong>FC Opportunities</strong> board with live countdowns, severity colour-coding, op-type icons (⚔️ hostile, 🛡️ defense, generic for auto-detected timers), and buttons that turn the op into a pre-filled broadcast: "Form-up" to send one now, "Schedule" to send one later. "Details" on any row deep-links straight to the op in Structure Manager. Elapsed timers drop off the board automatically.',
     'structure_timers_pings_title' => 'Pre-Timer Reminder Pings',
     'structure_timers_pings_desc' => 'Edit any webhook and enable "Receive structure timer alerts" to have it post an automatic reminder 24 hours and 1 hour before each timer. The reminder is a rich embed showing the structure, system, timer type, and time. More than one webhook can be flagged. A master on/off switch for these pings lives on the Settings > Structure Timers tab, so you can disable them without un-flagging individual webhooks.',
     'structure_timers_opsec_title' => 'Visibility and Opsec',
@@ -217,7 +217,7 @@ return [
     'published_events_broadcast_sent_title' => 'pings.broadcast.sent',
     'published_events_broadcast_sent_desc' => 'Fires after every successful Discord broadcast: manual sends from the Send Broadcast page, scheduled fires, webhook test sends, and pre-timer reminder pings. Payload includes <code>user_id</code>, <code>user_name</code>, <code>webhook_id</code> / <code>webhook_name</code>, <code>corporation_id</code> (if the webhook is corp-scoped), <code>broadcast_type</code> (fleet / announcement / message / prepping), <code>mention_type</code>, <code>message_summary</code> (truncated to 200 chars for privacy), and the <code>history_id</code>. Two boolean flags (<code>is_scheduled</code> and <code>is_structure_alert</code>) let subscribers filter out system-driven sends and credit only manual FC activity.',
     'published_events_formup_scheduled_title' => 'pings.formup.scheduled',
-    'published_events_formup_scheduled_desc' => 'Fires when an FC creates a scheduled broadcast correlated with a tactical event (the form-up workflow that originates from the FC Opportunities board or the Calendar timer modal). This is the strongest "this user is acting like an active fleet commander" signal the plugin emits. Payload includes the user, the scheduled time, the webhook target, and a snapshot of the tactical event (event_type, severity, structure, system, corporation, owner / attacker, eve_time).',
+    'published_events_formup_scheduled_desc' => 'Fires when an FC creates a scheduled broadcast correlated with a tactical event (the Schedule button on an FC Opportunities row). This is the strongest "this user is acting like an active fleet commander" signal the plugin emits. Payload includes the user, the scheduled time, the webhook target, and a snapshot of the tactical event (event_type, severity, structure, system, corporation, owner / attacker, eve_time).',
     'published_events_safety_title' => 'Safety',
     'published_events_safety_desc' => 'Publishing is fully guarded: it skips silently if Manager Core is not installed, and any publish failure is logged at warning level but never propagates back to the broadcast path. A subscriber crashing on its end cannot break a Discord send.',
 
@@ -247,7 +247,7 @@ return [
     'configuration_ping_requests' => 'Ping Requests',
     'configuration_ping_requests_desc' => 'The buttons line members can press: name, emergency or request, webhook, role to ping, sections and their boxes, cooldown, and optional limits by Broadcast permission, corporation or alliance. The Ping Requests section of this page explains each one.',
     'configuration_structure_timers' => 'Structure Timers',
-    'configuration_structure_timers_desc' => 'Shows whether Manager Core and Structure Manager are detected, provides a master on/off switch for pre-timer reminder pings, and lets you set the default form-up lead time (in minutes) used when an FC schedules a form-up broadcast from a tactical event. Turning the pings switch off stops all pre-timer pings while the calendar continues to show structure timers.',
+    'configuration_structure_timers_desc' => 'Shows whether Manager Core, Structure Manager and Mining Manager are detected, provides master on/off switches for pre-timer reminder pings and mining extraction alerts, and lets you set the default form-up lead time (in minutes) used when an FC schedules a form-up broadcast from FC Opportunities. Turning a switch off stops those pings while FC Opportunities keeps showing the timers and extractions.',
     'configuration_routing_map' => 'Routing Map',
     'configuration_routing_map_desc' => 'Read-only snapshot of where each event the plugin reacts to actually fires: for every webhook flagged with "Receive structure timer alerts" it shows the corporation scope, current state (active / disabled / master switch off / integration dormant), and whether it would deliver a pre-timer ping right now. Catches the "I configured this but nothing is happening" class of issues at a glance.',
 
@@ -281,7 +281,7 @@ return [
     'command_process_scheduled' => 'Process Scheduled Broadcasts',
     'command_process_scheduled_desc' => 'Processes all due scheduled broadcasts and sends them. This command runs automatically via the Laravel scheduler.',
     'command_cleanup' => 'Cleanup History',
-    'command_cleanup_desc' => 'Removes old broadcast history entries (default: 90 days) and prunes resolved structure timers from the calendar ingest table (default: 14 days). Both retention windows are configurable in `discordpings.config.php`.',
+    'command_cleanup_desc' => 'Removes old broadcast history entries (default: 90 days) and prunes resolved structure timers and extractions from FC Opportunities (default: 14 days). Both retention windows are configurable in `discordpings.config.php`.',
     'scheduler_note' => 'Scheduler',
     'scheduler_note_desc' => 'The process-scheduled command runs automatically every minute via Laravel\'s task scheduler. Ensure your cron is configured: * * * * * cd /path-to-seat && php artisan schedule:run >> /dev/null 2>&1',
 
@@ -334,7 +334,7 @@ return [
     'faq_q11' => 'Why don\'t I see FC Opportunities in the sidebar?',
     'faq_a11' => 'FC Opportunities is hidden when Manager Core or Structure Manager is not installed (the board has nothing to surface without them). Install both, restart your SeAT stack, and the entry appears. If your install runs `php artisan config:cache`, clear the cache after installing the dependencies.',
     'faq_q12' => 'How do I send a form-up broadcast for a structure timer?',
-    'faq_a12' => 'From the FC Opportunities board click the green "Form-up" button on the row, or from the Calendar click the timer and use "Schedule formup ping" in the modal. Either path opens the Scheduled Broadcast form pre-filled with the op details (scheduled time = timer minus your configured lead time, formup = system, scaffolded message). Review, adjust, submit.',
+    'faq_a12' => 'On the FC Opportunities board, click "Schedule" on the timer\'s row. It opens the Scheduled Broadcast form pre-filled with the op details (scheduled time = timer minus your configured lead time, formup = system, scaffolded message). Review, adjust, submit. If the fleet is forming up now, the green "Form-up" button opens the Send Broadcast form pre-filled the same way, to send straight away.',
     'faq_q13' => 'How do I change the 30-minute default form-up lead time?',
     'faq_a13' => 'Settings > Structure Timers tab > "Default form-up lead time (minutes)". Range: 5 minutes to 12 hours. The change takes effect for new form-up broadcasts scheduled afterwards; broadcasts already scheduled keep their original time.',
     'faq_q14' => 'Do I need to send another ping when something changes after an emergency?',
@@ -379,7 +379,7 @@ return [
     'v2_badge'  => 'NEW in v2.0.2',
     'mc_badge'  => 'Requires Manager Core',
     'whats_new_v2_title'  => 'What\'s New in v2.0.0: The Planning HUB Era',
-    'whats_new_v2_intro'  => 'SeAT Broadcast steps up from a standalone Discord webhook sender into the <strong>Planning HUB</strong> for fleet commanders. With <strong>Manager Core</strong> and <strong>Structure Manager</strong> installed, structure timers and fleet ops flow onto the Broadcasts Calendar and a dedicated <strong>FC Opportunities</strong> board, and one click on any op opens a pre-filled form-up broadcast.',
+    'whats_new_v2_intro'  => 'SeAT Broadcast steps up from a standalone Discord webhook sender into the <strong>Planning HUB</strong> for fleet commanders. With <strong>Manager Core</strong> and <strong>Structure Manager</strong> installed, structure timers and fleet ops flow onto a dedicated <strong>FC Opportunities</strong> board, and one click on any op opens a pre-filled form-up broadcast.',
     'whats_new_v2_list'   => '<ul>
         <li><strong>FC Opportunities board</strong>: focused FC view of upcoming structure timers, mining extractions and manual fleet ops, with live countdowns, severity, and a one-click <em>Form-up</em> button (sidebar entry hidden without Manager Core + Structure Manager)</li>
         <li><strong>Calendar / Planner split</strong>: tactical events (structure timers + mining extractions) live exclusively on FC Opportunities. The Broadcasts Calendar stays strictly broadcast-focused (scheduled + manual sent pings), uncluttered by timers. Form-up pings created from the board land on the calendar naturally</li>
@@ -395,9 +395,9 @@ return [
     'fc_opportunities_requires_title' => 'Requires Manager Core and Structure Manager',
     'fc_opportunities_requires_desc'  => 'The FC Opportunities board surfaces structure timers and fleet ops ingested via Manager Core\'s EventBus from Structure Manager. The sidebar entry is hidden when either plugin is missing; the board itself shows an empty-state with install instructions for anyone reaching it via a deep link.',
     'whats_new_fc_opportunities_title' => '🎯 FC Opportunities Board (2.0.0)',
-    'whats_new_fc_opportunities_desc' => 'A new FC Opportunities sidebar entry lists upcoming structure timers and fleet ops in a focused board with countdowns, severity, op type, and a one-click "Form-up" button that opens the Scheduled Broadcast form pre-filled from the op. The Calendar event modal also gains a "Schedule formup ping" button and shows a "📡 N scheduled" badge per op once a form-up broadcast has been planned. Plus a configurable default form-up lead time (in minutes) on the Settings > Structure Timers tab.',
-    'whats_new_structure_timers_title' => '🛰️ Structure Timers on the Calendar',
-    'whats_new_structure_timers_desc' => 'With Manager Core and Structure Manager installed, structure timers and fleet ops now appear automatically on the Broadcasts Calendar through Manager Core\'s EventBus. Webhooks can be flagged to send pre-timer reminder pings at T-24h and T-1h. See the Structure Timers section for full details. This integration is optional: SeAT Broadcast continues to work standalone when Manager Core is not installed.',
+    'whats_new_fc_opportunities_desc' => 'A new FC Opportunities sidebar entry lists upcoming structure timers and fleet ops in a focused board with countdowns, severity, op type, and one-click buttons that turn an op into a pre-filled broadcast: "Form-up" to send it now, "Schedule" to send it later. Each op shows a "📡 N scheduled" badge once a form-up broadcast has been planned for it. Plus a configurable default form-up lead time (in minutes) on the Settings > Structure Timers tab.',
+    'whats_new_structure_timers_title' => '🛰️ Structure Timers from Structure Manager',
+    'whats_new_structure_timers_desc' => 'With Manager Core and Structure Manager installed, structure timers and fleet ops now appear automatically on the FC Opportunities board through Manager Core\'s EventBus. Webhooks can be flagged to send pre-timer reminder pings at T-24h and T-1h. See the Structure Timers section for full details. This integration is optional: SeAT Broadcast continues to work standalone when Manager Core is not installed.',
     'whats_new_prepping_title' => '‼️ PREPING ‼️ Broadcast Type',
     'whats_new_prepping_desc' => 'A new "‼️ PREPING ‼️" broadcast type is now available alongside Fleet Broadcast, Announcement, and Message. Use it to notify members that a fleet is being staged and is not yet ready to undock. The title appears in Discord exactly as "‼️ PREPING ‼️". Select it from the Broadcast Type dropdown on both the Send and Schedule forms.',
     'whats_new_pap_config_title' => '🏷️ Configurable PAP Types',

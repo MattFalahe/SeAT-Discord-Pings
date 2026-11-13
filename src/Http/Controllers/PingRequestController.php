@@ -26,6 +26,12 @@ class PingRequestController extends Controller
 
     private const MAX_ANSWER_LENGTH = 1000;
 
+    /** How far back a member's own list goes. History keeps the rest until its cleanup. */
+    private const RECENT_DAYS = 7;
+
+    /** The list pages in the browser, so one visit never loads more than this however busy the week was. */
+    private const MOST_RECENT = 500;
+
     public function index(PingRequestSender $sender)
     {
         $user = auth()->user();
@@ -73,15 +79,17 @@ class PingRequestController extends Controller
 
         $recent = PingHistory::where('user_id', $user->id)
             ->memberRequests()
+            ->where('created_at', '>=', now()->subDays(self::RECENT_DAYS))
             ->latest()
-            ->take(10)
+            ->take(self::MOST_RECENT)
             ->get();
+        $recentDays = self::RECENT_DAYS;
 
         $identity = DiscordUserResolver::senderIdentity($user);
         $characters = MemberAccount::characterNames((int) $user->id);
         $active = $sender->openFor($user);
 
-        return view('discordpings::requests.index', compact('cards', 'recent', 'identity', 'characters', 'active'));
+        return view('discordpings::requests.index', compact('cards', 'recent', 'recentDays', 'identity', 'characters', 'active'));
     }
 
     public function systems(LocationLookup $lookup)

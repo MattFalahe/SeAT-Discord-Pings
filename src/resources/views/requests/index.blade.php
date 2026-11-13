@@ -4,6 +4,7 @@
 @section('page_header', 'Ping Requests')
 
 @push('head')
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
 <style>
     .pr-notice { border-left: 4px solid var(--pings-info); }
@@ -148,11 +149,11 @@
 
     <div class="card card-dark">
         <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-history"></i> Your last requests</h3>
+            <h3 class="card-title"><i class="fas fa-history"></i> Your requests from the last {{ $recentDays }} days</h3>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0">
+                <table id="prRecentTable" class="table table-striped table-hover mb-0" style="width:100%">
                     <thead>
                         <tr>
                             <th>Time</th>
@@ -162,9 +163,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($recent as $history)
+                        @foreach($recent as $history)
                             <tr>
-                                <td>
+                                <td data-order="{{ $history->created_at->timestamp }}">
                                     <span class="eve-time" data-eve-time="{{ $history->created_at->utc()->toIso8601String() }}">
                                         {{ $history->created_at->utc()->format('Y-m-d H:i:s') }} EVE
                                     </span>
@@ -183,11 +184,7 @@
                                     @endif
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">Nothing sent yet.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -264,4 +261,28 @@
     };
 </script>
 <script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=5"></script>
+<script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
+<script>
+    $(function () {
+        $('#prRecentTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            searching: false,
+            language: {
+                lengthMenu: 'Show _MENU_ requests',
+                info: '_START_ to _END_ of _TOTAL_',
+                infoEmpty: '',
+                emptyTable: @json('Nothing sent in the last ' . $recentDays . ' days.')
+            },
+            // Only the rows on the page are in the document, so each page gets its local times when it draws.
+            drawCallback: function () {
+                if (window.EveTime) {
+                    window.EveTime.convert(this.api().table().node());
+                }
+            }
+        });
+    });
+</script>
 @endpush

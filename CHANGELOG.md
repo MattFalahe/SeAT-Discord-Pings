@@ -7,9 +7,9 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ## 🙋 Version 2.0.2 — *November 2026*
 
-**Requests and Roles.** Line members get their own way into the plugin. You set up buttons in Settings ("Help, I'm tackled", "I want a mining fleet"), each with a webhook and a role to ping, and anyone holding the new **Line Member** permission presses one from the new **Ping Requests** page. The message reaches Discord with the sender's SeAT main character and corporation, plus their Discord name when seat-connector is installed and the account is linked, because the character in trouble can be any alt.
+**Requests and Roles.** Line members get their own way into the plugin. You set up buttons in Settings ("Help, I'm tackled", "I want a mining fleet"), each with a webhook and a role to ping, and anyone holding the new **Line Member** permission presses one from the new **Ping Requests** page. The message reaches Discord with the sender's SeAT main character and corporation, plus their Discord name when seat-connector is installed and the account is linked, because the character in trouble can be any alt. FCs answer a request from a link in its Discord message, and everyone can see who did.
 
-**Backwards compatible.** Two new tables and one new permission. Nothing that exists is changed or rewritten, no role loses anything, and nobody gets the page until you hand out the permission. No button posts anywhere until you give it a webhook and switch it on.
+**Backwards compatible.** Three new tables, a column on one of them and one new permission. Nothing that exists is changed or rewritten, no role loses anything, and nobody gets the page until you hand out the permission. No button posts anywhere until you give it a webhook and switch it on. The Send form starts empty, as before, until you switch on its defaults.
 
 ### 🎉 New Features
 
@@ -39,6 +39,23 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Requests that reached Discord show on FC Opportunities for 24 hours, in a table of their own above the board, newest first and 10 to a page. Each row says what kind of request it is, who sent it and what they wrote
 - An FC sees the requests made with buttons open to their corporation or alliance, or to everyone. Admins see them all
 - **Form-up** on a request opens the Send form starting from it: the button, who asked and what they wrote
+- FC Opportunities shows in the menu whenever Manager Core is installed. It used to need Structure Manager too, so an install with only Mining Manager, or one using it for requests alone, never saw it
+
+**🤝 Answering a request**
+- Each request's Discord message has a **Form up in SeAT** link for FCs. It opens the Send form filled in from the request, the same as Form-up, and only for an FC who could see the request on FC Opportunities
+- A request counts as answered once a broadcast sent from it goes out, whether the FC came from the link or from Form-up, and whether it was sent now or scheduled. Opening the form isn't answering
+- The request's Discord message then gets an **Answered by** line naming each FC and when. It's an edit, so nobody is pinged again, and an emergency still being added to keeps it
+- FC Opportunities has an **Answered by** column, and History shows who answered a request and which request a broadcast answered
+- The member sees a **Handled by** badge on their request, in their list and under Active requests, without reloading the page
+- Each button can set what an answer starts from under **When an FC answers**: webhook, broadcast type, mention, Discord channel, colour, PAP type and comms. Where to form up and what to fly stay the FC's call
+
+**📝 Broadcast form**
+- **Settings > Send Form** picks how Send and Schedule start: empty, or filled in with defaults for every box except the message. The FC name can start as the sender's SeAT main. The message only starts filled in when answering a request
+- The message box is about four times taller on every form
+- A formatting bar above it adds bold, italic, underline, strikethrough, spoilers, code, quotes, lists and links. **Discord time** turns an EVE or local time into a Discord timestamp in any of its styles, which everyone reads in their own time zone
+- FC Name suggests your own characters, Formup Location suggests systems and then the stations, structures and other spots in them, and Comms and Doctrine suggest what you've typed in your own broadcasts before
+- Send, Schedule and the template pages share one set of boxes, so each has every field the others do
+- Preview shows the formatting and Discord timestamps the way Discord will
 
 **📜 History**
 - Requests show on the History page with a **Request** badge, or a red **Emergency** one, and an All / Broadcasts / Ping requests filter. They can't be resent
@@ -52,11 +69,14 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Quick Links on the Help page now only offer what you can open. Someone holding View alone used to get links that ended in a 403
 - The What's New box on the Help page can be read on a light SeAT theme. Its text used to fade into the background
 - The plugin's tables have proper page buttons and search boxes. A Bootstrap script they load was never shipped with the plugin, so each of those pages got a 404 and the page numbers ran together as plain text
+- **Schedule** on the Send form left the webhook behind, and a role or custom mention it carried over stayed hidden on the schedule page. It now carries every field
+- Templates kept no webhook, custom mention or Discord channel, and one saved from the Send form lost its role. They now keep every field
 
 ### 📖 Documentation
 
 - **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h
 - Help & Documentation has a Ping Requests section, a Live Updates box under Key Features and a Line Member recipe, and its NEW badges now mark what 2.0.2 adds. The permission list now uses the name SeAT shows for View
+- Help covers answering a request, the Send Form tab, the formatting bar and Discord time, and the suggestions. It no longer says FC Opportunities needs Structure Manager
 - **Plugins & Ecosystem** in Help: every plugin SeAT Broadcast works with, crucial and optional, and whether this server has it. Key Features gives each feature that needs another plugin a box of its own, marked red while Manager Core is missing and yellow while only an optional plugin is
 - Help and Settings no longer say structure timers show on the Calendar. They've been on FC Opportunities since 2.0.0, where **Form-up** sends a broadcast straight away and **Schedule** plans one for later
 
@@ -66,7 +86,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ### 📦 Upgrade
 
-Migrations run on restart. Then give **Line Member** to the role your members hold and add your buttons in Settings > Ping Requests.
+Migrations run on restart. Then give **Line Member** to the role your members hold and add your buttons in Settings > Ping Requests. If you'd like the Send form to start filled in, set that up in Settings > Send Form.
 
 ```
 docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-compose.traefik.yml down

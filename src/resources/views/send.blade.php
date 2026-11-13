@@ -4,7 +4,7 @@
 @section('page_header', 'Discord Pings')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=4">
 <script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <style>
     /* Page-specific only — chrome lives in canonical CSS.

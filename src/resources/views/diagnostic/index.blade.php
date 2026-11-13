@@ -4,7 +4,7 @@
 @section('page_header', 'SeAT Broadcast — Diagnostic')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=4">
 <style>
     /* Diagnostic chrome — scoped to .discord-pings-wrapper.diagnostic-page so
        it cannot leak into other plugin views. Same primitives as Structure

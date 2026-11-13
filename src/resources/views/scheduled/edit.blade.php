@@ -4,7 +4,7 @@
 @section('page_header', 'Edit Scheduled Broadcast')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=4">
 <style>
     /* Page-specific only — chrome lives in canonical CSS */
     .time-display { font-size: 0.9em; color: var(--pings-text-muted); }

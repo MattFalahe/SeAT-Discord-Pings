@@ -2883,6 +2883,13 @@ div.discord-pings-wrapper div.tab-pane {
 }
 
 @media (max-width: 768px) {
+    /* The narrow-screen rule above gives every button a row of its own, which would stack the toolbar eleven high. */
+    .discord-pings-wrapper .mt-toolbar .btn,
+    .discord-pings-wrapper .mt-time-panel .btn {
+        width: auto;
+        margin-bottom: 0;
+    }
+
     .discord-pings-wrapper .mt-time-row {
         grid-template-columns: minmax(0, 1fr) auto;
     }

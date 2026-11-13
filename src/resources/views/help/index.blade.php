@@ -945,6 +945,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.fc_opportunities_indicators_title') }}</h4>
                 <p>{{ trans('discordpings::help.fc_opportunities_indicators_desc') }}</p>
 
+                <h4>{{ trans('discordpings::help.fc_opportunities_requests_title') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{!! trans('discordpings::help.fc_opportunities_requests_desc') !!}</p>
+
                 <h4>{{ trans('discordpings::help.fc_opportunities_offset_title') }}</h4>
                 <p>{{ trans('discordpings::help.fc_opportunities_offset_desc') }}</p>
 

@@ -12,7 +12,7 @@
         'fc-opportunities' => [
             'icon' => 'fa-bullseye',
             'title' => 'FC Opportunities Board',
-            'text' => 'Upcoming timers and fleet ops, and moon extractions with Mining Manager, on one board with countdowns. Each row becomes a broadcast filled in from the op: Form-up to send it now, Schedule to send it later.',
+            'text' => 'Upcoming timers and fleet ops, and moon extractions with Mining Manager, on one board with countdowns, and the requests line members sent in the last day above them. Each op becomes a broadcast filled in from it: Form-up to send it now, Schedule to send it later. Form-up works from a request too.',
         ],
         'moon-extractions' => [
             'icon' => 'fa-gem',

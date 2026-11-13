@@ -29,13 +29,19 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Only the role set on the button can be pinged, whatever a member types, and member text can't hide a link behind other words
 - A press waits for Discord's answer, so "Sent to Discord" means it got there. If it didn't, the member is told and the cooldown is handed back
 - Requests are not broadcasts: they don't publish `pings.broadcast.sent`, so HR Manager won't take a member asking for help for an active FC
+- The bottom of the page lists what the member sent in the last 7 days, 10 to a page, or 25, 50 or 100 if they pick
 - **Settings > Ping Requests** is the new tab for all of this. **Load examples** adds four buttons to start from, switched off and with no webhook. Buttons can be deleted one at a time, ticked and deleted together with **Delete selected**, or all at once with **Delete all**, and the forms members saved for them go too
 
 **🔐 Line Member permission**
 - `discordpings.line_member` is the permission for the member side of the plugin. `discordpings.view` is still the menu and Help & Documentation, and its description now says so
 
+**🎯 FC Opportunities**
+- Requests that reached Discord show on FC Opportunities for 24 hours, in a table of their own above the board, newest first and 10 to a page. Each row says what kind of request it is, who sent it and what they wrote
+- An FC sees the requests made with buttons open to their corporation or alliance, or to everyone. Admins see them all
+- **Form-up** on a request opens the Send form starting from it: the button, who asked and what they wrote
+
 **📜 History**
-- Requests show on the History page with a **Ping request** badge and an All / Broadcasts / Ping requests filter. They can't be resent
+- Requests show on the History page with a **Request** badge, or a red **Emergency** one, and an All / Broadcasts / Ping requests filter. They can't be resent
 - They stay off the Calendar and out of an FC's recent pings
 
 **🩺 Diagnostics**

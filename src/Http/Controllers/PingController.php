@@ -14,6 +14,7 @@ use DiscordPings\Models\PapType;
 use DiscordPings\Models\TacticalEvent;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Jobs\SendPingJob;
+use DiscordPings\Services\PingRequests\RequestBoard;
 
 class PingController extends Controller
 {
@@ -60,6 +61,16 @@ class PingController extends Controller
                 }
             }
 
+            // FC Opportunities → "Form-up" on a member's request. The board's
+            // own rule decides, so a link can't open a request the FC couldn't see there.
+            $pingRequest = null;
+            if (! $tacticalEvent && $request->filled('ping_request_id')) {
+                $pingRequest = RequestBoard::find(auth()->user(), $request->input('ping_request_id'));
+                if ($pingRequest) {
+                    $prefill = RequestBoard::prefill($pingRequest, auth()->user());
+                }
+            }
+
             return view('discordpings::send', compact(
                 'webhooks',
                 'roles',
@@ -71,7 +82,8 @@ class PingController extends Controller
                 'doctrines',
                 'hasFittingPlugin',
                 'prefill',
-                'tacticalEvent'
+                'tacticalEvent',
+                'pingRequest'
             ));
 
         } catch (\Exception $e) {

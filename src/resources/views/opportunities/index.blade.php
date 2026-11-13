@@ -43,11 +43,81 @@
     .op-type-icon { font-size: 0.95rem; margin-right: 4px; }
     #opportunitiesTable a { color: #a5b4fc; }
     #opportunitiesTable .badge { font-size: 0.78rem; }
+    #requestsTable .badge { font-size: 0.78rem; }
+    .ops-ago { font-size: 0.8rem; color: #9ca3af; }
+    .ops-request-text { white-space: pre-wrap; font-size: 0.85rem; max-width: 480px; }
 </style>
 @endpush
 
 @section('full')
 <div class="discord-pings-wrapper">
+    @if($requestsInUse ?? false)
+        <div class="card card-dark">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-hand-paper"></i> Member requests from the last {{ $requestHours }} hours
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="requestsTable" class="table table-striped table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Sent (EVE)</th>
+                                <th>Request</th>
+                                <th>From</th>
+                                <th>What they wrote</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($requests as $memberRequest)
+                            @php
+                                $sentIso = $memberRequest->created_at->utc()->toIso8601String();
+                                $requestButton = (string) ($memberRequest->fields['button'] ?? '');
+                                $wrote = trim((string) $memberRequest->message);
+                            @endphp
+                            <tr>
+                                <td data-order="{{ $memberRequest->created_at->timestamp }}">
+                                    <span class="ops-eve-time eve-time" data-eve-time="{{ $sentIso }}" data-show-local>
+                                        {{ $memberRequest->created_at->utc()->format('Y-m-d H:i') }} EVE
+                                    </span>
+                                    <br><span class="ops-ago" data-sent-at="{{ $sentIso }}"></span>
+                                </td>
+                                <td>
+                                    @include('discordpings::requests.partials.type-badge', ['row' => $memberRequest])
+                                    {{ $requestButton }}
+                                </td>
+                                <td>
+                                    <strong>{{ $memberRequest->fields['main'] ?? $memberRequest->user_name }}</strong>
+                                    @if(! empty($memberRequest->fields['corporation']))
+                                        <br><small>{{ $memberRequest->fields['corporation'] }}</small>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($wrote !== '' && $wrote !== $requestButton)
+                                        <div class="ops-request-text">{{ Str::limit($wrote, 300) }}</div>
+                                    @else
+                                        <span class="text-muted" style="font-size: 0.85rem;">Nothing filled in</span>
+                                    @endif
+                                </td>
+                                <td class="text-right">
+                                    {{-- Form-up: the Send form, starting from what the member wrote. --}}
+                                    <a href="{{ route('discordpings.send', ['ping_request_id' => $memberRequest->id]) }}"
+                                       class="btn btn-sm btn-pings-primary"
+                                       title="Open the Send Broadcast form with this request filled in">
+                                        <i class="fas fa-paper-plane"></i> Form-up
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="card card-dark">
         <div class="card-header">
             <h3 class="card-title">
@@ -273,6 +343,49 @@ $(document).ready(function() {
         });
     }
 
+    if ($('#requestsTable').length) {
+        $('#requestsTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            order: [[0, 'desc']],
+            columnDefs: [
+                { orderable: false, targets: [3, 4] }
+            ],
+            language: {
+                search: '_INPUT_',
+                searchPlaceholder: 'Filter requests...',
+                lengthMenu: 'Show _MENU_ requests',
+                emptyTable: @json('No member requests in the last ' . $requestHours . ' hours.')
+            },
+            // Only the rows on the page are in the document, so each page is brought up to date as it draws.
+            drawCallback: function () {
+                if (window.EveTime) {
+                    window.EveTime.convert(this.api().table().node());
+                }
+                updateAgo();
+            }
+        });
+    }
+
+    function updateAgo() {
+        var now = Date.now();
+        $('.ops-ago').each(function () {
+            var sent = Date.parse($(this).data('sent-at'));
+            if (isNaN(sent)) {
+                $(this).text('');
+                return;
+            }
+            var minutes = Math.max(0, Math.floor((now - sent) / 60000));
+            if (minutes < 1) {
+                $(this).text('just now');
+            } else if (minutes < 60) {
+                $(this).text(minutes + 'm ago');
+            } else {
+                $(this).text(Math.floor(minutes / 60) + 'h ' + (minutes % 60) + 'm ago');
+            }
+        });
+    }
+
     // Live countdown updates every 30 seconds.
     function updateCountdowns() {
         var now = Date.now();
@@ -323,6 +436,7 @@ $(document).ready(function() {
     }
     updateCountdowns();
     setInterval(updateCountdowns, 30 * 1000);
+    setInterval(updateAgo, 30 * 1000);
 });
 </script>
 @endpush

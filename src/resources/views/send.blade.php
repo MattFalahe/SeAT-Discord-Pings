@@ -140,6 +140,23 @@
             </div>
         @endif
 
+        @if(! empty($pingRequest))
+            <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
+                <i class="fas fa-hand-paper"></i>
+                <strong>Form-up for:</strong>
+                {{ $pingRequest->fields['button'] ?? 'a ping request' }},
+                {{ $pingRequest->isEmergencyRequest() ? 'an emergency' : 'a request' }} from
+                <strong>{{ $pingRequest->fields['main'] ?? $pingRequest->user_name }}</strong>
+                sent at
+                <strong>
+                    <span class="eve-time" data-eve-time="{{ $pingRequest->created_at->utc()->toIso8601String() }}" data-show-local>
+                        {{ $pingRequest->created_at->utc()->format('Y-m-d H:i') }} EVE
+                    </span>
+                </strong>.
+                The form below starts from what they wrote, so check it before you send.
+            </div>
+        @endif
+
         <div class="card card-dark">
             <div class="card-header">
                 <h3 class="card-title">

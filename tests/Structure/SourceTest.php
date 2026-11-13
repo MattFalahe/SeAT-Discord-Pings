@@ -321,4 +321,17 @@ class SourceTest extends TestCase
         }
     }
 
+    /** A Form-up link carries the request's id, so it must not open one the FC couldn't see on the board. */
+    public function test_form_up_opens_a_request_only_through_the_board(): void
+    {
+        $controller = file_get_contents(self::SRC . 'Http/Controllers/PingController.php');
+
+        $this->assertStringContainsString("RequestBoard::find(auth()->user(), \$request->input('ping_request_id'))", $controller);
+        $this->assertSame(2, substr_count($controller, "'ping_request_id'"), 'PingController reads the request id somewhere the board does not check');
+
+        // The list and a Form-up link both leave out what never reached Discord.
+        $board = file_get_contents(self::SRC . 'Services/PingRequests/RequestBoard.php');
+        $this->assertSame(2, substr_count($board, "->where('status', 'sent')"));
+    }
+
 }

@@ -66,21 +66,10 @@ class PingRequestButton extends Model
             return $query;
         }
 
-        $member = $user ? MemberAccount::affiliations((int) $user->id) : ['corporations' => [], 'alliances' => []];
         $held = $user ? array_filter(array_keys(self::audienceOptions()), fn ($permission) => $user->can($permission)) : [];
 
         return $query
-            ->where(function ($q) use ($member) {
-                $q->where(fn ($open) => $open->whereNull('corporation_id')->whereNull('alliance_id'));
-
-                if (! empty($member['corporations'])) {
-                    $q->orWhereIn('corporation_id', $member['corporations']);
-                }
-
-                if (! empty($member['alliances'])) {
-                    $q->orWhereIn('alliance_id', $member['alliances']);
-                }
-            })
+            ->inGroupOf($user)
             ->where(function ($q) use ($held) {
                 $q->whereNull('audience_permissions');
 
@@ -88,6 +77,28 @@ class PingRequestButton extends Model
                     $q->orWhereJsonContains('audience_permissions', $permission);
                 }
             });
+    }
+
+    /**
+     * The corporation and alliance half of visibleTo, with no pass for admins.
+     * FC Opportunities shows a request to the FCs of the group its button was
+     * for, and the permissions only say who may press it.
+     */
+    public function scopeInGroupOf($query, $user)
+    {
+        $member = $user ? MemberAccount::affiliations((int) $user->id) : ['corporations' => [], 'alliances' => []];
+
+        return $query->where(function ($q) use ($member) {
+            $q->where(fn ($open) => $open->whereNull('corporation_id')->whereNull('alliance_id'));
+
+            if (! empty($member['corporations'])) {
+                $q->orWhereIn('corporation_id', $member['corporations']);
+            }
+
+            if (! empty($member['alliances'])) {
+                $q->orWhereIn('alliance_id', $member['alliances']);
+            }
+        });
     }
 
     public function webhook()

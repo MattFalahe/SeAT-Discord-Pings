@@ -28,6 +28,12 @@ class PingHistory extends Model
         return ($this->fields['source'] ?? null) === self::SOURCE_MEMBER_REQUEST;
     }
 
+    /** The button's type is kept on the row, so a request stays an emergency after its button changes or goes. */
+    public function isEmergencyRequest(): bool
+    {
+        return $this->isMemberRequest() && ($this->fields['type'] ?? null) === PingRequestButton::TYPE_EMERGENCY;
+    }
+
     public function scopeMemberRequests($query)
     {
         return $query->where('fields->source', self::SOURCE_MEMBER_REQUEST);

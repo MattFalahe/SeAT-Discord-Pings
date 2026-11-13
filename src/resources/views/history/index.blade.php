@@ -56,9 +56,7 @@
                                 @endif
                             </td>
                             <td>
-                                @if($history->isMemberRequest())
-                                    <span class="badge badge-info">Ping request</span>
-                                @endif
+                                @include('discordpings::requests.partials.type-badge', ['row' => $history])
                                 {{ Str::limit($history->message, 80) }}
                             </td>
                             <td>{{ $history->user_name }}</td>

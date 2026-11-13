@@ -47,9 +47,10 @@ final class PluginStatus
             ['role' => self::CRUCIAL, 'any' => ['manager-core']],
             ['role' => self::OPTIONAL, 'any' => ['structure-manager']],
         ],
+        // The menu only looks for Manager Core. Without either of these the board holds member requests alone.
         'fc-opportunities' => [
             ['role' => self::CRUCIAL, 'any' => ['manager-core']],
-            ['role' => self::OPTIONAL, 'any' => ['structure-manager']],
+            ['role' => self::OPTIONAL, 'any' => ['structure-manager', 'mining-manager']],
         ],
         'moon-extractions' => [
             ['role' => self::CRUCIAL, 'any' => ['manager-core']],

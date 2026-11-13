@@ -43,12 +43,16 @@ return [
     'feature_history_title' => 'Broadcast History',
     'feature_history_desc' => 'Full audit trail of all sent broadcasts with status tracking and resend capability.',
     'feature_config_title' => 'Settings',
-    'feature_config_desc' => 'Manage webhooks, Discord roles, channels, staging locations, PAP types, ping request buttons, and Structure Timers integration from the Settings page.',
+    'feature_config_desc' => 'Manage webhooks, Discord roles, channels, staging locations, PAP types, what the Send form starts with, ping request buttons, and Structure Timers integration from the Settings page.',
 
     'feature_ping_requests_title' => 'Ping Requests',
     'feature_ping_requests_desc' => 'Buttons for line members to call for help or ask for a fleet. Each posts to its own channel and role and says who sent it.',
     'feature_live_updates_title' => 'Live Updates',
     'feature_live_updates_desc' => 'An emergency with questions left to answer stays under Active requests for 10 minutes after it goes out, or until the sender closes it. Each answer edits the message already on Discord without pinging anyone again, and its Live updates line counts down to the close and says when it was last updated.',
+    'feature_answer_title' => 'Answer from Discord',
+    'feature_answer_desc' => 'Each request on Discord links FCs to the Send form, filled in from it. Once an FC\'s broadcast goes out, the request names them under Answered by, and the member who asked sees it is being handled.',
+    'feature_message_tools_title' => 'Message Tools',
+    'feature_message_tools_desc' => 'A formatting bar on every message box, with a Discord time picker that turns an EVE or local time into a timestamp everyone reads in their own time zone. FC name, formup location, comms and doctrine suggest as you type.',
 
     // Recent changes (the latest update of this major version only)
     'recent_changes_title' => 'In this update (2.0.2)',
@@ -56,6 +60,9 @@ return [
     'recent_changes_intro' => 'The changes in this release you will notice without going looking. <a href="https://github.com/MattFalahe/SeAT-Discord-Pings/blob/main/CHANGELOG.md" target="_blank" rel="noopener">The changelog</a> has the complete record.',
     'recent_changes_ping_requests' => '<strong>Ping Requests for line members.</strong> A new <strong>Line Member</strong> permission and a <strong>Ping Requests</strong> page where members press a button to call for help or ask for a fleet. Nothing changes for anyone until you add buttons in Settings &gt; Ping Requests and hand out the permission. Requests also show in History, marked Request or Emergency and with a filter of their own, and for 24 hours on FC Opportunities, where an FC can form up from one.',
     'recent_changes_emergency_details' => '<strong>Adding to an emergency after it has gone out.</strong> Once an emergency is out it shows under <strong>Active requests</strong> at the top of the Ping Requests page for 10 minutes, even after a reload. Each answer there updates the message already on Discord without a second ping, and the message says it is live and counts down to when it closes. <strong>Send now, fill in after</strong> posts at once and leaves every section to fill in there.',
+    'recent_changes_answers' => '<strong>Answering a request.</strong> Each request\'s Discord message has a <strong>Form up in SeAT</strong> link that opens the Send form filled in from it, the same as Form-up on FC Opportunities. Once an FC\'s broadcast goes out, the request\'s message names them under <strong>Answered by</strong> and the member who asked sees a <strong>Handled by</strong> badge. Each button can set what its answers start from, so the FC only picks where to form up and what to fly.',
+    'recent_changes_broadcast_form' => '<strong>A better broadcast form.</strong> The message box is taller and has a formatting bar with a <strong>Discord time</strong> picker. FC name, formup location, comms and doctrine suggest as you type. <strong>Settings &gt; Send Form</strong> can start the form from defaults, with the FC name as the sender\'s main. <strong>Schedule</strong> and templates now carry every field.',
+    'recent_changes_fc_opportunities' => '<strong>FC Opportunities with Manager Core alone.</strong> It shows in the menu whenever Manager Core is installed, so member requests reach your FCs without Structure Manager. Timers still come from Structure Manager and moon extractions from Mining Manager.',
 
     // Ping Requests
     'ping_requests' => 'Ping Requests',
@@ -75,9 +82,11 @@ return [
     'ping_requests_suggest_title' => 'Boxes that suggest as you type',
     'ping_requests_suggest_desc' => 'A box for a system or location starts suggesting after three letters, so <code>Q-3</code> brings up Q-3HS5. Pick the system and the list changes to the moons, planets, structures, stations and gates in it, and narrows as you keep typing. A box for one of your characters suggests your own characters the same way, and a box for a ship suggests ship types. They are only suggestions: whatever you type yourself stays as you typed it, so a system and the name of an anomaly is fine. Structures are limited to your own corporations and alliances, and a moon names its structure only when SeAT holds a moon extraction for it.',
     'ping_requests_discord_title' => 'What Discord shows',
-    'ping_requests_discord_desc' => 'The name of the button, what you filled in with each section name in bold, your SeAT main character and its corporation. If <strong>seat-connector</strong> is installed and you have linked your Discord account, your Discord name is added too, so an FC can find you whichever alt is in trouble. While you can still add to an emergency, a <strong>Live updates</strong> line tells everyone the message may change and counts down to when it closes, in each reader\'s own time. Each time you add to it, the line also says when, and how long ago that was. Close it early and that line says so. Only the role set on the button is ever pinged, whatever anybody types.',
+    'ping_requests_discord_desc' => 'The name of the button, what you filled in with each section name in bold, your SeAT main character and its corporation. If <strong>seat-connector</strong> is installed and you have linked your Discord account, your Discord name is added too, so an FC can find you whichever alt is in trouble. While you can still add to an emergency, a <strong>Live updates</strong> line tells everyone the message may change and counts down to when it closes, in each reader\'s own time. Each time you add to it, the line also says when, and how long ago that was. Close it early and that line says so. Under it, a <strong>Form up in SeAT</strong> link takes an FC to the Send form, and once an FC answers, an <strong>Answered by</strong> line names them. Only the role set on the button is ever pinged, whatever anybody types.',
+    'ping_requests_answered_title' => 'When an FC answers',
+    'ping_requests_answered_desc' => 'An FC answers a request by sending a broadcast from it, either through the <strong>Form up in SeAT</strong> link on Discord or with <strong>Form-up</strong> on FC Opportunities. Both open the Send form filled in from the request, and only for an FC who could see it on FC Opportunities. It counts as answered when the broadcast goes out, scheduled ones included, never when the form is only opened. The request\'s Discord message then gets an <strong>Answered by</strong> line with each FC and when, edited in without pinging anyone again. On your Ping Requests page the request shows a <strong>Handled by</strong> badge, which turns up without a reload.',
     'ping_requests_setup_title' => 'Setting up the buttons',
-    'ping_requests_setup_desc' => 'Anyone with <strong>Manage Webhooks</strong> does this in <strong>Settings &gt; Ping Requests</strong>. Give each button a name, a webhook and the role to ping, and if you like a line telling members who that notifies, such as Cap Umbrella. It shows on the button only and is never posted. Then list what the button asks under <strong>Section names (format)</strong>, one row per section: its name, its box and when it is filled in. <strong>Saved form</strong> means members can keep the answer, so one press carries it. <strong>After the press</strong> is for what is only true at that moment: a request asks it in the confirm box, and an emergency asks it under <strong>Active requests</strong> once the message has gone out, where each answer updates that message without pinging anyone again. Start from <strong>Tackled</strong>, <strong>Mining fleet</strong> or <strong>PvP fleet</strong>, or paste your alliance\'s format into any section name and each line becomes a row with its box already picked for you to check. A <strong>Fixed line</strong> goes out as written. System and spot, My characters and Ship boxes suggest as members type, with nothing to set up. Each request button has its own cooldown per member. While the list is empty, <strong>Load examples</strong> adds four buttons to start from. They arrive switched off with no webhook, so nothing can post until you finish them. To clear buttons out, delete one with its bin, tick several and press <strong>Delete selected</strong>, or press <strong>Delete all</strong>. The forms members saved for a button go with it.',
+    'ping_requests_setup_desc' => 'Anyone with <strong>Manage Webhooks</strong> does this in <strong>Settings &gt; Ping Requests</strong>. Give each button a name, a webhook and the role to ping, and if you like a line telling members who that notifies, such as Cap Umbrella. It shows on the button only and is never posted. Then list what the button asks under <strong>Section names (format)</strong>, one row per section: its name, its box and when it is filled in. <strong>Saved form</strong> means members can keep the answer, so one press carries it. <strong>After the press</strong> is for what is only true at that moment: a request asks it in the confirm box, and an emergency asks it under <strong>Active requests</strong> once the message has gone out, where each answer updates that message without pinging anyone again. Start from <strong>Tackled</strong>, <strong>Mining fleet</strong> or <strong>PvP fleet</strong>, or paste your alliance\'s format into any section name and each line becomes a row with its box already picked for you to check. A <strong>Fixed line</strong> goes out as written. System and spot, My characters and Ship boxes suggest as members type, with nothing to set up. Each request button has its own cooldown per member. Under <strong>When an FC answers</strong> a button can set what an answer starts from (webhook, broadcast type, mention, Discord channel, colour, PAP type and comms), so the FC only picks where to form up and what to fly. While the list is empty, <strong>Load examples</strong> adds four buttons to start from. They arrive switched off with no webhook, so nothing can post until you finish them. To clear buttons out, delete one with its bin, tick several and press <strong>Delete selected</strong>, or press <strong>Delete all</strong>. The forms members saved for a button go with it.',
     'ping_requests_history_note' => 'Requests show on the <strong>History</strong> page with a <strong>Request</strong> badge, or a red <strong>Emergency</strong> one, and that page has a filter for them. They cannot be resent and they stay off the Calendar. The list at the bottom of your own page shows what you sent in the last 7 days, 10 to a page or 25, 50 or 100 if you pick, and History keeps them as long as it keeps everything else. For 24 hours after a request reaches Discord it also shows on <strong>FC Opportunities</strong>, to the FCs in the corporation or alliance its button is for, or to every FC when the button is open to all. The Master Test tab of the <strong>Diagnostic</strong> page warns about a switched-on button that could not post or that nobody can see.',
 
     // Getting Started
@@ -89,7 +98,7 @@ return [
     'getting_started_step3' => 'Navigate to Send Broadcast to compose and send your first ping.',
     'getting_started_step4' => 'Use Templates to save frequently used broadcast formats.',
     'getting_started_step5' => 'Schedule recurring broadcasts using the Scheduled Broadcasts page.',
-    'getting_started_step6' => 'With Manager Core and Structure Manager installed, the FC Opportunities sidebar entry appears, listing structure timers and fleet ops with one-click form-up broadcasts.',
+    'getting_started_step6' => 'With Manager Core installed, the FC Opportunities sidebar entry appears. Add Structure Manager or Mining Manager and it lists their timers, fleet ops and moon extractions, with one-click form-up broadcasts.',
 
     // Plugins & Ecosystem
     'plugins' => 'Plugins & Ecosystem',
@@ -108,7 +117,15 @@ return [
     'sending_preview' => 'Preview',
     'sending_preview_desc' => 'Click the Preview button to see how your broadcast will appear in Discord before sending. The preview shows the embed with all fields, colors, and formatting.',
     'sending_schedule_redirect' => 'Schedule for Later',
-    'sending_schedule_redirect_desc' => 'Click the Schedule button on the send form to save your current form data and redirect to the scheduling page with all fields pre-populated.',
+    'sending_schedule_redirect_desc' => 'Click the Schedule button on the send form to take everything you have filled in, webhooks and mentions included, to the scheduling page. It is picked up there within 10 minutes, so an old form never turns up later.',
+    'sending_formatting' => 'Formatting and Discord Time',
+    'sending_formatting_desc' => 'The bar above the message box adds bold, italic, underline, strikethrough, spoilers, code, quotes, lists and links around what you have selected. <strong>Discord time</strong> opens a picker: choose a time in EVE time or your own, or a quick one like +30 min, and insert it in any of Discord\'s styles. Everyone reading it sees it in their own time zone, with a countdown if you pick Relative. The preview shows the formatting and the times as Discord will.',
+    'sending_suggestions' => 'Suggestions as You Type',
+    'sending_suggestions_desc' => 'FC Name suggests your own characters. Formup Location suggests systems after three letters, then the stations, structures and other spots in the one you pick. Comms and Doctrine suggest what you have typed in your own broadcasts before. They are only suggestions: what you type yourself stays as typed.',
+    'sending_starting' => 'What the Form Starts With',
+    'sending_starting_desc' => 'Settings &gt; Send Form decides whether Send and Schedule start empty or filled in with your defaults, with the FC name as the sender\'s SeAT main if you like. The message always starts empty unless you are answering a request.',
+    'sending_answering' => 'Answering a Request',
+    'sending_answering_desc' => 'Opened from a request, through its link on Discord or Form-up on FC Opportunities, the form starts with what the request\'s button sets for its answers and a message saying who asked and what they wrote, ready for you to make your own call. A banner names the request, and anyone who has answered it already. It counts as answered once your broadcast goes out, or when a broadcast you schedule from it does.',
 
     // Webhooks
     'webhooks' => 'Webhooks',
@@ -127,7 +144,7 @@ return [
 
     // Templates
     'templates' => 'Templates',
-    'templates_intro' => 'Templates allow you to save frequently used broadcast formats for quick reuse. Each template stores the message text and all optional fields (FC name, formup, doctrine, etc.).',
+    'templates_intro' => 'Templates allow you to save frequently used broadcast formats for quick reuse. Each template stores the message and every other box of the form: webhooks, broadcast type, mentions, Discord channel, colour and the fleet details.',
     'templates_personal' => 'Personal Templates',
     'templates_personal_desc' => 'Personal templates are only visible to you. Create them from the Templates page or use the "Save as Template" feature on the Send Broadcast page.',
     'templates_global' => 'Global Templates',
@@ -207,7 +224,7 @@ return [
     'fc_opportunities_indicators_title' => 'Status Indicators',
     'fc_opportunities_indicators_desc' => 'The countdown column turns amber inside the last hour and red at T-zero, then strikes through and dims after the timer elapses. The "Broadcasts" column shows a green "📡 N scheduled" badge when at least one form-up broadcast has been planned for the op (Schedule path), or "None yet" otherwise. Immediate Form-up (Send) broadcasts are NOT counted here because they fire instantly and live on the calendar from the moment they\'re sent.',
     'fc_opportunities_requests_title' => 'Member Requests',
-    'fc_opportunities_requests_desc' => 'Ping requests your line members sent in the last 24 hours get a table of their own above the board, newest first and 10 to a page. Only requests that reached Discord show. Each row has a red <strong>Emergency</strong> or a <strong>Request</strong> badge, the button, who sent it and from which corporation, and what they wrote, including anything added to an emergency after it went out. You see the requests made with buttons open to your corporation or alliance, or to everyone, and admins see them all. <strong>Form-up</strong> opens the <em>Send Broadcast</em> form starting from the request: the button, who asked and what they wrote, for you to turn into your own call.',
+    'fc_opportunities_requests_desc' => 'Ping requests your line members sent in the last 24 hours get a table of their own above the board, newest first and 10 to a page. Only requests that reached Discord show. Each row has a red <strong>Emergency</strong> or a <strong>Request</strong> badge, the button, who sent it and from which corporation, and what they wrote, including anything added to an emergency after it went out. You see the requests made with buttons open to your corporation or alliance, or to everyone, and admins see them all. <strong>Form-up</strong> opens the <em>Send Broadcast</em> form starting from the request: the button, who asked and what they wrote, for you to turn into your own call. The <strong>Answered by</strong> column names the FCs whose broadcasts have answered each request, and when, so two FCs don\'t form up for the same one.',
     'fc_opportunities_offset_title' => 'Form-up Lead Time',
     'fc_opportunities_offset_desc' => 'The default lead time used when pre-filling a form-up broadcast (timer eve_time minus this offset) is set in Settings > Structure Timers. Defaults to 30 minutes. Acceptable range: 5 minutes to 12 hours.',
 
@@ -237,7 +254,7 @@ return [
 
     // Configuration
     'configuration' => 'Settings',
-    'configuration_intro' => 'The Settings page lets you manage all plugin configuration across eight tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, PAP Types, Ping Requests, Structure Timers, and Routing Map.',
+    'configuration_intro' => 'The Settings page lets you manage all plugin configuration across nine tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, PAP Types, Send Form, Ping Requests, Structure Timers, and Routing Map.',
     'configuration_roles' => 'Discord Roles',
     'configuration_roles_desc' => 'Add Discord role IDs to enable role-specific mentions in broadcasts. Each role needs its Discord ID (the "snowflake") and a name for identification. <strong>Two ways to get the ID:</strong> (1) manually via Discord Developer Mode (right-click the role → Copy ID), or (2) if you have a SeAT Discord connector installed alongside SeAT Broadcast (either <code>warlof/seat-connector</code> + <code>warlof/seat-discord-connector</code>, or zenobio93\'s maintained fork — both populate the same <code>seat_connector_sets</code> table so the picker doesn\'t care which vendor you have), the Add Role modal shows a "Quick-pick" dropdown that lists every Discord role the connector has catalogued. Pick one, the snowflake and name pre-fill, click Save. Already-added roles are filtered out of the dropdown so you cannot create duplicates by accident. The plugin OWNS the <code>discord_roles</code> table that Structure Manager, Mining Manager and Corp Wallet Manager read from for their own role mentions, so anything added here becomes available to every other plugin in the family.',
     'configuration_channels' => 'Discord Channels',
@@ -246,8 +263,10 @@ return [
     'configuration_stagings_desc' => 'Pre-configure fleet staging locations (system name and optionally structure name) for quick selection when composing broadcasts. Set one as default to have it pre-filled.',
     'configuration_pap_types' => 'PAP Types',
     'configuration_pap_types_desc' => 'Manage the PAP type options available in all broadcast forms. Three defaults are provided out of the box (Strategic, Peacetime, CTA). Add custom types, set their sort order, or deactivate ones you do not use. Deactivated types are hidden from dropdowns but not deleted.',
+    'configuration_send_form' => 'Send Form',
+    'configuration_send_form_desc' => 'Whether the Send and Schedule forms start empty or filled in with defaults. The defaults cover every box but the message: webhook, broadcast type, mention, Discord channel, colour, formup location, PAP type, comms and doctrine, and you can have the FC name start as the sender\'s SeAT main. While the form starts empty the defaults are kept but not used. Answering a request starts from what its button sets, on top of these.',
     'configuration_ping_requests' => 'Ping Requests',
-    'configuration_ping_requests_desc' => 'The buttons line members can press: name, emergency or request, webhook, role to ping, sections and their boxes, cooldown, and optional limits by Broadcast permission, corporation or alliance. The Ping Requests section of this page explains each one.',
+    'configuration_ping_requests_desc' => 'The buttons line members can press: name, emergency or request, webhook, role to ping, sections and their boxes, cooldown, optional limits by Broadcast permission, corporation or alliance, and what an FC\'s answer to them starts from. The Ping Requests section of this page explains each one.',
     'configuration_structure_timers' => 'Structure Timers',
     'configuration_structure_timers_desc' => 'Shows whether Manager Core, Structure Manager and Mining Manager are detected, provides master on/off switches for pre-timer reminder pings and mining extraction alerts, and lets you set the default form-up lead time (in minutes) used when an FC schedules a form-up broadcast from FC Opportunities. Turning a switch off stops those pings while FC Opportunities keeps showing the timers and extractions.',
     'configuration_routing_map' => 'Routing Map',
@@ -259,7 +278,7 @@ return [
     'page_ping_requests' => 'Ping Requests',
     'page_ping_requests_desc' => 'The line member\'s page: your active requests, the buttons you can press, your saved forms and your requests from the last 7 days.',
     'page_send' => 'Send Broadcast',
-    'page_send_desc' => 'The main broadcast composition page. Write your message, select webhooks, add fleet details, and send or schedule your broadcast.',
+    'page_send_desc' => 'The main broadcast composition page. Write your message with the formatting bar and Discord time picker, select webhooks, add fleet details, and send or schedule your broadcast. Opened from a ping request, it starts from that request.',
     'page_history' => 'Broadcast History',
     'page_history_desc' => 'View a complete history of sent broadcasts and member ping requests with status, timestamps, and details. Ping requests are marked Request or Emergency. Broadcasts can be resent from here, ping requests cannot.',
     'page_scheduled' => 'Scheduled Broadcasts',
@@ -271,9 +290,9 @@ return [
     'page_webhooks' => 'Webhooks',
     'page_webhooks_desc' => 'Manage Discord webhooks including creating, editing, testing, and deleting webhook configurations.',
     'page_config' => 'Settings',
-    'page_config_desc' => 'Central settings page with eight tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, PAP Types, Ping Requests, Structure Timers, and Routing Map.',
+    'page_config_desc' => 'Central settings page with nine tabs: Webhooks, Discord Roles, Discord Channels, Staging Locations, PAP Types, Send Form, Ping Requests, Structure Timers, and Routing Map.',
     'page_opportunities' => 'FC Opportunities',
-    'page_opportunities_desc' => 'Focused board for fleet commanders: upcoming structure timers and fleet ops with live countdowns, severity, and one-click form-up broadcasts, with the requests line members sent in the last 24 hours above it. Sidebar entry only appears when Manager Core and Structure Manager are installed.',
+    'page_opportunities_desc' => 'Focused board for fleet commanders: upcoming structure timers and fleet ops with live countdowns, severity, and one-click form-up broadcasts, with the requests line members sent in the last 24 hours above it and who has answered each. Sidebar entry only appears when Manager Core is installed.',
     'page_diagnostic' => 'Diagnostic',
     'page_diagnostic_desc' => 'Admin-only operational surface for troubleshooting webhook delivery, event subscriptions, and integration health. Six tabs (Health Checks, Master Test, System Validation, Settings Health, Data Integrity, Broadcast Trace) cover stats / deep checks / row counts / pipeline tracing. Not in the sidebar — reach via /discord-pings/diagnostic. Requires the new "Plugin Admin" permission.',
 
@@ -334,7 +353,7 @@ return [
     'faq_q10' => 'Can I edit a scheduled broadcast?',
     'faq_a10' => 'Yes. Click the edit (pencil) button on any active scheduled ping in the list, or use the Edit button in the calendar event popup. For recurring pings that have already fired, editing applies to all future occurrences from the new scheduled time; past sends are preserved in history.',
     'faq_q11' => 'Why don\'t I see FC Opportunities in the sidebar?',
-    'faq_a11' => 'FC Opportunities is hidden when Manager Core or Structure Manager is not installed (the board has nothing to surface without them). Install both, restart your SeAT stack, and the entry appears. If your install runs `php artisan config:cache`, clear the cache after installing the dependencies.',
+    'faq_a11' => 'FC Opportunities is hidden when Manager Core is not installed. Install it, restart your SeAT stack, and the entry appears. Structure Manager and Mining Manager fill the board with timers and moon extractions; without them it holds member requests only. If your install runs `php artisan config:cache`, clear the cache after installing the dependencies.',
     'faq_q12' => 'How do I send a form-up broadcast for a structure timer?',
     'faq_a12' => 'On the FC Opportunities board, click "Schedule" on the timer\'s row. It opens the Scheduled Broadcast form pre-filled with the op details (scheduled time = timer minus your configured lead time, formup = system, scaffolded message). Review, adjust, submit. If the fleet is forming up now, the green "Form-up" button opens the Send Broadcast form pre-filled the same way, to send straight away.',
     'faq_q13' => 'How do I change the 30-minute default form-up lead time?',
@@ -361,7 +380,7 @@ return [
     'issue_mentions_not_working_solution2' => 'For role mentions, verify the role ID is correct and the role is mentionable in Discord server settings.',
     'issue_mentions_not_working_solution3' => 'Check that the webhook bot has permission to mention @everyone / @here in the target channel.',
     'issue_fc_opps_empty_title' => 'FC Opportunities board is empty or sidebar entry missing',
-    'issue_fc_opps_empty_solution1' => 'The board requires Manager Core and Structure Manager. Confirm both are installed; the Settings > Structure Timers tab shows their live detection status.',
+    'issue_fc_opps_empty_solution1' => 'The sidebar entry needs Manager Core, and the board fills from Structure Manager and Mining Manager. Confirm they are installed; the Settings > Structure Timers tab shows their live detection status.',
     'issue_fc_opps_empty_solution2' => 'After installing the dependencies, restart your SeAT stack so the plugin\'s service provider re-evaluates the sidebar conditional and the EventBus subscription registers.',
     'issue_fc_opps_empty_solution3' => 'If your install runs `php artisan config:cache`, clear the cache (`php artisan config:clear`) so the conditional sidebar entry re-evaluates.',
     'issue_fc_opps_empty_solution4' => 'If MC + SM are installed but no events are flowing, check Manager Core\'s diagnostic page for the seat-discord-pings subscription on pattern `structure_manager.timer.*`.',
@@ -383,7 +402,7 @@ return [
     'whats_new_v2_title'  => 'What\'s New in v2.0.0: The Planning HUB Era',
     'whats_new_v2_intro'  => 'SeAT Broadcast steps up from a standalone Discord webhook sender into the <strong>Planning HUB</strong> for fleet commanders. With <strong>Manager Core</strong> and <strong>Structure Manager</strong> installed, structure timers and fleet ops flow onto a dedicated <strong>FC Opportunities</strong> board, and one click on any op opens a pre-filled form-up broadcast.',
     'whats_new_v2_list'   => '<ul>
-        <li><strong>FC Opportunities board</strong>: focused FC view of upcoming structure timers, mining extractions and manual fleet ops, with live countdowns, severity, and a one-click <em>Form-up</em> button (sidebar entry hidden without Manager Core + Structure Manager)</li>
+        <li><strong>FC Opportunities board</strong>: focused FC view of upcoming structure timers, mining extractions and manual fleet ops, with live countdowns, severity, and a one-click <em>Form-up</em> button (in the sidebar whenever Manager Core is installed)</li>
         <li><strong>Calendar / Planner split</strong>: tactical events (structure timers + mining extractions) live exclusively on FC Opportunities. The Broadcasts Calendar stays strictly broadcast-focused (scheduled + manual sent pings), uncluttered by timers. Form-up pings created from the board land on the calendar naturally</li>
         <li><strong>Structure timer ingest</strong>: auto-detected reinforce / anchor / fuel timers and manual fleet ops flow in via Manager Core\'s EventBus, colour-coded by severity, surfaced on FC Opportunities</li>
         <li><strong>Mining extraction ingest</strong>: moon extractions from Mining Manager v2.0.1+ appear on FC Opportunities as a distinct ⛏️ mining category with their fleet-able window (48h, or up to 96h with a moon drilling rig), multi-FC friendly, with optional T-2h pre-expiry alerts</li>
@@ -394,8 +413,8 @@ return [
         <li><strong>Hardening pass</strong>: webhook URLs encrypted at rest, restored TLS verification, queued sends, per-webhook rate limits</li>
     </ul>',
     'whats_new_v2_upgrade_note' => 'Upgrade is in place: no manual steps beyond <code>composer update</code> and restarting your SeAT stack (migrations auto-run). The internal PHP namespace was renamed from <code>MattFalahe\\Seat\\DiscordPings</code> to <code>DiscordPings</code>; if your install runs <code>php artisan route:cache</code>, clear it once after the upgrade.',
-    'fc_opportunities_requires_title' => 'Requires Manager Core and Structure Manager',
-    'fc_opportunities_requires_desc'  => 'The FC Opportunities board surfaces structure timers and fleet ops ingested via Manager Core\'s EventBus from Structure Manager. The sidebar entry is hidden when either plugin is missing; the board itself shows an empty-state with install instructions for anyone reaching it via a deep link.',
+    'fc_opportunities_requires_title' => 'Requires Manager Core',
+    'fc_opportunities_requires_desc'  => 'The sidebar entry shows whenever Manager Core is installed. Structure timers and fleet ops reach the board from Structure Manager, and moon extractions from Mining Manager, both through Manager Core\'s EventBus. With neither, the board holds member requests only and says what to install; anyone reaching it through a link without Manager Core gets the same.',
     'whats_new_fc_opportunities_title' => '🎯 FC Opportunities Board (2.0.0)',
     'whats_new_fc_opportunities_desc' => 'A new FC Opportunities sidebar entry lists upcoming structure timers and fleet ops in a focused board with countdowns, severity, op type, and one-click buttons that turn an op into a pre-filled broadcast: "Form-up" to send it now, "Schedule" to send it later. Each op shows a "📡 N scheduled" badge once a form-up broadcast has been planned for it. Plus a configurable default form-up lead time (in minutes) on the Settings > Structure Timers tab.',
     'whats_new_structure_timers_title' => '🛰️ Structure Timers from Structure Manager',

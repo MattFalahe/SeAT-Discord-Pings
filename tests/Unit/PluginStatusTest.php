@@ -21,7 +21,7 @@ class PluginStatusTest extends TestCase
     /** What each feature needs on top of Manager Core. */
     private const PARTNERS = [
         'structure-timers' => 'Structure Manager',
-        'fc-opportunities' => 'Structure Manager',
+        'fc-opportunities' => 'Structure Manager or Mining Manager',
         'moon-extractions' => 'Mining Manager',
         'fc-activity' => 'HR Manager',
     ];
@@ -115,6 +115,16 @@ class PluginStatusTest extends TestCase
         foreach (array_keys(PluginStatus::PLUGINS) as $key) {
             $this->assertSame(['Installed/success'], self::labels($status['plugins'][$key]['badges']), $key);
         }
+    }
+
+    /** The board fills from either plugin, so Mining Manager alone is enough for it. */
+    public function test_fc_opportunities_is_on_with_mining_manager_and_no_structure_manager(): void
+    {
+        $status = self::resolve(['manager-core' => true, 'mining-manager' => true]);
+
+        $this->assertSame('on', $status['features']['fc-opportunities']['state']);
+        $this->assertSame('Manager Core and Mining Manager', $status['features']['fc-opportunities']['using']);
+        $this->assertSame('yellow', $status['features']['structure-timers']['state']);
     }
 
     public function test_warlof_covers_the_role_list_but_not_the_sender_so_seat_connector_stays_yellow(): void

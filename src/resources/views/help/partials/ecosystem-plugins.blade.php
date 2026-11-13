@@ -6,13 +6,13 @@
             'icon' => 'fa-network-wired',
             'url' => 'https://github.com/MattFalahe/manager-core',
             'text' => 'The hub of the plugin ecosystem. It carries events and data between the plugins, so each one can use what the others know.',
-            'here' => 'Structure Manager\'s timers and Mining Manager\'s moon extractions come in through it, and the broadcasts sent here go out through it to HR Manager. Without it, SeAT Broadcast still sends, schedules and takes ping requests on its own.',
+            'here' => 'Structure Manager\'s timers and Mining Manager\'s moon extractions come in through it, and the broadcasts sent here go out through it to HR Manager. FC Opportunities shows in the menu whenever it is installed. Without it, SeAT Broadcast still sends, schedules and takes ping requests on its own.',
         ],
         'structure-manager' => [
             'icon' => 'fa-building',
             'url' => 'https://github.com/MattFalahe/Structure-Manager',
             'text' => 'Keeps track of your corporations\' structures: fuel, reinforcement timers, and the fleet ops planned around them.',
-            'here' => 'Its timers and fleet ops fill the FC Opportunities board, and webhooks you flag get a reminder 24 hours and 1 hour before each timer. FC Opportunities shows in the menu once this and Manager Core are both installed.',
+            'here' => 'Its timers and fleet ops fill the FC Opportunities board, and webhooks you flag get a reminder 24 hours and 1 hour before each timer.',
         ],
         'mining-manager' => [
             'icon' => 'fa-gem',

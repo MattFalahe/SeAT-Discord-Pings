@@ -499,6 +499,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <ul>
                     <li>{!! trans('discordpings::help.recent_changes_ping_requests') !!}</li>
                     <li>{!! trans('discordpings::help.recent_changes_emergency_details') !!}</li>
+                    <li>{!! trans('discordpings::help.recent_changes_answers') !!}</li>
+                    <li>{!! trans('discordpings::help.recent_changes_broadcast_form') !!}</li>
+                    <li>{!! trans('discordpings::help.recent_changes_fc_opportunities') !!}</li>
                 </ul>
             </div>
 
@@ -551,6 +554,18 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                             <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
                         </h5>
                         <p>{{ trans('discordpings::help.feature_live_updates_desc') }}</p>
+                    </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-reply"></i> {{ trans('discordpings::help.feature_answer_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
+                        <p>{{ trans('discordpings::help.feature_answer_desc') }}</p>
+                    </div>
+                    <div class="feature-item">
+                        <h5><i class="fas fa-bold"></i> {{ trans('discordpings::help.feature_message_tools_title') }}
+                            <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                        </h5>
+                        <p>{{ trans('discordpings::help.feature_message_tools_desc') }}</p>
                     </div>
                 </div>
 
@@ -699,6 +714,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.ping_requests_discord_title') }}</h4>
                 <p>{!! trans('discordpings::help.ping_requests_discord_desc') !!}</p>
 
+                <h4>{{ trans('discordpings::help.ping_requests_answered_title') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{!! trans('discordpings::help.ping_requests_answered_desc') !!}</p>
+
                 <h4>{{ trans('discordpings::help.ping_requests_setup_title') }}</h4>
                 <p>{!! trans('discordpings::help.ping_requests_setup_desc') !!}</p>
 
@@ -726,6 +746,26 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
 
                 <h4>{{ trans('discordpings::help.sending_embed_types') }}</h4>
                 <p>{{ trans('discordpings::help.sending_embed_types_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.sending_formatting') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{!! trans('discordpings::help.sending_formatting_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.sending_suggestions') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.sending_suggestions_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.sending_starting') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{!! trans('discordpings::help.sending_starting_desc') !!}</p>
+
+                <h4>{{ trans('discordpings::help.sending_answering') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.sending_answering_desc') }}</p>
 
                 <h4>{{ trans('discordpings::help.sending_preview') }}</h4>
                 <p>{{ trans('discordpings::help.sending_preview_desc') }}</p>
@@ -999,6 +1039,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
 
                 <h4>{{ trans('discordpings::help.configuration_pap_types') }}</h4>
                 <p>{{ trans('discordpings::help.configuration_pap_types_desc') }}</p>
+
+                <h4>{{ trans('discordpings::help.configuration_send_form') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
+                <p>{{ trans('discordpings::help.configuration_send_form_desc') }}</p>
 
                 <h4>{{ trans('discordpings::help.configuration_ping_requests') }}
                     <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>

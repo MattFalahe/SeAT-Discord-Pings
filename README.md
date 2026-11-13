@@ -28,7 +28,10 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - 🔀 **Enter In: [EVE/UTC | My local]** toggle on the schedule form. Default is EVE/UTC (FC convention); switch to local and the form converts to UTC on submit
 - 📆 **Broadcasts Calendar** — scheduled pings + manual broadcast history, color-coded by webhook
 - 📜 **Broadcast History** with resend capability
-- 📝 **Personal + global templates** with full field support
+- 📝 **Personal + global templates** that keep every box of the form, webhooks and mentions included
+- ✍️ **Formatting bar** on every message box, with a **Discord time** picker that turns an EVE or local time into a timestamp everyone reads in their own time zone
+- 💡 **Suggestions as you type** — your own characters for FC Name, systems and the spots in them for Formup Location, and what you've typed before for Comms and Doctrine
+- 🧾 **Send form defaults** — Settings > Send Form starts Send and Schedule empty or from your defaults, with the FC name as the sender's main
 - 🧪 **Webhook testing** before going live
 - 🧹 **Bulk-clear** inactive scheduled pings older than 7 or 30 days (Fleet Coordinator tier only)
 - 🔐 **Webhook URLs encrypted at rest** + TLS verification on every Discord send
@@ -37,10 +40,11 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - 🎨 **Visual color picker** for embed colours
 - 📡 **Multi-webhook send** to fan out a single broadcast across channels
 - 🙋 **Ping Requests for line members** — buttons you set up in Settings, each with its own webhook and role mention. An emergency button posts the moment it's pressed, then stays under Active requests for 10 minutes so the sender can add to it, each answer updating that same message without a second ping; the others show the message first and have a per-member cooldown. Members keep saved forms per button, and every message names the SeAT main character, the corporation and, with seat-connector, the Discord account. Requests also show on FC Opportunities for 24 hours, where an FC can form up from one
+- 🤝 **Answering requests** — each request's Discord message links FCs to the Send form, filled in from the request and from what its button sets for answers. Once an FC's broadcast goes out, the message gets an **Answered by** line and the member sees a **Handled by** badge on their page
 
 ### With Manager Core + Structure Manager
 
-- 🎯 **FC Opportunities board** — focused planning surface listing upcoming structure timers and manual fleet ops with live countdowns
+- 🎯 **FC Opportunities board** — focused planning surface listing upcoming structure timers and manual fleet ops with live countdowns. It shows in the sidebar with Manager Core alone, holding member requests until Structure Manager or Mining Manager fill it
 - 🛰️ **Structure timer ingest** — auto-detected reinforce / anchor / fuel timers + manually entered ops flow in via the `structure_manager.timer.*` event family
 - ⚔️ / 🛡️ / 📌 op-type icons for hostile / defense / generic ops
 - 📨 **Pre-timer reminder pings** at T-24h and T-1h (per-webhook opt-in via `Receive structure timer alerts` flag)
@@ -109,7 +113,7 @@ Two-tier model for scheduled-broadcast surfaces (Calendar, FC Opportunities, sch
 
 The Help & Documentation page inside the plugin has a **Permissions** section with six role recipes (Line Member / Solo FC / Regular FC / Fleet Coordinator / Auditor / Plugin Admin) showing the exact permission combinations to assign — start there.
 
-## Settings page (8 tabs)
+## Settings page (9 tabs)
 
 | Tab | What lives here |
 |---|---|
@@ -118,13 +122,14 @@ The Help & Documentation page inside the plugin has a **Permissions** section wi
 | Discord Channels | Pre-registered channels for inline `#channel` links |
 | Staging Locations | Pre-registered staging spots for quick formup-location selection |
 | PAP Types | Configurable PAP categories (Strategic / Peacetime / CTA seeded by default) |
-| Ping Requests | The buttons line members can press: type, webhook, role to ping, sections and their boxes, cooldown, limits by Broadcast permission, corporation or alliance |
+| Send Form | Whether Send and Schedule start empty or from defaults, the defaults for every box but the message, and whether the FC name starts as the sender's main |
+| Ping Requests | The buttons line members can press: type, webhook, role to ping, sections and their boxes, cooldown, limits by Broadcast permission, corporation or alliance, and what an FC's answer starts from |
 | Structure Timers | Master toggles for pre-event alerts (structure + mining), default formup lead time, MC / SM / MM detection badges |
 | Routing Map | Read-only snapshot of which webhooks will fire for each event right now, with corp scope + master switch state |
 
 ## Form-up workflow
 
-1. Open **FC Opportunities** (sidebar; only visible when MC + SM are installed)
+1. Open **FC Opportunities** (sidebar; visible whenever Manager Core is installed)
 2. Pick a row (structure timer, fleet op, or mining extraction)
 3. Click one of the action buttons:
    - **📤 Form-up** — opens the Send Broadcast page pre-filled with urgent "forming up NOW" copy + PREPING embed type. Use when staging right now
@@ -132,6 +137,8 @@ The Help & Documentation page inside the plugin has a **Permissions** section wi
    - **ℹ️ Details** — deep-links to the source plugin's detail page (Structure Manager structure board or Mining Manager extraction view)
 4. Review, adjust, submit
 5. The resulting scheduled or sent broadcast naturally appears on the Calendar via the standard broadcast pipeline
+
+A member's request answers the same way: **Form-up** on its row, or the **Form up in SeAT** link in its Discord message. Either one only opens a request the FC could see on the board, and it counts as answered once the broadcast goes out.
 
 ## Integration with seat-fitting
 

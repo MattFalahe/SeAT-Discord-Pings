@@ -15,6 +15,9 @@ use DiscordPings\Models\TacticalEvent;
 use DiscordPings\Models\PluginSetting;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Services\BroadcastEventPublisher;
+use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\DiscordUserResolver;
+use DiscordPings\Services\PingRequests\RequestBoard;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -61,23 +64,34 @@ class ScheduledController extends Controller
             // blade calls ->count() on it which crashes on bare arrays
             $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
+            $user = auth()->user();
+
+            // Empty, or what Settings fills in, the same as Send.
+            $prefill = BroadcastForm::forForm(DiscordUserResolver::mainCharacterName($user));
+
             // FC Opportunities: when arriving from a tactical event (Calendar
             // modal or FC Opportunities board), pre-fill the form with the
             // op's structure/system/time so the FC just reviews and submits.
             $tacticalEvent = null;
-            $prefill = [];
             $tacticalEventId = null;
             $rawTacticalEventId = $request->input('tactical_event_id');
             if ($rawTacticalEventId) {
-                $tacticalEvent = TacticalEvent::visibleTo(auth()->user())
+                $tacticalEvent = TacticalEvent::visibleTo($user)
                     ->find((int) $rawTacticalEventId);
                 if ($tacticalEvent && $tacticalEvent->eve_time) {
                     // 'schedule' mode: includes scheduled_at = eve_time minus
                     // the configured form-up offset, fleet embed type.
-                    $prefill = $tacticalEvent->buildBroadcastPrefill('schedule');
+                    $prefill = BroadcastForm::layer($prefill, $tacticalEvent->buildBroadcastPrefill('schedule'));
                     $tacticalEventId = $tacticalEvent->id;
                 }
             }
+
+            // Send's Schedule button, when the form there was answering a member's request.
+            $pingRequest = $request->filled('answers_request')
+                ? RequestBoard::find($user, $request->input('answers_request'))
+                : null;
+
+            $suggestions = BroadcastForm::suggestions($user);
 
             return view('discordpings::scheduled.create', compact(
                 'webhooks',
@@ -89,7 +103,9 @@ class ScheduledController extends Controller
                 'hasFittingPlugin',
                 'prefill',
                 'tacticalEvent',
-                'tacticalEventId'
+                'tacticalEventId',
+                'pingRequest',
+                'suggestions'
             ));
 
         } catch (\Exception $e) {
@@ -123,8 +139,9 @@ class ScheduledController extends Controller
                 'channel_link' => 'nullable|exists:discord_channels,id',
                 'custom_mention' => 'nullable|string|max:100',
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'answers_request' => 'nullable|integer',
             ]);
-            
+
             // Handle the UTC time from JavaScript
             $scheduledAtUtc = $request->input('scheduled_at_utc');
             $repeatUntilUtc = $request->input('repeat_until_utc');
@@ -226,7 +243,13 @@ class ScheduledController extends Controller
                     $fields[$key] = $validated[$key];
                 }
             }
-            
+
+            // Checked again rather than trusted from the form. It counts as
+            // answered when the broadcast goes out, not now.
+            if (! empty($validated['answers_request']) && RequestBoard::find(auth()->user(), $validated['answers_request'])) {
+                $fields['answers_request'] = (int) $validated['answers_request'];
+            }
+
             // Create scheduled ping - times are already in Carbon format
             $scheduled = ScheduledPing::create([
                 'webhook_id' => $validated['webhook_id'],
@@ -282,6 +305,11 @@ class ScheduledController extends Controller
 
             $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
             $doctrines = collect(DiscordHelper::listFittingDoctrines());
+            $suggestions = BroadcastForm::suggestions(auth()->user());
+
+            $answering = ! empty($ping->fields['answers_request'])
+                ? PingHistory::find((int) $ping->fields['answers_request'])
+                : null;
 
             // If a specific occurrence time was passed from the calendar, use it to pre-fill
             $fromTime = request('from');
@@ -292,7 +320,8 @@ class ScheduledController extends Controller
             }
 
             return view('discordpings::scheduled.edit', compact(
-                'ping', 'webhooks', 'roles', 'channels', 'stagings', 'papTypes', 'hasFittingPlugin', 'doctrines'
+                'ping', 'webhooks', 'roles', 'channels', 'stagings', 'papTypes', 'hasFittingPlugin', 'doctrines',
+                'suggestions', 'answering'
             ));
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled edit error: ' . $e->getMessage());
@@ -389,6 +418,11 @@ class ScheduledController extends Controller
                 if (isset($validated[$key]) && !empty($validated[$key])) {
                     $fields[$key] = $validated[$key];
                 }
+            }
+
+            // The form never carries it, so an edit keeps the request it answers.
+            if (! empty($ping->fields['answers_request'])) {
+                $fields['answers_request'] = (int) $ping->fields['answers_request'];
             }
 
             $ping->update([

@@ -68,6 +68,7 @@ class PingRequestSender
         $open = $button->isEmergency() ? $this->openAfter($rows, $savedForm) : [];
         $sentAt = time();
         $closesAt = $open !== [] ? $sentAt + self::DETAILS_WINDOW : null;
+        $ref = RequestBoard::newRef();
 
         $payload = RequestMessage::payload(
             $button->name,
@@ -77,12 +78,13 @@ class PingRequestSender
             $this->color($button, $webhook),
             (string) config('discordpings.app_name', 'SeAT Broadcast'),
             gmdate('Y-m-d\TH:i:s\Z', $sentAt),
-            $closesAt
+            $closesAt,
+            $this->formUpUrl($ref)
         );
 
         $delivery = $this->post($webhook, $payload);
 
-        $historyId = $this->record($button, $webhook, $user, $sender, $body, $savedForm, $delivery['ok'] ? 'sent' : 'failed', $delivery['error'], $delivery['message_id']);
+        $historyId = $this->record($button, $webhook, $user, $sender, $body, $savedForm, $delivery['ok'] ? 'sent' : 'failed', $delivery['error'], $delivery['message_id'], $delivery['ok'] ? $ref : null);
 
         if ($delivery['ok']) {
             $outcome = $this->outcome(true, 'sent', 'Sent to Discord.', $button->isEmergency() ? null : (int) $button->cooldown_minutes * 60);
@@ -139,9 +141,16 @@ class PingRequestSender
             return $this->outcome(false, 'not_configured', 'Not updated. The webhook this went out on is gone or switched off.');
         }
 
+        return $this->oneEditAtATime($press['history_id'] ?? null, fn () => $this->editDetails($token, $press, $webhook, $answers));
+    }
+
+    /** @return array{ok: bool, status: string, message: string, retry_in: ?int} */
+    private function editDetails(string $token, array $press, DiscordWebhook $webhook, array $answers): array
+    {
         $rows = $press['rows'];
         $answers = array_merge($press['answers'], array_intersect_key($answers, array_flip($press['open'])));
-        $embed = RequestMessage::withBody(RequestMessage::updated($press['embed'], time()), Sections::forDiscord($rows, $answers));
+        $embed = $this->withAnswers(RequestMessage::updated($press['embed'], time()), $press['history_id'] ?? null);
+        $embed = RequestMessage::withBody($embed, Sections::forDiscord($rows, $answers));
         $delivery = $this->edit($webhook, $press['message_id'], $embed);
 
         if (! $delivery['ok']) {
@@ -197,9 +206,12 @@ class PingRequestSender
         }
 
         $webhook = DiscordWebhook::find($press['webhook_id']);
-        $embed = RequestMessage::withBody(RequestMessage::closed($press['embed'], time()), Sections::forDiscord($press['rows'], $press['answers']));
         $delivery = $webhook && $webhook->is_active
-            ? $this->edit($webhook, $press['message_id'], $embed)
+            ? $this->oneEditAtATime($press['history_id'] ?? null, function () use ($press, $webhook) {
+                $embed = $this->withAnswers(RequestMessage::closed($press['embed'], time()), $press['history_id'] ?? null);
+
+                return $this->edit($webhook, $press['message_id'], RequestMessage::withBody($embed, Sections::forDiscord($press['rows'], $press['answers'])));
+            })
             : ['ok' => false, 'error' => 'The webhook is gone or switched off'];
 
         if (! $delivery['ok']) {
@@ -241,7 +253,97 @@ class PingRequestSender
 
         usort($found, fn ($a, $b) => (int) $b[1]['sent_at'] <=> (int) $a[1]['sent_at']);
 
-        return array_map(fn ($pair) => $this->entry($pair[0], $pair[1]), $found);
+        $answered = RequestAnswers::forRequests(array_map(fn ($pair) => (int) ($pair[1]['history_id'] ?? 0), $found)) ?? [];
+
+        return array_map(fn ($pair) => $this->entry($pair[0], $pair[1], $answered[(int) ($pair[1]['history_id'] ?? 0)] ?? []), $found);
+    }
+
+    /**
+     * Says on a request's Discord message which FCs have answered it. Read
+     * back from Discord first, so it keeps whatever the message says by now.
+     * Only the embed is sent, so nobody is pinged again.
+     */
+    public function markAnswered(PingHistory $request): bool
+    {
+        $webhook = DiscordWebhook::find($request->webhook_id);
+        $messageId = (string) $request->discord_message_id;
+
+        if (! $webhook || ! $webhook->is_active || $messageId === '') {
+            return false;
+        }
+
+        return (bool) $this->oneEditAtATime((int) $request->id, function () use ($request, $webhook, $messageId) {
+            $answers = RequestAnswers::forRequests([(int) $request->id]);
+            $read = $this->deliver('get', $this->messageUrl($webhook, $messageId), null);
+            $embed = $read['body']['embeds'][0] ?? null;
+
+            if ($answers === null || ! is_array($embed)) {
+                Log::warning('[DiscordPings] Could not read a ping request back from Discord to say who answered it' . ($read['error'] ? ': ' . $read['error'] : ''), ['history_id' => $request->id]);
+
+                return false;
+            }
+
+            $embed = RequestMessage::answered(RequestMessage::fromDiscord($embed), $answers[(int) $request->id] ?? []);
+            $delivery = $this->edit($webhook, $messageId, $embed);
+
+            if (! $delivery['ok']) {
+                Log::warning('[DiscordPings] Could not say on Discord who answered a ping request: ' . $delivery['error'], ['history_id' => $request->id]);
+            }
+
+            return $delivery['ok'];
+        });
+    }
+
+    /**
+     * One edit of a message at a time. Adding to an emergency and an FC
+     * answering it both send the whole embed again, so without this one could
+     * put back what the other had just changed. When the lock can't be had the
+     * edit still goes, because a member's update arriving is worth more than
+     * the rare clash.
+     */
+    private function oneEditAtATime(?int $historyId, callable $edit)
+    {
+        if ($historyId === null || $historyId <= 0) {
+            return $edit();
+        }
+
+        $started = false;
+
+        try {
+            return Cache::lock('discordpings:requests:edit:' . $historyId, 30)->block(10, function () use ($edit, &$started) {
+                $started = true;
+
+                return $edit();
+            });
+        } catch (\Throwable $e) {
+            if ($started) {
+                throw $e;
+            }
+
+            return $edit();
+        }
+    }
+
+    /** The Answered by line as it stands. When the answers can't be read, the embed keeps the line it had. */
+    private function withAnswers(array $embed, ?int $historyId): array
+    {
+        if ($historyId === null) {
+            return $embed;
+        }
+
+        $answers = RequestAnswers::forRequests([$historyId]);
+
+        return $answers === null ? $embed : RequestMessage::answered($embed, $answers[$historyId] ?? []);
+    }
+
+    /** Null when no link can be made, and the message goes out without one. */
+    private function formUpUrl(string $ref): ?string
+    {
+        try {
+            return route('discordpings.send', ['request' => $ref]);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /** How long this member has to wait before this button works again. */
@@ -332,18 +434,22 @@ class PingRequestSender
      */
     private function edit(DiscordWebhook $webhook, string $messageId, array $embed): array
     {
+        return $this->deliver('patch', $this->messageUrl($webhook, $messageId), ['embeds' => [$embed]]);
+    }
+
+    private function messageUrl(DiscordWebhook $webhook, string $messageId): string
+    {
         [$address, $query] = array_pad(explode('?', (string) $webhook->webhook_url, 2), 2, '');
 
         // A webhook that posts into a thread has to name the thread for an edit too.
-        $url = rtrim($address, '/') . '/messages/' . rawurlencode($messageId) . ($query !== '' ? '?' . $query : '');
-
-        return $this->deliver('patch', $url, ['embeds' => [$embed]]);
+        return rtrim($address, '/') . '/messages/' . rawurlencode($messageId) . ($query !== '' ? '?' . $query : '');
     }
 
     /**
-     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int, http_status: ?int}
+     * @param array|null $payload null for a read, which sends no body
+     * @return array{ok: bool, error: ?string, message_id: ?string, retry_in: ?int, http_status: ?int, body?: ?array}
      */
-    private function deliver(string $verb, string $url, array $payload): array
+    private function deliver(string $verb, string $url, ?array $payload): array
     {
         try {
             $client = new Client([
@@ -352,14 +458,15 @@ class PingRequestSender
                 'http_errors' => false,
             ]);
 
-            $response = $client->$verb($url, ['json' => $payload]);
+            $options = $payload === null ? [] : ['json' => $payload];
+            $response = $client->$verb($url, $options);
 
             if ($response->getStatusCode() === 429) {
                 $wait = $this->retryAfter($response);
 
                 if ($wait > 0 && $wait <= self::LONGEST_WAIT) {
                     usleep((int) ceil($wait * 1000000));
-                    $response = $client->$verb($url, ['json' => $payload]);
+                    $response = $client->$verb($url, $options);
                 }
             }
 
@@ -367,7 +474,14 @@ class PingRequestSender
             $json = json_decode((string) $response->getBody(), true);
 
             if ($status >= 200 && $status < 300) {
-                return ['ok' => true, 'error' => null, 'message_id' => isset($json['id']) ? (string) $json['id'] : null, 'retry_in' => null, 'http_status' => $status];
+                return [
+                    'ok' => true,
+                    'error' => null,
+                    'message_id' => isset($json['id']) ? (string) $json['id'] : null,
+                    'retry_in' => null,
+                    'http_status' => $status,
+                    'body' => is_array($json) ? $json : null,
+                ];
             }
 
             $error = 'Discord answered ' . $status . (is_string($json['message'] ?? null) ? ': ' . $json['message'] : '');
@@ -487,13 +601,20 @@ class PingRequestSender
         });
     }
 
-    /** One open emergency the way the page shows it: what it still asks, and the answers as they stand. */
-    private function entry(string $token, array $press): array
+    /**
+     * One open emergency the way the page shows it: what it still asks, the
+     * answers as they stand, and which FCs have answered it so far.
+     *
+     * @param array<int, array{name: string, at: int}> $answeredBy
+     */
+    private function entry(string $token, array $press, array $answeredBy = []): array
     {
         $freeText = ! Sections::hasQuestions($press['rows']);
 
         return [
             'token' => $token,
+            'historyId' => $press['history_id'] ?? null,
+            'answeredBy' => RequestAnswers::forPage($answeredBy),
             'button' => $press['button'],
             'savedForm' => $press['saved_form'],
             'sentAt' => gmdate('Y-m-d\TH:i:s\Z', (int) $press['sent_at']),
@@ -560,8 +681,12 @@ class PingRequestSender
         return 'discordpings:requests:details:' . $token;
     }
 
-    /** Written after the post, and never allowed to get in its way. */
-    private function record(PingRequestButton $button, DiscordWebhook $webhook, $user, SenderIdentity $sender, string $body, ?string $savedForm, string $status, ?string $error, ?string $messageId = null): ?int
+    /**
+     * Written after the post, and never allowed to get in its way.
+     *
+     * @param string|null $ref what the link in the message names it by
+     */
+    private function record(PingRequestButton $button, DiscordWebhook $webhook, $user, SenderIdentity $sender, string $body, ?string $savedForm, string $status, ?string $error, ?string $messageId = null, ?string $ref = null): ?int
     {
         try {
             $history = PingHistory::create([
@@ -578,6 +703,7 @@ class PingRequestSender
                     'main' => $sender->mainName,
                     'corporation' => $sender->corporation,
                     'discord' => $sender->discordLine(),
+                    'ref' => $ref,
                 ], fn ($value) => $value !== null && $value !== ''),
                 'status' => $status,
                 'error_message' => $error,

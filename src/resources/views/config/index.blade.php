@@ -5,7 +5,7 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <style>
     /* Page-specific only — chrome lives in canonical CSS */
     .color-badge {
@@ -50,6 +50,11 @@
                 <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#pap-types-tab">
                         <i class="fas fa-tag"></i> PAP Types
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-toggle="tab" href="#send-form-tab">
+                        <i class="fas fa-paper-plane"></i> Send Form
                     </a>
                 </li>
                 <li class="nav-item">
@@ -401,6 +406,11 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                {{-- Send Form Tab --}}
+                <div class="tab-pane fade" id="send-form-tab">
+                    @include('discordpings::config.sections.send-form')
                 </div>
 
                 {{-- Ping Requests Tab --}}

@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use DiscordPings\Models\PingHistory;
 use DiscordPings\Services\BroadcastEventPublisher;
+use DiscordPings\Services\PingRequests\RequestAnswers;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -55,6 +56,9 @@ class DiscordHelper
             // Publish to Manager Core EventBus (no-op without MC) so subscribers
             // like HR Manager can track active FC broadcast activity.
             $this->publishBroadcastSentEvent($webhook, $user, $data, $history);
+
+            // Sent from Form-up on a member's request, now or on a schedule.
+            RequestAnswers::afterBroadcast($data, $user, $history);
 
             return ['success' => true, 'status' => 'sent', 'history_id' => $history->id];
 

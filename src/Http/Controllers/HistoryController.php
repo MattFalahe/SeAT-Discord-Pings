@@ -5,8 +5,10 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\PingRequestAnswer;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Jobs\SendPingJob;
+use DiscordPings\Services\PingRequests\RequestAnswers;
 
 class HistoryController extends Controller
 {
@@ -68,8 +70,25 @@ class HistoryController extends Controller
             if ($history->user_id != auth()->id() && !auth()->user()->can('discordpings.view_all_history')) {
                 abort(403, 'Unauthorized');
             }
-            
-            return view('discordpings::history.show', compact('history'));
+
+            // A request lists the FCs who answered it, and a broadcast names the request it answered.
+            // Null when the answers couldn't be read, so the page doesn't claim nobody answered.
+            $answers = null;
+            $answeredRequest = null;
+
+            if ($history->isMemberRequest()) {
+                $read = RequestAnswers::forRequests([$history->id]);
+                $answers = $read === null ? null : ($read[(int) $history->id] ?? []);
+            } else {
+                try {
+                    $answer = PingRequestAnswer::where('broadcast_history_id', $history->id)->first();
+                    $answeredRequest = $answer ? PingHistory::find($answer->request_history_id) : null;
+                } catch (\Throwable $e) {
+                    Log::warning('Discord Pings history show could not read the request a broadcast answered: ' . $e->getMessage());
+                }
+            }
+
+            return view('discordpings::history.show', compact('history', 'answers', 'answeredRequest'));
             
         } catch (\Exception $e) {
             Log::error('Discord Pings history show error: ' . $e->getMessage());

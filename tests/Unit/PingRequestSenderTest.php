@@ -4,8 +4,10 @@ namespace DiscordPings\Tests\Unit;
 
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\PingHistory;
+use DiscordPings\Models\PingRequestAnswer;
 use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Services\PingRequests\PingRequestSender;
+use DiscordPings\Services\PingRequests\RequestBoard;
 use DiscordPings\Services\PingRequests\RequestMessage;
 use DiscordPings\Services\PingRequests\Sections;
 use GuzzleHttp\Client;
@@ -30,6 +32,7 @@ class PingRequestSenderTest extends TestCase
         Model::$failCreateWith = null;
         Model::$found = [];
         Model::$updated = [];
+        Model::$failQueryWith = null;
         Cache::$store = [];
         Cache::$seconds = [];
         Cache::$failPutWith = null;
@@ -40,7 +43,9 @@ class PingRequestSenderTest extends TestCase
         DB::$rows = [];
         Client::$posts = [];
         Client::$patches = [];
+        Client::$gets = [];
         Client::$replies = [];
+        $GLOBALS['FAKE_ROUTES'] = [];
 
         $this->user = (object) ['id' => 7, 'name' => 'Account Name', 'main_character_id' => 90000001];
     }
@@ -357,6 +362,8 @@ class PingRequestSenderTest extends TestCase
         $this->assertSame('Matt Falahe', $row['user_name']);
         $this->assertSame(7, $row['user_id']);
         $this->assertSame('999', $row['discord_message_id']);
+        $this->assertTrue(RequestBoard::isRef($row['fields']['ref'] ?? null));
+        unset($row['fields']['ref']);
         $this->assertSame([
             'source' => PingHistory::SOURCE_MEMBER_REQUEST,
             'button_id' => 11,
@@ -366,6 +373,142 @@ class PingRequestSenderTest extends TestCase
             'main' => 'Matt Falahe',
             'corporation' => 'Minc Corp',
         ], $row['fields']);
+    }
+
+    /** The link in the message names the request by its ref, which is only kept for one that arrived. */
+    public function test_the_message_links_fcs_to_the_send_form_by_the_requests_ref(): void
+    {
+        $GLOBALS['FAKE_ROUTES']['discordpings.send'] = 'https://seat.example/discord-pings/send';
+        Client::$replies = [$this->reply()];
+
+        $this->press($this->button(PingRequestButton::TYPE_REQUEST));
+
+        $ref = $this->history()[0]['fields']['ref'];
+        $fields = array_column(Client::$posts[0][1]['json']['embeds'][0]['fields'], 'value', 'name');
+        $this->assertSame('[Form up in SeAT](https://seat.example/discord-pings/send?request=' . $ref . ')', $fields[RequestMessage::FOR_FCS]);
+    }
+
+    public function test_a_request_that_did_not_arrive_keeps_no_ref(): void
+    {
+        Client::$replies = [$this->reply(500, ['message' => 'Server Error'])];
+
+        $this->press($this->button(PingRequestButton::TYPE_REQUEST));
+
+        $this->assertArrayNotHasKey('ref', $this->history()[0]['fields']);
+    }
+
+    /** With no route to link to, the message still goes, just without the link. */
+    public function test_no_link_never_holds_a_request_up(): void
+    {
+        Client::$replies = [$this->reply()];
+
+        $this->assertTrue($this->press($this->button(PingRequestButton::TYPE_REQUEST))['ok']);
+        $this->assertNotContains(RequestMessage::FOR_FCS, array_column(Client::$posts[0][1]['json']['embeds'][0]['fields'], 'name'));
+    }
+
+    /** Presses a request, records an FC's answer to it, and hands back its History row. */
+    private function answeredRequest(string $fcName = 'Fleet Boss'): PingHistory
+    {
+        $webhook = $this->webhook();
+        Model::$found[DiscordWebhook::class][$webhook->id] = $webhook;
+        $GLOBALS['FAKE_ROUTES']['discordpings.send'] = 'https://seat.example/discord-pings/send';
+        Client::$replies = [$this->reply()];
+
+        $this->press($this->button(PingRequestButton::TYPE_REQUEST));
+
+        $request = end(Model::$found[PingHistory::class]);
+        $answer = PingRequestAnswer::create(['request_history_id' => $request->id, 'user_id' => 8, 'fc_name' => $fcName, 'broadcast_history_id' => null]);
+        $answer->created_at = 1762603800;
+
+        return $request;
+    }
+
+    /** What Discord sends back for the message that went out, with keys of its own that are never sent again. */
+    private function asDiscordHasIt(): object
+    {
+        $embed = Client::$posts[0][1]['json']['embeds'][0] + ['type' => 'rich', 'footer' => ['text' => 'x']];
+
+        return $this->reply(200, ['id' => '999', 'type' => 0, 'embeds' => [$embed]]);
+    }
+
+    public function test_an_answer_is_added_to_the_message_as_discord_has_it(): void
+    {
+        $request = $this->answeredRequest();
+        Client::$replies = [$this->asDiscordHasIt(), $this->reply()];
+
+        $this->assertTrue((new PingRequestSender())->markAnswered($request));
+
+        $this->assertSame(self::ADDRESS . '/messages/999', Client::$gets[0][0]);
+        $this->assertSame([], Client::$gets[0][1], 'A read sends no body');
+
+        $sent = Client::$patches[0][1]['json'];
+        $this->assertSame(['embeds'], array_keys($sent), 'Only the embed goes, so nobody is pinged again');
+        $this->assertArrayNotHasKey('type', $sent['embeds'][0]);
+        $this->assertArrayNotHasKey('footer', $sent['embeds'][0]);
+
+        $names = array_column($sent['embeds'][0]['fields'], 'name');
+        $this->assertSame([RequestMessage::ANSWERED, RequestMessage::FOR_FCS], array_slice($names, -2));
+        $this->assertSame('Fleet Boss at <t:1762603800:t> (<t:1762603800:R>)', $sent['embeds'][0]['fields'][count($names) - 2]['value']);
+    }
+
+    public function test_a_message_that_cannot_be_read_back_is_left_as_it_is(): void
+    {
+        $request = $this->answeredRequest();
+        Client::$replies = [$this->reply(404, ['message' => 'Unknown Message'])];
+
+        $this->assertFalse((new PingRequestSender())->markAnswered($request));
+        $this->assertSame([], Client::$patches);
+    }
+
+    public function test_answers_that_cannot_be_read_leave_the_message_as_it_is(): void
+    {
+        $request = $this->answeredRequest();
+        Model::$failQueryWith = new \RuntimeException('Gone away');
+        Client::$replies = [$this->asDiscordHasIt()];
+
+        $this->assertFalse((new PingRequestSender())->markAnswered($request));
+        $this->assertSame([], Client::$patches);
+    }
+
+    public function test_no_message_or_no_webhook_means_nothing_is_sent(): void
+    {
+        $request = $this->answeredRequest();
+        $sender = new PingRequestSender();
+
+        $request->discord_message_id = null;
+        $this->assertFalse($sender->markAnswered($request));
+
+        $request->discord_message_id = '999';
+        Model::$found[DiscordWebhook::class][3] = $this->webhook(['is_active' => false]);
+        $this->assertFalse($sender->markAnswered($request));
+
+        $this->assertSame([], Client::$gets);
+        $this->assertSame([], Client::$patches);
+    }
+
+    /** A member adding to an emergency sends the whole embed again, so it has to keep who already answered. */
+    public function test_adding_to_an_emergency_keeps_who_answered_it(): void
+    {
+        $token = $this->pressTackled();
+        $request = end(Model::$found[PingHistory::class]);
+        PingRequestAnswer::create(['request_history_id' => $request->id, 'user_id' => 8, 'fc_name' => 'Fleet Boss', 'broadcast_history_id' => null])->created_at = 1762603800;
+        Client::$replies = [$this->reply()];
+
+        $this->assertTrue($this->addDetails($token, [$this->keys()['Panic Active?'] => 'Yes'])['ok']);
+
+        $this->assertContains(RequestMessage::ANSWERED, array_column(Client::$patches[0][1]['json']['embeds'][0]['fields'], 'name'));
+    }
+
+    public function test_the_open_ones_say_who_answered_them(): void
+    {
+        $this->pressTackled();
+        $request = end(Model::$found[PingHistory::class]);
+        PingRequestAnswer::create(['request_history_id' => $request->id, 'user_id' => 8, 'fc_name' => 'Fleet Boss', 'broadcast_history_id' => null])->created_at = 1762603800;
+
+        $open = $this->openFor()[0];
+
+        $this->assertSame((int) $request->id, (int) $open['historyId']);
+        $this->assertSame([['name' => 'Fleet Boss', 'at' => '2025-11-08T12:10:00Z']], $open['answeredBy']);
     }
 
     /** The history page prints each of these as text, so an array here is a crash. */

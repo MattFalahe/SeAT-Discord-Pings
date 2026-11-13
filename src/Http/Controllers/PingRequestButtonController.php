@@ -4,6 +4,7 @@ namespace DiscordPings\Http\Controllers;
 
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\PingRequestButton;
+use DiscordPings\Services\BroadcastForm;
 use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -150,6 +151,16 @@ class PingRequestButtonController extends Controller
             'audience_permissions' => 'nullable|array',
             'audience_permissions.*' => ['string', Rule::in(array_keys(PingRequestButton::audienceOptions()))],
             'sort_order' => 'nullable|integer|min:0|max:9999',
+            'answer_defaults' => 'nullable|array',
+            'answer_defaults.webhook_id' => 'nullable|integer|exists:discord_webhooks,id',
+            'answer_defaults.embed_type' => ['nullable', Rule::in(BroadcastForm::EMBED_TYPES)],
+            'answer_defaults.mention_type' => ['nullable', Rule::in(BroadcastForm::MENTION_TYPES)],
+            'answer_defaults.role_mention' => 'nullable|integer|exists:discord_roles,id',
+            'answer_defaults.custom_mention' => 'nullable|string|max:100',
+            'answer_defaults.channel_link' => 'nullable|integer|exists:discord_channels,id',
+            'answer_defaults.embed_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'answer_defaults.pap_type' => 'nullable|string|max:100',
+            'answer_defaults.comms' => 'nullable|string|max:200',
         ]);
 
         $mention = trim((string) ($data['mention_role'] ?? ''));
@@ -182,6 +193,7 @@ class PingRequestButtonController extends Controller
             'audience_permissions' => array_values(array_unique($data['audience_permissions'] ?? [])) ?: null,
             'sort_order' => (int) ($data['sort_order'] ?? 0),
             'is_active' => $active,
+            'answer_defaults' => BroadcastForm::clean($data['answer_defaults'] ?? [], BroadcastForm::ANSWER_KEYS) ?: null,
         ];
     }
 }

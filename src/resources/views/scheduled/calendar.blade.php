@@ -5,7 +5,7 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/fullcalendar.min.css') }}">
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <style>
     /* Page-specific only — FullCalendar dark-theme overrides + event detail bits.
        Card chrome / buttons / general primitives live in canonical CSS. */

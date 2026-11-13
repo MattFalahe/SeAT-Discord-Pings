@@ -6,13 +6,39 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use DiscordPings\Models\PingTemplate;
+use DiscordPings\Models\DiscordChannel;
 use DiscordPings\Models\DiscordRole;
+use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\StagingLocation;
 use DiscordPings\Models\PapType;
 use DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Services\BroadcastForm;
 
 class TemplateController extends Controller
 {
+    /**
+     * Every box of the Send form, so a template brings back the whole form it
+     * was saved from. Older pages sent the role as mention_role_id.
+     */
+    private const FIELD_RULES = [
+        'webhook_id' => 'nullable|integer|exists:discord_webhooks,id',
+        'webhook_ids' => 'nullable|array',
+        'webhook_ids.*' => 'integer|exists:discord_webhooks,id',
+        'embed_type' => 'nullable|string|in:fleet,announcement,message,prepping',
+        'fc_name' => 'nullable|string|max:100',
+        'formup_location' => 'nullable|string|max:100',
+        'pap_type' => 'nullable|string|max:100',
+        'comms' => 'nullable|string|max:200',
+        'doctrine' => 'nullable|string|max:200',
+        'doctrine_id' => 'nullable|integer',
+        'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
+        'role_mention' => 'nullable|integer|exists:discord_roles,id',
+        'mention_role_id' => 'nullable|integer|exists:discord_roles,id',
+        'custom_mention' => 'nullable|string|max:100',
+        'channel_link' => 'nullable|integer|exists:discord_channels,id',
+        'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+    ];
+
     /**
      * Display template list
      */
@@ -33,16 +59,7 @@ class TemplateController extends Controller
      */
     public function create()
     {
-        $roles = DiscordRole::active()->get();
-        $stagings = StagingLocation::active()->get();
-        $papTypes = PapType::active()->ordered()->get();
-
-        $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-        // collect() wrap: listFittingDoctrines() returns a PHP array; the
-        // blade calls ->count() on it which crashes on bare arrays
-        $doctrines = collect(DiscordHelper::listFittingDoctrines());
-
-        return view('discordpings::templates.create', compact('roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
+        return view('discordpings::templates.create', $this->formData());
     }
 
     /**
@@ -51,33 +68,16 @@ class TemplateController extends Controller
     public function store(Request $request)
     {
         try {
-            $validated = $request->validate([
+            $validated = $request->validate(array_merge([
                 'name' => 'required|string|max:100',
-                'template' => 'required|string|max:2000',
-                'embed_type' => 'nullable|string|in:fleet,announcement,message',
-                'fc_name' => 'nullable|string|max:100',
-                'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|max:100',
-                'comms' => 'nullable|string|max:200',
-                'doctrine' => 'nullable|string|max:200',
-                'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
-                'mention_role_id' => 'nullable|integer|exists:discord_roles,id',
-                'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            ]);
+                'message' => 'required|string|max:2000',
+            ], self::FIELD_RULES));
 
-            $fields = [];
-            $fieldKeys = ['embed_type', 'fc_name', 'formup_location', 'pap_type', 'comms',
-                         'doctrine', 'mention_type', 'mention_role_id', 'embed_color'];
-
-            foreach ($fieldKeys as $key) {
-                if (!empty($validated[$key])) {
-                    $fields[$key] = $validated[$key];
-                }
-            }
+            $fields = self::fieldsFrom($validated);
 
             PingTemplate::create([
                 'name' => $validated['name'],
-                'template' => $validated['template'],
+                'template' => $validated['message'],
                 'fields' => !empty($fields) ? $fields : null,
                 'created_by' => auth()->id(),
                 'is_global' => false,
@@ -106,16 +106,7 @@ class TemplateController extends Controller
                 abort(403, 'Unauthorized');
             }
 
-            $roles = DiscordRole::active()->get();
-            $stagings = StagingLocation::active()->get();
-            $papTypes = PapType::active()->ordered()->get();
-
-            $hasFittingPlugin = (bool) DiscordHelper::detectFittingDoctrineClass();
-            // collect() wrap: listFittingDoctrines() returns a PHP array; the
-            // blade calls ->count() on it which crashes on bare arrays
-            $doctrines = collect(DiscordHelper::listFittingDoctrines());
-
-            return view('discordpings::templates.edit', compact('template', 'roles', 'stagings', 'papTypes', 'doctrines', 'hasFittingPlugin'));
+            return view('discordpings::templates.edit', array_merge($this->formData(), compact('template')));
         } catch (\Exception $e) {
             Log::error('Discord Pings template edit error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Unable to load template.');
@@ -135,33 +126,16 @@ class TemplateController extends Controller
                 abort(403, 'Unauthorized');
             }
 
-            $validated = $request->validate([
+            $validated = $request->validate(array_merge([
                 'name' => 'required|string|max:100',
-                'template' => 'required|string|max:2000',
-                'embed_type' => 'nullable|string|in:fleet,announcement,message',
-                'fc_name' => 'nullable|string|max:100',
-                'formup_location' => 'nullable|string|max:100',
-                'pap_type' => 'nullable|string|max:100',
-                'comms' => 'nullable|string|max:200',
-                'doctrine' => 'nullable|string|max:200',
-                'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
-                'mention_role_id' => 'nullable|integer|exists:discord_roles,id',
-                'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            ]);
+                'message' => 'required|string|max:2000',
+            ], self::FIELD_RULES));
 
-            $fields = [];
-            $fieldKeys = ['embed_type', 'fc_name', 'formup_location', 'pap_type', 'comms',
-                         'doctrine', 'mention_type', 'mention_role_id', 'embed_color'];
-
-            foreach ($fieldKeys as $key) {
-                if (!empty($validated[$key])) {
-                    $fields[$key] = $validated[$key];
-                }
-            }
+            $fields = self::fieldsFrom($validated);
 
             $template->update([
                 'name' => $validated['name'],
-                'template' => $validated['template'],
+                'template' => $validated['message'],
                 'fields' => !empty($fields) ? $fields : null,
             ]);
 
@@ -221,21 +195,12 @@ class TemplateController extends Controller
     public function quickSave(Request $request)
     {
         try {
-            $validated = $request->validate([
+            $validated = $request->validate(array_merge([
                 'name' => 'required|string|max:100',
                 'message' => 'required|string|max:2000',
-            ]);
+            ], self::FIELD_RULES));
 
-            // Build fields from all optional form data
-            $fields = [];
-            $fieldKeys = ['embed_type', 'fc_name', 'formup_location', 'pap_type', 'comms',
-                         'doctrine', 'mention_type', 'mention_role_id', 'embed_color'];
-
-            foreach ($fieldKeys as $key) {
-                if ($request->has($key) && !empty($request->input($key))) {
-                    $fields[$key] = $request->input($key);
-                }
-            }
+            $fields = self::fieldsFrom($validated);
 
             $template = PingTemplate::create([
                 'name' => $validated['name'],
@@ -256,5 +221,75 @@ class TemplateController extends Controller
                 'error' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * What a template keeps of a form: whatever was filled in. Webhooks become
+     * one id or a list, by how many were picked, and a doctrine picked from
+     * SeAT Fitting keeps its name next to its id, so the template still loads
+     * it by name if the fitting is removed later.
+     */
+    public static function fieldsFrom(array $validated): array
+    {
+        $fields = [];
+
+        $ids = array_values(array_unique(array_map('intval', $validated['webhook_ids'] ?? [])));
+        if (count($ids) > 1) {
+            $fields['webhook_ids'] = $ids;
+        } elseif (count($ids) === 1) {
+            $fields['webhook_id'] = $ids[0];
+        } elseif (! empty($validated['webhook_id'])) {
+            $fields['webhook_id'] = (int) $validated['webhook_id'];
+        }
+
+        foreach (['embed_type', 'mention_type', 'custom_mention', 'embed_color', 'fc_name', 'formup_location', 'pap_type', 'comms'] as $key) {
+            $value = trim((string) ($validated[$key] ?? ''));
+
+            if ($value !== '') {
+                $fields[$key] = $value;
+            }
+        }
+
+        // Templates have always kept the role under this name.
+        $role = $validated['role_mention'] ?? $validated['mention_role_id'] ?? null;
+        if (! empty($role)) {
+            $fields['mention_role_id'] = (int) $role;
+        }
+
+        if (! empty($validated['channel_link'])) {
+            $fields['channel_link'] = (int) $validated['channel_link'];
+        }
+
+        $doctrine = trim((string) ($validated['doctrine'] ?? ''));
+        if (! empty($validated['doctrine_id'])) {
+            $fitting = DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id']);
+
+            if ($fitting) {
+                $fields['doctrine_id'] = (int) $fitting->id;
+                $doctrine = (string) $fitting->name;
+            }
+        }
+
+        if ($doctrine !== '') {
+            $fields['doctrine'] = $doctrine;
+        }
+
+        return $fields;
+    }
+
+    /** The same lists the Send form offers. */
+    private function formData(): array
+    {
+        return [
+            'webhooks' => DiscordWebhook::active()->get(),
+            'roles' => DiscordRole::active()->get(),
+            'channels' => DiscordChannel::active()->get(),
+            'stagings' => StagingLocation::active()->get(),
+            'papTypes' => PapType::active()->ordered()->get(),
+            'hasFittingPlugin' => (bool) DiscordHelper::detectFittingDoctrineClass(),
+            // listFittingDoctrines() returns a plain array, and the form counts it.
+            'doctrines' => collect(DiscordHelper::listFittingDoctrines()),
+            'suggestions' => BroadcastForm::suggestions(auth()->user()),
+        ];
     }
 }

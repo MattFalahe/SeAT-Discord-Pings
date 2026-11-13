@@ -14,6 +14,9 @@ use DiscordPings\Models\PapType;
 use DiscordPings\Models\TacticalEvent;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Jobs\SendPingJob;
+use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\DiscordUserResolver;
+use DiscordPings\Services\PingRequests\RequestAnswers;
 use DiscordPings\Services\PingRequests\RequestBoard;
 
 class PingController extends Controller
@@ -24,6 +27,7 @@ class PingController extends Controller
     public function index(Request $request)
     {
         try {
+            $user = auth()->user();
             $webhooks = DiscordWebhook::active()->get();
             $roles = DiscordRole::active()->get();
             $channels = DiscordChannel::active()->get();
@@ -45,31 +49,45 @@ class PingController extends Controller
             // correct (empty arrays bypass `?? collect()` and crash on ->count())
             $doctrines = collect(DiscordHelper::listFittingDoctrines());
 
+            // Empty, or what Settings fills in. Whatever the page was opened
+            // for goes on top.
+            $mainName = DiscordUserResolver::mainCharacterName($user);
+            $prefill = BroadcastForm::forForm($mainName);
+
             // FC Opportunities → "Form-up" (immediate Send): when arriving
             // with ?tactical_event_id=N, pre-fill the form with urgent
             // "forming up NOW" copy + PREPING embed type. Mirrors the
             // schedule path's pre-fill but uses 'send' mode of the
             // TacticalEvent::buildBroadcastPrefill helper.
             $tacticalEvent = null;
-            $prefill = [];
             $rawTacticalEventId = $request->input('tactical_event_id');
             if ($rawTacticalEventId) {
-                $tacticalEvent = TacticalEvent::visibleTo(auth()->user())
+                $tacticalEvent = TacticalEvent::visibleTo($user)
                     ->find((int) $rawTacticalEventId);
                 if ($tacticalEvent) {
-                    $prefill = $tacticalEvent->buildBroadcastPrefill('send');
+                    $prefill = BroadcastForm::layer($prefill, $tacticalEvent->buildBroadcastPrefill('send'));
                 }
             }
 
-            // FC Opportunities → "Form-up" on a member's request. The board's
-            // own rule decides, so a link can't open a request the FC couldn't see there.
+            // A member's request, from Form-up on FC Opportunities or the link
+            // in its Discord message. The board's own rule decides either way,
+            // so neither can open a request the FC couldn't see there.
             $pingRequest = null;
-            if (! $tacticalEvent && $request->filled('ping_request_id')) {
-                $pingRequest = RequestBoard::find(auth()->user(), $request->input('ping_request_id'));
+            $pingRequestMissing = false;
+            if (! $tacticalEvent && ($request->filled('ping_request_id') || $request->filled('request'))) {
+                $pingRequest = $request->filled('ping_request_id')
+                    ? RequestBoard::find($user, $request->input('ping_request_id'))
+                    : RequestBoard::findByRef($user, $request->input('request'));
+
                 if ($pingRequest) {
-                    $prefill = RequestBoard::prefill($pingRequest, auth()->user());
+                    $prefill = BroadcastForm::layer($prefill, RequestBoard::prefill($pingRequest, $mainName, RequestBoard::answerDefaultsFor($pingRequest)));
+                } else {
+                    $pingRequestMissing = true;
                 }
             }
+
+            $pingRequestAnswers = $pingRequest ? (RequestAnswers::forRequests([$pingRequest->id])[(int) $pingRequest->id] ?? []) : [];
+            $suggestions = BroadcastForm::suggestions($user);
 
             return view('discordpings::send', compact(
                 'webhooks',
@@ -83,7 +101,10 @@ class PingController extends Controller
                 'hasFittingPlugin',
                 'prefill',
                 'tacticalEvent',
-                'pingRequest'
+                'pingRequest',
+                'pingRequestMissing',
+                'pingRequestAnswers',
+                'suggestions'
             ));
 
         } catch (\Exception $e) {
@@ -113,7 +134,10 @@ class PingController extends Controller
                 'channel_link' => 'nullable|exists:discord_channels,id',
                 'custom_mention' => 'nullable|string|max:100',
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'answers_request' => 'nullable|integer',
             ]);
+
+            $validated = $this->withAnsweredRequest($request, $validated);
 
             $webhook = DiscordWebhook::find($validated['webhook_id']);
             
@@ -195,8 +219,11 @@ class PingController extends Controller
                 'channel_link' => 'nullable|exists:discord_channels,id',
                 'custom_mention' => 'nullable|string|max:100',
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+                'answers_request' => 'nullable|integer',
             ]);
-            
+
+            $validated = $this->withAnsweredRequest($request, $validated);
+
             $doctrine = !empty($validated['doctrine_id'])
                 ? DiscordHelper::findFittingDoctrine((int) $validated['doctrine_id'])
                 : null;
@@ -268,5 +295,21 @@ class PingController extends Controller
             
             return redirect()->back()->with('error', 'Failed to send broadcasts. Please check logs.');
         }
+    }
+
+    /**
+     * Keeps the request this broadcast answers only while the board would
+     * still show it to this FC. The form's hidden field is never taken on trust.
+     * It counts as answered once the broadcast reaches Discord.
+     */
+    private function withAnsweredRequest(Request $request, array $validated): array
+    {
+        unset($validated['answers_request']);
+
+        if ($request->filled('answers_request') && RequestBoard::find(auth()->user(), $request->input('answers_request'))) {
+            $validated['answers_request'] = (int) $request->input('answers_request');
+        }
+
+        return $validated;
     }
 }

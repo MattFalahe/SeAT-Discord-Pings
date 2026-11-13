@@ -73,6 +73,28 @@ class DiscordUserResolver
         );
     }
 
+    /** The SeAT main character's name, or the account's own name when it has no main. */
+    public static function mainCharacterName($user): string
+    {
+        if (! $user) {
+            return '';
+        }
+
+        return self::mainName((int) ($user->main_character_id ?? 0)) ?? (string) ($user->name ?? '');
+    }
+
+    /** For a job, which only has the account's id. */
+    public static function mainNameOfUser(int $userId): ?string
+    {
+        try {
+            $mainId = (int) DB::table('users')->where('id', $userId)->value('main_character_id');
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return self::mainName($mainId);
+    }
+
     private static function mainName(int $mainId): ?string
     {
         if ($mainId === 0) {

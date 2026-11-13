@@ -317,4 +317,108 @@ class RequestMessageTest extends TestCase
 
         $this->assertSame($embed['fields'], RequestMessage::withBody($embed, '**Panic Active?** Yes')['fields']);
     }
+
+    private function linked(string $url = 'https://seat.example/discord-pings/send?request=0123456789abcdef'): array
+    {
+        return RequestMessage::payload("Help, I'm tackled", 'Rorqual Tackled', self::ROLE, new SenderIdentity('Matt Falahe', 'Minc Corp'), 0xDC3545, 'SeAT Broadcast', '2026-11-08T12:00:00Z', null, $url);
+    }
+
+    /** The plugin writes this one, so unlike anything a member types it stays a link. */
+    public function test_the_form_up_link_goes_last_as_a_link(): void
+    {
+        $fields = $this->linked()['embeds'][0]['fields'];
+        $last = end($fields);
+
+        $this->assertSame(RequestMessage::FOR_FCS, $last['name']);
+        $this->assertSame('[Form up in SeAT](https://seat.example/discord-pings/send?request=0123456789abcdef)', $last['value']);
+        $this->assertFalse($last['inline']);
+    }
+
+    /** An address that would break out of the markdown isn't sent at all. */
+    public function test_an_address_that_could_break_the_link_is_left_out(): void
+    {
+        foreach (['https://seat.example/a b', 'https://seat.example/a)b', 'https://seat.example/<a>', ''] as $url) {
+            $this->assertNotContains(RequestMessage::FOR_FCS, array_keys($this->fields($this->linked($url))), $url);
+        }
+    }
+
+    public function test_who_answered_goes_above_the_link(): void
+    {
+        $embed = RequestMessage::answered($this->linked()['embeds'][0], [['name' => 'Fleet Boss', 'at' => 1762603800], ['name' => 'Second FC', 'at' => 1762603900]]);
+        $names = array_column($embed['fields'], 'name');
+
+        $this->assertSame([RequestMessage::ANSWERED, RequestMessage::FOR_FCS], array_slice($names, -2));
+        $this->assertSame(
+            "Fleet Boss at <t:1762603800:t> (<t:1762603800:R>)\nSecond FC at <t:1762603900:t> (<t:1762603900:R>)",
+            array_column($embed['fields'], 'value', 'name')[RequestMessage::ANSWERED]
+        );
+    }
+
+    public function test_answering_again_replaces_the_line_and_never_adds_a_second(): void
+    {
+        $once = RequestMessage::answered($this->linked()['embeds'][0], [['name' => 'Fleet Boss', 'at' => 1762603800]]);
+        $twice = RequestMessage::answered($once, [['name' => 'Fleet Boss', 'at' => 1762603800], ['name' => 'Second FC', 'at' => 1762603900]]);
+
+        $this->assertSame(1, count(array_keys(array_column($twice['fields'], 'name'), RequestMessage::ANSWERED)));
+        $this->assertCount(count($once['fields']), $twice['fields']);
+    }
+
+    public function test_a_message_with_no_link_gets_the_line_at_the_end(): void
+    {
+        $embed = RequestMessage::answered($this->payload()['embeds'][0], [['name' => 'Fleet Boss', 'at' => 1762603800]]);
+
+        $this->assertSame(RequestMessage::ANSWERED, end($embed['fields'])['name']);
+    }
+
+    public function test_no_answers_means_no_line(): void
+    {
+        $embed = $this->linked()['embeds'][0];
+
+        $this->assertSame($embed['fields'], RequestMessage::answered($embed, [])['fields']);
+    }
+
+    /** An FC's name is typed on the Send form, so it can't carry a link into the message either. */
+    public function test_an_fc_name_cannot_carry_a_masked_link(): void
+    {
+        $embed = RequestMessage::answered($this->payload()['embeds'][0], [['name' => '[Free ISK](https://evil.example)', 'at' => 1762603800]]);
+
+        $this->assertStringNotContainsString('[Free ISK](', end($embed['fields'])['value']);
+    }
+
+    public function test_the_line_still_leaves_the_embed_under_discords_total(): void
+    {
+        $embed = $this->linked()['embeds'][0];
+        $embed['description'] = str_repeat('a', 4096);
+        $answers = array_map(fn ($i) => ['name' => str_repeat('N', 90) . $i, 'at' => 1762603800], range(1, 40));
+
+        $answered = RequestMessage::answered($embed, $answers);
+
+        $total = $this->length($answered['title']) + $this->length($answered['description']);
+        foreach ($answered['fields'] as $field) {
+            $this->assertLessThanOrEqual(1024, $this->length($field['value']));
+            $total += $this->length($field['name']) + $this->length($field['value']);
+        }
+        $this->assertLessThanOrEqual(6000, $total);
+    }
+
+    /** Discord sends back keys of its own, and sending them again is a 400. */
+    public function test_an_embed_read_from_discord_is_cut_to_what_can_be_sent(): void
+    {
+        $embed = RequestMessage::fromDiscord([
+            'type' => 'rich',
+            'title' => 'Tackled',
+            'description' => 'Help',
+            'color' => 14431557,
+            'timestamp' => '2026-11-08T12:00:00+00:00',
+            'footer' => ['text' => 'x'],
+            'content_scan_version' => 1,
+            'fields' => [['name' => 'Sent by', 'value' => 'Matt', 'inline' => true], 'not a field', ['name' => 'Corporation', 'value' => 'Minc']],
+        ]);
+
+        $this->assertSame(['title', 'description', 'color', 'timestamp', 'fields'], array_keys($embed));
+        $this->assertSame([
+            ['name' => 'Sent by', 'value' => 'Matt', 'inline' => true],
+            ['name' => 'Corporation', 'value' => 'Minc', 'inline' => false],
+        ], $embed['fields']);
+    }
 }

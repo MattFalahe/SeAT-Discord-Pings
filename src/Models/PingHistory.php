@@ -48,6 +48,12 @@ class PingHistory extends Model
         });
     }
 
+    /** The FCs who answered a member's request, first one first. */
+    public function answers()
+    {
+        return $this->hasMany(PingRequestAnswer::class, 'request_history_id')->orderBy('created_at')->orderBy('id');
+    }
+
     /**
      * Get the webhook
      */

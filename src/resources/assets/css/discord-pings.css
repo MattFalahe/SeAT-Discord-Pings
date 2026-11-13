@@ -2731,6 +2731,214 @@ div.discord-pings-wrapper div.tab-pane {
 }
 
 /* ============================================
+   Broadcast form: suggestions and message tools
+   ============================================ */
+
+/* The menu has no top on purpose: it sits wherever the field ends, so a help line under it never ends up covered. */
+.discord-pings-wrapper .bf-suggests {
+    position: relative;
+}
+
+.discord-pings-wrapper .bf-suggest-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    max-height: 260px;
+    overflow-y: auto;
+    margin-top: 2px;
+    background: #1e222b;
+    border: 1px solid #454d55;
+    border-radius: 4px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.discord-pings-wrapper .bf-suggest-group {
+    padding: 6px 10px 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8b95a5;
+}
+
+.discord-pings-wrapper .bf-suggest-item {
+    padding: 5px 10px;
+    font-size: 0.875rem;
+    color: #fff;
+    cursor: pointer;
+}
+
+.discord-pings-wrapper .bf-suggest-item:hover,
+.discord-pings-wrapper .bf-suggest-item.bf-active {
+    background: #4c5fd5;
+}
+
+.discord-pings-wrapper .mt-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.discord-pings-wrapper .mt-toolbar .btn {
+    min-width: 32px;
+}
+
+.discord-pings-wrapper .mt-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 2px 4px;
+    background: #454d55;
+}
+
+.discord-pings-wrapper .mt-time-toggle.active {
+    background: #4c5fd5;
+    border-color: #4c5fd5;
+    color: #fff;
+}
+
+.discord-pings-wrapper .mt-time-panel {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    background: #1e222b;
+    border: 1px solid #454d55;
+    border-radius: 4px;
+}
+
+.discord-pings-wrapper .mt-time-panel[hidden] {
+    display: none;
+}
+
+.discord-pings-wrapper .mt-time-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #e2e8f0;
+}
+
+.discord-pings-wrapper .mt-time-note {
+    font-size: 0.8rem;
+    color: #8b95a5;
+}
+
+.discord-pings-wrapper .mt-time-inputs,
+.discord-pings-wrapper .mt-time-quick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.discord-pings-wrapper .mt-time-when {
+    width: auto;
+    min-width: 210px;
+}
+
+.discord-pings-wrapper .mt-time-mode .btn.active {
+    background: #4c5fd5;
+    border-color: #4c5fd5;
+    color: #fff;
+}
+
+.discord-pings-wrapper .mt-time-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.discord-pings-wrapper .mt-time-row {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    border-radius: 3px;
+}
+
+.discord-pings-wrapper .mt-time-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.discord-pings-wrapper .mt-time-label {
+    font-size: 0.85rem;
+    color: #c7cdd8;
+}
+
+.discord-pings-wrapper .mt-time-code {
+    overflow-wrap: anywhere;
+    color: #a5b4fc;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+}
+
+.discord-pings-wrapper .mt-time-preview {
+    font-size: 0.85rem;
+    color: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+    .discord-pings-wrapper .mt-time-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .discord-pings-wrapper .mt-time-label,
+    .discord-pings-wrapper .mt-time-code {
+        grid-column: 1 / -1;
+    }
+}
+
+/* How the preview shows Discord's own formatting. The preview modal moves to body, outside the wrapper. */
+.discord-pings-wrapper .mt-render-stamp,
+#previewModal .mt-render-stamp {
+    padding: 0 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.discord-pings-wrapper .mt-render-spoiler,
+#previewModal .mt-render-spoiler {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: #202225;
+    color: transparent;
+    cursor: pointer;
+}
+
+.discord-pings-wrapper .mt-render-spoiler:hover,
+#previewModal .mt-render-spoiler:hover {
+    color: inherit;
+}
+
+.discord-pings-wrapper .mt-render-quote,
+#previewModal .mt-render-quote {
+    display: inline-block;
+    padding-left: 8px;
+    border-left: 4px solid #4f545c;
+}
+
+.discord-pings-wrapper .mt-render-block,
+#previewModal .mt-render-block {
+    margin: 4px 0;
+    padding: 6px 8px;
+    white-space: pre-wrap;
+    color: #e2e8f0;
+    background: #2b2d31;
+    border: 1px solid #1e1f22;
+    border-radius: 4px;
+}
+
+/* Send form defaults that the Empty mode ignores. Only the fields fade; the mode switch above them stays as it was. */
+.discord-pings-wrapper .send-form-defaults.is-off {
+    opacity: 0.55;
+}
+
+/* ============================================
    End of SeAT Broadcast design system
    ============================================ */
 

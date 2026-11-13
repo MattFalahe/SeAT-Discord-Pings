@@ -17,8 +17,8 @@ class PingRequestButton extends Model
     protected $table = 'discord_ping_request_buttons';
 
     protected $fillable = [
-        'name', 'webhook_id', 'mention_role_id', 'ping_notice', 'starter_text', 'sections', 'type', 'cooldown_minutes',
-        'corporation_id', 'alliance_id', 'audience_permissions', 'is_active', 'sort_order',
+        'name', 'webhook_id', 'mention_role_id', 'ping_notice', 'starter_text', 'sections', 'answer_defaults', 'type',
+        'cooldown_minutes', 'corporation_id', 'alliance_id', 'audience_permissions', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
@@ -28,6 +28,7 @@ class PingRequestButton extends Model
         'alliance_id' => 'integer',
         'audience_permissions' => 'array',
         'sections' => 'array',
+        'answer_defaults' => 'array',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];

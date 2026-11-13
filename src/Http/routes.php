@@ -29,6 +29,10 @@ Route::group([
         ->name('discordpings.requests.ships')
         ->middleware('can:discordpings.line_member');
 
+    Route::get('/requests/answers', 'PingRequestController@answers')
+        ->name('discordpings.requests.answers')
+        ->middleware('can:discordpings.line_member');
+
     Route::post('/requests/{id}/press', 'PingRequestController@press')
         ->name('discordpings.requests.press')
         ->middleware('can:discordpings.line_member');
@@ -100,6 +104,16 @@ Route::group([
     Route::post('/send-multiple', 'PingController@sendMultiple')
         ->name('discordpings.send.multiple')
         ->middleware('can:discordpings.send_multiple');
+
+    // Suggestions on the Send and Schedule forms
+    Route::get('/send/systems', 'BroadcastLookupController@systems')
+        ->name('discordpings.send.systems')
+        ->middleware('can:discordpings.send');
+
+    Route::get('/send/systems/{id}/locations', 'BroadcastLookupController@locations')
+        ->name('discordpings.send.locations')
+        ->middleware('can:discordpings.send')
+        ->where('id', '[0-9]+');
     
     // Discord Configuration (Webhooks, Roles, Channels)
     Route::get('/config', 'DiscordConfigController@index')
@@ -189,6 +203,11 @@ Route::group([
 
     Route::delete('/config/ping-requests/{id}', 'PingRequestButtonController@destroy')
         ->name('discordpings.config.ping-requests.destroy')
+        ->middleware('can:discordpings.manage_webhooks');
+
+    // What the Send and Schedule forms start from
+    Route::post('/config/send-defaults', 'DiscordConfigController@updateSendDefaults')
+        ->name('discordpings.config.send-defaults')
         ->middleware('can:discordpings.manage_webhooks');
 
     // Structure Timer integration settings

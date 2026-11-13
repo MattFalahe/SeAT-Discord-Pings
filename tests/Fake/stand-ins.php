@@ -62,6 +62,124 @@ namespace Illuminate\Database\Eloquent {
 
             return true;
         }
+
+        /** Every list query blows up with this while it's set. */
+        public static ?\Throwable $failQueryWith = null;
+
+        public static function where(...$arguments): FakeQuery
+        {
+            return (new FakeQuery(static::class))->where(...$arguments);
+        }
+
+        public static function whereIn(string $column, array $values): FakeQuery
+        {
+            return (new FakeQuery(static::class))->whereIn($column, $values);
+        }
+    }
+
+    /** A query over the rows find() can see, so a model's where() works the way the database's would. */
+    class FakeQuery
+    {
+        /** @var callable[] */
+        private array $filters = [];
+        private array $orders = [];
+
+        public function __construct(private string $class)
+        {
+        }
+
+        public function where($column, $operator = null, $value = null): self
+        {
+            if (func_num_args() === 2) {
+                $value = $operator;
+                $operator = '=';
+            }
+
+            $this->filters[] = function ($row) use ($column, $operator, $value) {
+                $actual = $row->$column;
+
+                return match ($operator) {
+                    '=' => $actual == $value,
+                    '!=' => $actual != $value,
+                    '>=' => $actual >= $value,
+                    '<=' => $actual <= $value,
+                    '>' => $actual > $value,
+                    '<' => $actual < $value,
+                };
+            };
+
+            return $this;
+        }
+
+        public function whereIn(string $column, array $values): self
+        {
+            $this->filters[] = fn ($row) => in_array($row->$column, $values);
+
+            return $this;
+        }
+
+        public function orderBy(string $column, string $direction = 'asc'): self
+        {
+            $this->orders[] = [$column, strtolower($direction)];
+
+            return $this;
+        }
+
+        public function get(): \Illuminate\Support\Collection
+        {
+            return new \Illuminate\Support\Collection($this->rows());
+        }
+
+        public function first()
+        {
+            return $this->rows()[0] ?? null;
+        }
+
+        public function exists(): bool
+        {
+            return $this->rows() !== [];
+        }
+
+        public function pluck(string $column): \Illuminate\Support\Collection
+        {
+            return new \Illuminate\Support\Collection(array_map(fn ($row) => $row->$column, $this->rows()));
+        }
+
+        private function rows(): array
+        {
+            if (Model::$failQueryWith) {
+                throw Model::$failQueryWith;
+            }
+
+            $rows = array_values(array_filter(Model::$found[$this->class] ?? [], function ($row) {
+                foreach ($this->filters as $filter) {
+                    if (! $filter($row)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }));
+
+            usort($rows, function ($a, $b) {
+                foreach ($this->orders as [$column, $direction]) {
+                    $compared = $a->$column <=> $b->$column;
+                    if ($compared !== 0) {
+                        return $direction === 'desc' ? -$compared : $compared;
+                    }
+                }
+
+                return 0;
+            });
+
+            return $rows;
+        }
+    }
+}
+
+namespace Illuminate\Routing {
+    abstract class Controller
+    {
     }
 }
 
@@ -277,6 +395,9 @@ namespace GuzzleHttp {
         /** @var array<int, array{0: string, 1: array}> every patch, in order */
         public static array $patches = [];
 
+        /** @var array<int, array{0: string, 1: array}> every get, in order */
+        public static array $gets = [];
+
         /** @var array<int, object> what the next posts and patches get back, in the order they're made; a Throwable is thrown */
         public static array $replies = [];
 
@@ -296,6 +417,13 @@ namespace GuzzleHttp {
             self::$patches[] = [$url, $options];
 
             return self::nextReply('patch', $url);
+        }
+
+        public function get(string $url, array $options = [])
+        {
+            self::$gets[] = [$url, $options];
+
+            return self::nextReply('get', $url);
         }
 
         private static function nextReply(string $verb, string $url)
@@ -326,6 +454,18 @@ namespace {
         function trans($key)
         {
             return 'Translated ' . $key;
+        }
+    }
+
+    // Only the routes a test names exist, the way an unknown name throws in Laravel.
+    if (!function_exists('route')) {
+        function route($name, $parameters = [])
+        {
+            if (!isset($GLOBALS['FAKE_ROUTES'][$name])) {
+                throw new \InvalidArgumentException('Route [' . $name . '] not defined.');
+            }
+
+            return $GLOBALS['FAKE_ROUTES'][$name] . ($parameters ? '?' . http_build_query($parameters) : '');
         }
     }
 }

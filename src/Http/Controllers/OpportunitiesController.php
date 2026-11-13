@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\TacticalEvent;
 use DiscordPings\Services\PingRequests\ErrorText;
+use DiscordPings\Services\PingRequests\RequestAnswers;
 use DiscordPings\Services\PingRequests\RequestBoard;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -53,9 +54,13 @@ class OpportunitiesController extends Controller
             $requests = [];
             $requestsInUse = false;
             $requestHours = RequestBoard::HOURS;
+            $requestAnswers = [];
             try {
                 $requests = RequestBoard::forViewer(auth()->user());
                 $requestsInUse = $requests !== [] || PingRequestButton::active()->exists();
+
+                // Null when they couldn't be read, so the page doesn't claim nobody has answered.
+                $requestAnswers = RequestAnswers::forRequests(array_map(fn ($row) => $row->id, $requests));
             } catch (\Throwable $e) {
                 Log::warning('[DiscordPings] Could not load member requests for FC Opportunities: ' . ErrorText::safe($e->getMessage()));
             }
@@ -63,7 +68,7 @@ class OpportunitiesController extends Controller
             return view('discordpings::opportunities.index', compact(
                 'events', 'rangeDays',
                 'managerCoreInstalled', 'structureManagerInstalled', 'miningManagerInstalled',
-                'requests', 'requestsInUse', 'requestHours'
+                'requests', 'requestsInUse', 'requestHours', 'requestAnswers'
             ));
 
         } catch (\Exception $e) {

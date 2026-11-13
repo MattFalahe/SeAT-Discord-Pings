@@ -4,7 +4,7 @@
 @section('page_header', 'Ping Details')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 @endpush
 
@@ -69,11 +69,46 @@
                     </div>
                 </dd>
 
-                @if($history->fields && count($history->fields) > 0)
+                @if ($history->isMemberRequest())
+                    <dt class="col-sm-3">Answered by</dt>
+                    <dd class="col-sm-9">
+                        @if ($answers === null)
+                            <span class="text-muted">Couldn't check</span>
+                        @else
+                            @forelse ($answers as $answer)
+                                <div>
+                                    <i class="fas fa-user-check text-success"></i>
+                                    <strong>{{ $answer['name'] }}</strong>,
+                                    <span class="eve-time" data-eve-time="{{ gmdate('Y-m-d\TH:i:s\Z', $answer['at']) }}" data-show-local>{{ gmdate('Y-m-d H:i', $answer['at']) }} EVE</span>
+                                    @if ($answer['broadcast_id'] && auth()->user()->can('discordpings.view_all_history'))
+                                        <a href="{{ route('discordpings.history.show', $answer['broadcast_id']) }}">their broadcast</a>
+                                    @endif
+                                </div>
+                            @empty
+                                <span class="text-muted">Nobody yet</span>
+                            @endforelse
+                        @endif
+                    </dd>
+                @elseif (! empty($answeredRequest))
+                    <dt class="col-sm-3">Answered</dt>
+                    <dd class="col-sm-9">
+                        {{ $answeredRequest->fields['button'] ?? 'A ping request' }} from
+                        {{ $answeredRequest->fields['main'] ?? $answeredRequest->user_name }}
+                        @if (auth()->user()->can('discordpings.view_all_history'))
+                            (<a href="{{ route('discordpings.history.show', $answeredRequest->id) }}">the request</a>)
+                        @endif
+                    </dd>
+                @endif
+
+                {{-- ref only ties a request to the link in its Discord message. --}}
+                @php
+                    $shownFields = collect($history->fields ?? [])->except(['ref']);
+                @endphp
+                @if ($shownFields->isNotEmpty())
                     <dt class="col-sm-3">Fields</dt>
                     <dd class="col-sm-9">
                         <table class="table table-sm">
-                            @foreach($history->fields as $key => $value)
+                            @foreach ($shownFields as $key => $value)
                                 <tr>
                                     <th>{{ ucwords(str_replace('_', ' ', $key)) }}</th>
                                     <td>{{ $value }}</td>

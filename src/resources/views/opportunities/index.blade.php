@@ -5,7 +5,7 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <style>
     /* Page-specific only — chrome lives in canonical CSS */
     .ops-meta-row {
@@ -46,6 +46,8 @@
     #requestsTable .badge { font-size: 0.78rem; }
     .ops-ago { font-size: 0.8rem; color: #9ca3af; }
     .ops-request-text { white-space: pre-wrap; font-size: 0.85rem; max-width: 480px; }
+    .ops-answered { font-size: 0.85rem; white-space: nowrap; }
+    .ops-answered-at { font-size: 0.8rem; color: #9ca3af; }
 </style>
 @endpush
 
@@ -67,6 +69,7 @@
                                 <th>Request</th>
                                 <th>From</th>
                                 <th>What they wrote</th>
+                                <th>Answered by</th>
                                 <th class="text-right">Actions</th>
                             </tr>
                         </thead>
@@ -99,6 +102,21 @@
                                         <div class="ops-request-text">{{ Str::limit($wrote, 300) }}</div>
                                     @else
                                         <span class="text-muted" style="font-size: 0.85rem;">Nothing filled in</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($requestAnswers === null)
+                                        <span class="text-muted" style="font-size: 0.85rem;">Couldn't check</span>
+                                    @elseif (empty($requestAnswers[$memberRequest->id]))
+                                        <span class="text-muted" style="font-size: 0.85rem;">Nobody yet</span>
+                                    @else
+                                        @foreach ($requestAnswers[$memberRequest->id] as $answer)
+                                            <div class="ops-answered">
+                                                <i class="fas fa-user-check text-success"></i>
+                                                <strong>{{ $answer['name'] }}</strong>
+                                                <span class="ops-answered-at eve-time" data-eve-time="{{ gmdate('Y-m-d\TH:i:s\Z', $answer['at']) }}" data-show-local>{{ gmdate('H:i', $answer['at']) }} EVE</span>
+                                            </div>
+                                        @endforeach
                                     @endif
                                 </td>
                                 <td class="text-right">
@@ -163,11 +181,17 @@
                 </span>
             </div>
 
-            @if(! ($managerCoreInstalled ?? false) || ! ($structureManagerInstalled ?? false))
+            @if (! ($managerCoreInstalled ?? false))
                 <div class="alert-pings-styled alert-pings-info">
                     <i class="fas fa-info-circle"></i>
-                    Install Manager Core and Structure Manager to populate this board. With both active,
-                    structure timers and fleet ops appear here as they are created.
+                    Install Manager Core to populate this board. With Structure Manager or Mining Manager
+                    installed too, structure timers and moon extractions appear here as they are created.
+                </div>
+            @elseif (! ($structureManagerInstalled ?? false) && ! ($miningManagerInstalled ?? false) && $events->isEmpty())
+                <div class="alert-pings-styled alert-pings-info">
+                    <i class="fas fa-info-circle"></i>
+                    Install Structure Manager or Mining Manager to fill this board. Structure timers come
+                    from one and moon extractions from the other.
                 </div>
             @elseif($events->isEmpty())
                 <div class="alert-pings-styled alert-pings-info">
@@ -349,7 +373,7 @@ $(document).ready(function() {
             lengthMenu: [10, 25, 50, 100],
             order: [[0, 'desc']],
             columnDefs: [
-                { orderable: false, targets: [3, 4] }
+                { orderable: false, targets: [3, 4, 5] }
             ],
             language: {
                 search: '_INPUT_',

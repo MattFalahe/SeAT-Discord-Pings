@@ -276,12 +276,14 @@
                 $('<span class="text-muted">').append('Sent ', $('<span class="eve-time" data-show-local>').attr('data-eve-time', entry.sentAt).text(entry.sentAt.substr(11, 5) + ' EVE')),
                 $left
             ),
+            $('<div class="pr-active-handled" hidden>'),
             $fields,
             $('<button type="button" class="btn btn-sm btn-pings-secondary js-pr-details-send">').append($('<i class="fas fa-sync-alt">'), ' Update message'),
             $('<div class="pr-status pr-details-status" role="status">')
         );
         var details = {
             token: entry.token,
+            historyId: entry.historyId ? String(entry.historyId) : null,
             $item: $item,
             $fields: $fields,
             $left: $left,
@@ -311,12 +313,17 @@
         $('#prActive').removeClass('d-none');
         actives.push(details);
 
+        if (details.historyId) {
+            showHandled(details.historyId, entry.answeredBy || []);
+        }
+
         if (window.EveTime) {
             window.EveTime.convert($item[0]);
         }
 
         countDown();
         ticker = ticker || setInterval(countDown, 1000);
+        watchAnswers();
 
         if (fresh) {
             var top = $('#prActive')[0].getBoundingClientRect().top;
@@ -325,6 +332,82 @@
                 $('#prActive')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
+    }
+
+    /*
+     * Which FCs have answered a request, so the member knows it's being
+     * handled. A request counts as answered once an FC's broadcast for it
+     * has gone out.
+     */
+    var ANSWERS_EVERY = 30000;
+    var answersTimer = null;
+
+    function handledBadge(answers) {
+        return $('<span class="badge badge-info pr-handled-badge" title="An FC has sent a broadcast for this request">').append(
+            $('<i class="fas fa-user-check">'),
+            document.createTextNode(' Handled by ' + answers.map(function (answer) {
+                return answer.name;
+            }).join(', '))
+        );
+    }
+
+    function showHandled(historyId, answers) {
+        var id = String(historyId);
+
+        // The table keeps the rows of its other pages out of the document, so they're found through it.
+        var $table = $('#prRecentTable');
+        var $rows = $.fn.dataTable && $.fn.dataTable.isDataTable($table[0]) ? $($table.DataTable().rows().nodes()) : $table.find('tbody tr');
+
+        $rows.find('.pr-handled').filter(function () {
+            return $(this).attr('data-history-id') === id;
+        }).each(function () {
+            $(this).empty().append(answers.length > 0 ? handledBadge(answers) : null);
+        });
+
+        actives.forEach(function (details) {
+            if (details.historyId !== id) {
+                return;
+            }
+
+            var $handled = details.$item.find('.pr-active-handled').empty().prop('hidden', answers.length === 0);
+
+            answers.forEach(function (answer, index) {
+                $handled.append(
+                    index === 0 ? $('<i class="fas fa-user-check">') : ', ',
+                    index === 0 ? ' Being handled by ' : '',
+                    $('<strong>').text(answer.name),
+                    ' (', $('<span class="eve-time" data-show-local>').attr('data-eve-time', answer.at).text(answer.at.substr(11, 5) + ' EVE'), ')'
+                );
+            });
+
+            if (window.EveTime) {
+                window.EveTime.convert($handled[0]);
+            }
+        });
+    }
+
+    function checkAnswers() {
+        if (document.hidden) {
+            return;
+        }
+
+        $.getJSON(config.answersUrl).done(function (reply) {
+            var answers = reply && reply.answers ? reply.answers : {};
+
+            Object.keys(answers).forEach(function (id) {
+                showHandled(id, answers[id]);
+            });
+        });
+    }
+
+    // Every half minute while a request could still be answered, and straight away when the tab comes back.
+    function watchAnswers() {
+        if (answersTimer || !config.answersUrl) {
+            return;
+        }
+
+        answersTimer = setInterval(checkAnswers, ANSWERS_EVERY);
+        document.addEventListener('visibilitychange', checkAnswers);
     }
 
     function countDown() {
@@ -959,5 +1042,9 @@
         config.active.slice().reverse().forEach(function (entry) {
             showActive(entry, false);
         });
+
+        if (config.watchAnswers) {
+            watchAnswers();
+        }
     });
 })(jQuery);

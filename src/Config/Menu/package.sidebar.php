@@ -1,9 +1,9 @@
 <?php
 
-// Build entries dynamically so MC/SM-dependent menu items only appear when
-// the required plugins are present. The route itself still exists either
-// way — anyone with a deep-link bookmark gets the empty-state page that
-// invites them to install MC + SM.
+// Build entries dynamically so MC-dependent menu items only appear when
+// Manager Core is present. The route itself still exists either way —
+// anyone with a deep-link bookmark gets the empty-state page that invites
+// them to install it.
 $entries = [
     [
         'name'  => 'Ping Requests',
@@ -48,14 +48,13 @@ $entries = [
     ],
 ];
 
-// FC Opportunities — only meaningful with Manager Core + Structure Manager.
-// The board reads `discord_tactical_events`, which is only populated by
-// StructureTimerHandler receiving SM events via MC's EventBus. Hide the
-// menu entry when either dependency is missing so the sidebar stays
-// clean. NOTE: if the install runs `php artisan config:cache`, clear it
-// after installing MC/SM so the new entry appears.
-if (class_exists('\ManagerCore\Services\EventBus')
-    && class_exists('\StructureManager\Services\TimerEventPublisher')) {
+// FC Opportunities — shown whenever Manager Core is installed. The board's
+// ops arrive through MC's EventBus: structure timers from Structure
+// Manager, moon extractions from Mining Manager, either one being enough.
+// Without MC the entry stays hidden. NOTE: if the install runs
+// `php artisan config:cache`, clear it after installing MC so the new
+// entry appears.
+if (class_exists('\ManagerCore\Services\EventBus')) {
     $entries[] = [
         'name'  => 'FC Opportunities',
         'label' => 'discordpings::menu.opportunities',

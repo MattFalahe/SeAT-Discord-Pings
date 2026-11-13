@@ -4,7 +4,8 @@
 @section('page_header', 'Discord Pings')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
+<script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <style>
     /* Page-specific only — chrome lives in canonical CSS.
        Note: the Discord embed preview modal uses Discord's actual UI colors
@@ -21,6 +22,10 @@
     .recent-ping:hover {
         background-color: rgba(102, 126, 234, 0.1);
     }
+    #previewMessage {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
 </style>
 @endpush
 
@@ -32,7 +37,7 @@
         $myTemplates = ($templates ?? collect())->where('is_global', false)->where('created_by', auth()->id());
     @endphp
 
-    @if($globalTemplates->count() > 0)
+    @if ($globalTemplates->count() > 0)
     <div class="card card-dark mb-3">
         <div class="card-header">
             <h3 class="card-title">
@@ -40,8 +45,8 @@
             </h3>
         </div>
         <div class="card-body p-2">
-            @foreach($globalTemplates as $tpl)
-                <button class="btn btn-sm btn-block btn-outline-primary template-btn"
+            @foreach ($globalTemplates as $tpl)
+                <button type="button" class="btn btn-sm btn-block btn-outline-primary template-btn"
                         data-template="{{ $tpl->template }}"
                         data-fields='@json($tpl->fields ?? [])'>
                     {{ $tpl->name }}
@@ -58,14 +63,14 @@
                 <i class="fas fa-file-alt"></i> My Templates
             </h3>
             <div class="card-tools">
-                <button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#saveTemplateModal" title="Save current form as template">
+                <button type="button" class="btn btn-sm btn-outline-success" id="openSaveTemplate" title="Save current form as template">
                     <i class="fas fa-save"></i>
                 </button>
             </div>
         </div>
         <div class="card-body p-2">
-            @forelse($myTemplates as $tpl)
-                <button class="btn btn-sm btn-block btn-outline-info template-btn"
+            @forelse ($myTemplates as $tpl)
+                <button type="button" class="btn btn-sm btn-block btn-outline-info template-btn"
                         data-template="{{ $tpl->template }}"
                         data-fields='@json($tpl->fields ?? [])'>
                     {{ $tpl->name }}
@@ -87,10 +92,11 @@
         </div>
         <div class="card-body p-0">
             <div class="list-group list-group-flush">
-                @forelse($recentPings ?? [] as $ping)
-                    <div class="list-group-item recent-ping p-2" 
+                @forelse ($recentPings ?? [] as $ping)
+                    <div class="list-group-item recent-ping p-2"
                          data-message="{{ $ping->message }}"
-                         data-fields='@json($ping->fields)'>
+                         data-webhook-id="{{ $ping->webhook_id }}"
+                         data-fields='@json($ping->fields ?? [])'>
                         <small class="text-muted">
                             {{ $ping->created_at->diffForHumans() }}
                         </small>
@@ -103,7 +109,7 @@
                 @endforelse
             </div>
         </div>
-        @if(($recentPings ?? collect())->count() > 0)
+        @if (($recentPings ?? collect())->count() > 0)
             <div class="card-footer p-2">
                 <a href="{{ route('discordpings.history') }}" class="btn btn-sm btn-block btn-pings-secondary">
                     View All History
@@ -119,15 +125,15 @@
     <form method="POST" action="{{ route('discordpings.send.post') }}" id="pingForm">
         @csrf
 
-        @if(! empty($tacticalEvent))
+        @if (! empty($tacticalEvent))
             <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
                 <i class="fas fa-satellite-dish"></i>
                 <strong>Form-up for:</strong>
                 {{ $tacticalEvent->title }}
-                @if($tacticalEvent->system_name)
+                @if ($tacticalEvent->system_name)
                     in <strong>{{ $tacticalEvent->system_name }}</strong>
                 @endif
-                @if($tacticalEvent->eve_time)
+                @if ($tacticalEvent->eve_time)
                     ,
                     {{ $tacticalEvent->category_group === 'mining' ? 'window closes at' : 'timer at' }}
                     <strong>
@@ -140,7 +146,9 @@
             </div>
         @endif
 
-        @if(! empty($pingRequest))
+        @if (! empty($pingRequest))
+            {{-- Checked again when the form comes back, so this only says which request it means. --}}
+            <input type="hidden" name="answers_request" value="{{ $pingRequest->id }}">
             <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
                 <i class="fas fa-hand-paper"></i>
                 <strong>Form-up for:</strong>
@@ -154,6 +162,24 @@
                     </span>
                 </strong>.
                 The form below starts from what they wrote, so check it before you send.
+                It counts as answered once your broadcast goes out.
+                @if (! empty($pingRequestAnswers))
+                    <div class="mt-2">
+                        <i class="fas fa-user-check"></i>
+                        <strong>Already answered by</strong>
+                        @foreach ($pingRequestAnswers as $answer)
+                            {{ $answer['name'] }}
+                            (<span class="eve-time" data-eve-time="{{ gmdate('Y-m-d\TH:i:s\Z', $answer['at']) }}" data-show-local>{{ gmdate('H:i', $answer['at']) }} EVE</span>){{ $loop->last ? '.' : ',' }}
+                        @endforeach
+                        You can still send your own.
+                    </div>
+                @endif
+            </div>
+        @elseif (! empty($pingRequestMissing))
+            <div class="alert-pings-styled alert-pings-warning" style="margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                That request can't be answered from here. It's more than 24 hours old, the member closed it,
+                or it isn't one you can see. The form starts as it normally would.
             </div>
         @endif
 
@@ -169,130 +195,7 @@
                 </div>
             </div>
             <div class="card-body">
-                {{-- Single Webhook Selection --}}
-                <div class="form-group" id="singleWebhookDiv">
-                    <label>Target Webhook <span class="text-danger">*</span></label>
-                    <select name="webhook_id" class="form-control" id="webhookSelect" required>
-                        <option value="">Select Channel...</option>
-                        @foreach($webhooks ?? [] as $webhook)
-                            <option value="{{ $webhook->id }}" data-color="{{ $webhook->embed_color }}">
-                                {{ $webhook->name }}
-                                @if($webhook->channel_type)
-                                    ({{ $webhook->channel_type }})
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Multiple Webhooks Selection (hidden by default) --}}
-                <div class="form-group" id="multipleWebhooksDiv" style="display: none;">
-                    <label>Select Target Webhooks <span class="text-danger">*</span></label>
-                    @foreach($webhooks ?? [] as $webhook)
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" 
-                                   id="webhook_check_{{ $webhook->id }}"
-                                   name="webhook_ids[]" 
-                                   value="{{ $webhook->id }}">
-                            <label class="custom-control-label" for="webhook_check_{{ $webhook->id }}">
-                                {{ $webhook->name }}
-                                @if($webhook->channel_type)
-                                    <small class="text-muted">({{ $webhook->channel_type }})</small>
-                                @endif
-                            </label>
-                        </div>
-                    @endforeach
-                </div>
-                
-                {{-- Broadcast Type Selection --}}
-                <div class="form-group">
-                    <label>Broadcast Type</label>
-                    @php($embedDefault = old('embed_type', $prefill['embed_type'] ?? 'fleet'))
-                    <select name="embed_type" class="form-control" id="embedType">
-                        @foreach(['fleet' => '📢 Fleet Broadcast', 'announcement' => '📣 Announcement', 'message' => '💬 Message', 'prepping' => '‼️ PREPING ‼️'] as $embedVal => $embedLabel)
-                            <option value="{{ $embedVal }}" {{ $embedDefault === $embedVal ? 'selected' : '' }}>{{ $embedLabel }}</option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">
-                        Choose the type of broadcast to display in Discord
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Message <span class="text-danger">*</span></label>
-                    <textarea name="message" class="form-control" rows="3" required
-                              maxlength="2000">{{ old('message', $prefill['message'] ?? '') }}</textarea>
-                    <small class="form-text text-muted">
-                        <span id="charCount">0</span>/2000 characters
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Mentions</label>
-                    <select name="mention_type" class="form-control" id="mentionType">
-                        <option value="none">No Mention</option>
-                        <option value="everyone">@everyone</option>
-                        <option value="here">@here</option>
-                        <option value="role">Discord Role</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-
-                {{-- Role Mention Dropdown (hidden by default) --}}
-                <div class="form-group" id="roleMentionDiv" style="display: none;">
-                    <label>Select Role to Mention</label>
-                    <select name="role_mention" class="form-control">
-                        <option value="">Select Role...</option>
-                        @foreach($roles ?? [] as $role)
-                            <option value="{{ $role->id }}">
-                                {{ $role->name }}
-                                @if($role->color)
-                                    <span style="color: {{ $role->color }}">●</span>
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Custom Mention Input (hidden by default) --}}
-                <div class="form-group" id="customMentionDiv" style="display: none;">
-                    <label>Custom Mention</label>
-                    <input type="text" name="custom_mention" class="form-control" 
-                           placeholder="@username or custom mention">
-                </div>
-
-                {{-- Channel Link Dropdown --}}
-                <div class="form-group">
-                    <label>Discord Channel (Optional)</label>
-                    <select name="channel_link" class="form-control" id="channelSelect">
-                        <option value="">No Discord Channel...</option>
-                        @foreach($channels ?? [] as $channel)
-                            <option value="{{ $channel->id }}">
-                                #{{ $channel->name }} 
-                                <small class="text-muted">({{ ucfirst($channel->channel_type) }})</small>
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">
-                        <i class="fas fa-info-circle"></i> Select a pre-configured Discord channel. 
-                        <strong>If you select a channel here, leave the Comms field empty</strong> to avoid duplicate entries.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Embed Color</label>
-                    <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text p-1">
-                                <input type="color" id="colorPicker" value="#5865F2"
-                                       style="width:34px;height:34px;padding:2px;border:none;cursor:pointer;background:none;">
-                            </span>
-                        </div>
-                        <input type="text" name="embed_color" class="form-control"
-                               id="embedColor" value="#5865F2" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB">
-                    </div>
-                    <small class="form-text text-muted">Use the color picker or type a hex code directly</small>
-                </div>
+                @include('discordpings::partials.broadcast-main', ['multipleWebhooks' => true])
             </div>
         </div>
 
@@ -308,106 +211,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-user"></i> FC Name</label>
-                            <input type="text" name="fc_name" class="form-control"
-                                   value="{{ old('fc_name', $prefill['fc_name'] ?? '') }}">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-map-marker-alt"></i> Formup Location</label>
-                            <div class="input-group">
-                                <input type="text" name="formup_location" id="formupLocation" class="form-control"
-                                       placeholder="e.g., Jita 4-4" value="{{ old('formup_location', $prefill['formup_location'] ?? '') }}">
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
-                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fas fa-list"></i>
-                                    </button>
-                                    <div class="dropdown-menu dropdown-menu-right">
-                                        <h6 class="dropdown-header">Quick Select Staging</h6>
-                                        @forelse($stagings ?? [] as $staging)
-                                            <a class="dropdown-item staging-select" href="#" 
-                                               data-location="{{ $staging->getFullLocationString() }}">
-                                                {{ $staging->name }}
-                                                @if($staging->is_default)
-                                                    <span class="badge badge-primary ml-1">Default</span>
-                                                @endif
-                                                <br>
-                                                <small class="text-muted">{{ $staging->getFullLocationString() }}</small>
-                                            </a>
-                                        @empty
-                                            <span class="dropdown-item text-muted">No staging locations configured</span>
-                                        @endforelse
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item" href="{{ route('discordpings.config') }}#stagings-tab">
-                                            <i class="fas fa-cog"></i> Configure Stagings
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> PAP Type</label>
-                            <select name="pap_type" class="form-control">
-                                <option value="">None</option>
-                                @foreach($papTypes as $pap)
-                                    <option value="{{ $pap->name }}">{{ $pap->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-headset"></i> Comms</label>
-                            <input type="text" name="comms" class="form-control" id="commsField"
-                                   placeholder="e.g., Mumble Channel 3 or TeamSpeak Room 5"
-                                   value="{{ old('comms') }}">
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> For voice comms or custom channels. 
-                                <strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label><i class="fas fa-rocket"></i> Doctrine</label>
-                    @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)
-                        {{-- Show dropdown if seat-fitting is installed --}}
-                        <div class="input-group">
-                            <select name="doctrine_id" id="doctrineSelect" class="form-control">
-                                <option value="">Select Doctrine...</option>
-                                @foreach($doctrines as $doctrine)
-                                    <option value="{{ $doctrine->id }}">
-                                        {{ $doctrine->name }}
-                                    </option>
-                                @endforeach
-                                <option value="custom">-- Manual Entry --</option>
-                            </select>
-                        </div>
-                        <input type="text" name="doctrine" id="doctrineManual" class="form-control mt-2" 
-                               placeholder="Or type doctrine manually" 
-                               value="{{ old('doctrine') }}"
-                               style="display: none;">
-                        <small class="form-text text-muted">
-                            Select a doctrine from seat-fitting or choose "Manual Entry" to type your own
-                        </small>
-                    @else
-                        {{-- Show text input if seat-fitting is not installed --}}
-                        <input type="text" name="doctrine" class="form-control" 
-                               placeholder="Void Rays (MWD kikis) (Boosts > Logi > Kikis > Slasher/Hyena/Keres)" 
-                               value="{{ old('doctrine') }}">
-                    @endif
-                </div>
+                @include('discordpings::partials.broadcast-optional')
             </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-pings-primary">
@@ -420,35 +224,35 @@
                     <i class="fas fa-eye"></i> Preview
                 </button>
             </div>
-            
-            <!-- Preview Modal -->
-            <div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog modal-lg" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Discord Embed Preview</h5>
-                            <button type="button" class="close" data-dismiss="modal">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <div style="background-color: #36393f; padding: 20px; border-radius: 8px;">
-                                <div style="background-color: #2f3136; border-left: 4px solid #5865F2; padding: 16px; border-radius: 4px;" id="embedPreview">
-                                    <div style="color: #fff; font-weight: bold; margin-bottom: 8px;" id="previewTitle">📢 Fleet Broadcast</div>
-                                    <div style="color: #dcddde; margin-bottom: 12px;" id="previewMessage"></div>
-                                    <div id="previewFields" style="margin-top: 12px;"></div>
-                                    <div style="color: #72767d; font-size: 12px; margin-top: 12px;" id="previewFooter"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+    </form>
+
+    {{-- Preview Modal --}}
+    <div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Discord Embed Preview</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="background-color: #36393f; padding: 20px; border-radius: 8px;">
+                        <div style="background-color: #2f3136; border-left: 4px solid #5865F2; padding: 16px; border-radius: 4px;" id="embedPreview">
+                            <div style="color: #fff; font-weight: bold; margin-bottom: 8px;" id="previewTitle">📢 Fleet Broadcast</div>
+                            <div style="color: #dcddde; margin-bottom: 12px;" id="previewMessage"></div>
+                            <div id="previewFields" style="margin-top: 12px;"></div>
+                            <div style="color: #72767d; font-size: 12px; margin-top: 12px;" id="previewFooter"></div>
                         </div>
                     </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
-    </form>
+    </div>
 
     {{-- Save as Template Modal --}}
     <div class="modal fade" id="saveTemplateModal" tabindex="-1" role="dialog">
@@ -460,9 +264,10 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Template Name <span class="text-danger">*</span></label>
+                        <label for="templateName">Template Name <span class="text-danger">*</span></label>
                         <input type="text" id="templateName" class="form-control" maxlength="100"
                                placeholder="e.g., My Fleet CTA">
+                        <small class="form-text text-muted">Saves every box as it is now, the webhooks and the message included.</small>
                     </div>
                     <div id="saveTemplateAlert" style="display:none;"></div>
                 </div>
@@ -479,352 +284,150 @@
 @stop
 
 @push('javascript')
+@php
+    // A form that came back with errors keeps what was typed. Otherwise it
+    // starts from Settings' defaults and whatever the page was opened for.
+    $oldInput = collect(old())->except(['_token', '_method'])->all();
+    $formValues = $oldInput !== [] ? $oldInput : ($prefill ?? []);
+
+    $scheduleUrl = route('discordpings.scheduled.create', array_filter([
+        'answers_request' => ! empty($pingRequest) ? $pingRequest->id : null,
+        'tactical_event_id' => ! empty($tacticalEvent) ? $tacticalEvent->id : null,
+    ]));
+@endphp
+@include('discordpings::partials.broadcast-scripts', [
+    'suggestions' => $suggestions ?? [],
+    'singleAction' => route('discordpings.send.post'),
+    'multipleAction' => route('discordpings.send.multiple'),
+])
 <script>
-$(document).ready(function() {
-    // Character counter
-    $('textarea[name="message"]').on('input', function() {
-        $('#charCount').text($(this).val().length);
+$(function () {
+    'use strict';
+
+    var TITLES = {
+        fleet: '📢 Fleet Broadcast',
+        announcement: '📣 Announcement',
+        message: '💬 Message',
+        prepping: '‼️ PREPING ‼️'
+    };
+
+    BroadcastForm.init('#pingForm', @json($formValues));
+
+    // attr() rather than data(): data() turns a message like "1" or "true" into a number or a boolean.
+    function attrJson($element, name) {
+        try {
+            var parsed = JSON.parse($element.attr(name) || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    $('.template-btn').on('click', function () {
+        BroadcastForm.fill($.extend({}, attrJson($(this), 'data-fields'), {
+            message: $(this).attr('data-template') || ''
+        }));
     });
 
-    // Template buttons - populate message + fields
-    $('.template-btn').click(function() {
-        $('textarea[name="message"]').val($(this).data('template')).trigger('input');
-        var fields = $(this).data('fields');
-        if (fields && typeof fields === 'object') {
-            $.each(fields, function(key, value) {
-                // Map template field names to send form field names
-                var fieldName = key;
-
-                // Handle mention_role_id -> role_mention mapping
-                if (key === 'mention_role_id') {
-                    fieldName = 'role_mention';
-                }
-
-                var $el = $('[name="' + fieldName + '"]');
-                if ($el.length) {
-                    $el.val(value).trigger('change');
-                }
-
-                // Special handling for formup_location (ensure it updates the input)
-                if (key === 'formup_location') {
-                    $('#formupLocation').val(value);
-                }
-
-                // Special handling for doctrine - check if dropdown exists
-                if (key === 'doctrine' && value) {
-                    if ($('#doctrineSelect').length) {
-                        // Try to find matching option in dropdown
-                        var found = false;
-                        $('#doctrineSelect option').each(function() {
-                            if ($(this).text().trim() === value) {
-                                $('#doctrineSelect').val($(this).val()).trigger('change');
-                                found = true;
-                                return false;
-                            }
-                        });
-                        // If not found in dropdown, switch to manual and fill
-                        if (!found) {
-                            $('#doctrineSelect').val('custom').trigger('change');
-                            $('#doctrineManual').val(value);
-                        }
-                    } else {
-                        // No dropdown, just fill the text input
-                        $('input[name="doctrine"]').val(value);
-                    }
-                }
-
-                // Handle mention_type and show/hide role dropdown
-                if (key === 'mention_type') {
-                    $('#mentionType').val(value).trigger('change');
-                }
-            });
-
-            // After setting mention_type, also set the role if present
-            if (fields.mention_type === 'role' && fields.mention_role_id) {
-                $('#roleMentionDiv').show();
-                $('select[name="role_mention"]').val(fields.mention_role_id);
-            }
-        }
+    $('.recent-ping').on('click', function () {
+        BroadcastForm.fill($.extend({}, attrJson($(this), 'data-fields'), {
+            webhook_id: $(this).attr('data-webhook-id') || null,
+            message: $(this).attr('data-message') || ''
+        }));
     });
 
-    // Recent ping click - populate form
-    $('.recent-ping').click(function() {
-        const message = $(this).data('message');
-        const fields = $(this).data('fields');
-        
-        $('textarea[name="message"]').val(message).trigger('input');
-        
-        if (fields) {
-            $.each(fields, function(key, value) {
-                $(`[name="${key}"]`).val(value);
-            });
+    // Every box goes along, and the request it answers rides in the address.
+    $('#scheduleBtn').on('click', function () {
+        try {
+            localStorage.setItem('pingFormData', JSON.stringify({ v: 2, at: Date.now(), values: BroadcastForm.read() }));
+        } catch (e) {
+            // Without storage the Schedule page still opens, from its own defaults.
         }
+
+        window.location.href = @json($scheduleUrl);
     });
 
-    // Mention type change
-    $('#mentionType').change(function() {
-        const val = $(this).val();
-        
-        // Hide all mention divs
-        $('#roleMentionDiv, #customMentionDiv').hide();
-        
-        // Show appropriate div
-        if (val === 'role') {
-            $('#roleMentionDiv').show();
-        } else if (val === 'custom') {
-            $('#customMentionDiv').show();
+    function previewField(label, value) {
+        return $('<div style="margin-bottom: 8px;">').append(
+            $('<span style="color: #8e9297; font-weight: bold;">').text(label),
+            $('<br>'),
+            $('<span style="color: #dcddde;">').text(value)
+        );
+    }
+
+    $('#previewBtn').on('click', function (event) {
+        event.preventDefault();
+
+        var values = BroadcastForm.read();
+        var channel = $('#channelSelect').val() ? $('#channelSelect option:selected').text().trim() : '';
+        var $fields = $('#previewFields').empty();
+
+        $('#previewTitle').text(TITLES[values.embed_type] || TITLES.fleet);
+        $('#previewMessage').html(values.message ? MessageTools.render(values.message) : '<em>No message entered</em>');
+        $('#embedPreview').css('border-left-color', /^#[0-9A-Fa-f]{6}$/.test(values.embed_color) ? values.embed_color : '#5865F2');
+
+        if (values.fc_name) {
+            $fields.append(previewField('👤 FC Name', values.fc_name));
         }
+        if (values.formup_location) {
+            $fields.append(previewField('📍 Formup Location', values.formup_location));
+        }
+        if (values.pap_type) {
+            $fields.append(previewField('🎯 PAP Type', values.pap_type));
+        }
+        if (channel || values.comms) {
+            $fields.append(previewField('🎧 Comms / Channel', channel || values.comms));
+        }
+        if (values.doctrine) {
+            $fields.append(previewField('🚀 Doctrine', values.doctrine));
+        }
+
+        var now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        $('#previewFooter').text('This was a broadcast from ' + @json(auth()->user()->name) + ' to discord at ' + now + ' EVE');
+
+        $('#previewModal').appendTo('body').modal('show');
     });
 
-    // Toggle multiple webhooks
-    $('#multipleToggle').click(function() {
-        const isMultiple = $('#multipleWebhooksDiv').is(':visible');
-        
-        if (isMultiple) {
-            // Switch to single
-            $('#singleWebhookDiv').show();
-            $('#multipleWebhooksDiv').hide();
-            $('#webhookSelect').prop('required', true);
-            $(this).html('<i class="fas fa-copy"></i> Multiple Webhooks');
-            $('#pingForm').attr('action', '{{ route("discordpings.send.post") }}');
-        } else {
-            // Switch to multiple
-            $('#singleWebhookDiv').hide();
-            $('#multipleWebhooksDiv').show();
-            $('#webhookSelect').prop('required', false);
-            $(this).html('<i class="fas fa-bullhorn"></i> Single Webhook');
-            $('#pingForm').attr('action', '{{ route("discordpings.send.multiple") }}');
-        }
+    function templateAlert(kind, text) {
+        $('#saveTemplateAlert').empty().append($('<div class="alert">').addClass('alert-' + kind).text(text)).show();
+    }
+
+    $('#openSaveTemplate').on('click', function () {
+        $('#saveTemplateModal').appendTo('body').modal('show');
     });
 
-    // Handle staging location selection
-    $('.staging-select').click(function(e) {
-        e.preventDefault();
-        const location = $(this).data('location');
-        $('#formupLocation').val(location);
-    });
-    
-    // Set default staging on page load if field is empty
-    @if(($stagings ?? collect())->where('is_default', true)->first())
-        if (!$('#formupLocation').val()) {
-            const defaultStaging = '{{ ($stagings ?? collect())->where('is_default', true)->first()->getFullLocationString() }}';
-            // Don't auto-fill, but show placeholder
-            $('#formupLocation').attr('placeholder', defaultStaging + ' (default)');
-        }
-    @endif
-
-    // Add visual feedback when channel is selected
-    $('#channelSelect').change(function() {
-        if ($(this).val()) {
-            // Channel selected - add warning to comms field
-            $('#commsField').attr('placeholder', 'Leave empty - Discord channel already selected');
-            $('#commsField').parent().find('.text-warning').addClass('text-danger font-weight-bold');
-            
-            // Clear comms field if channel is selected
-            if ($('#commsField').val()) {
-                if (confirm('You have selected a Discord channel. Clear the Comms field to avoid duplication?')) {
-                    $('#commsField').val('');
-                }
-            }
-        } else {
-            // No channel selected - restore normal placeholder
-            $('#commsField').attr('placeholder', 'e.g., Mumble Channel 3 or TeamSpeak Room 5');
-            $('#commsField').parent().find('.text-warning').removeClass('text-danger font-weight-bold');
-        }
-    });
-    
-    // Warn when typing in comms if channel is selected
-    $('#commsField').on('input', function() {
-        if ($('#channelSelect').val() && $(this).val()) {
-            $(this).parent().find('small').html(
-                '<i class="fas fa-exclamation-triangle text-warning"></i> ' +
-                '<strong class="text-danger">Warning: Discord channel already selected. This may create duplicate entries!</strong>'
-            );
-        } else if (!$('#channelSelect').val()) {
-            $(this).parent().find('small').html(
-                '<i class="fas fa-info-circle"></i> For voice comms or custom channels. ' +
-                '<strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.'
-            );
-        }
-    });
-
-    // Color picker sync
-    $('#colorPicker').on('input change', function() {
-        $('#embedColor').val($(this).val());
-    });
-
-    $('#embedColor').on('input', function() {
-        const val = $(this).val();
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-            $('#colorPicker').val(val);
-        }
-    });
-
-    // Update color when webhook changes
-    $('#webhookSelect').change(function() {
-        const color = $(this).find(':selected').data('color');
-        if (color) {
-            $('#embedColor').val(color);
-            $('#colorPicker').val(color);
-        }
-    });
-
-    // Schedule button
-    $('#scheduleBtn').click(function() {
-        // Save form data to localStorage for scheduled page
-        const formData = $('#pingForm').serializeArray();
-        localStorage.setItem('pingFormData', JSON.stringify(formData));
-        
-        // Redirect to schedule page
-        window.location.href = '{{ route("discordpings.scheduled.create") }}';
-    });
-
-    // Preview button
-    $('#previewBtn').click(function(e) {
-        e.preventDefault();
-        
-        // Get form values
-        const message = $('textarea[name="message"]').val();
-        const embedType = $('#embedType').val();
-        const fcName = $('input[name="fc_name"]').val();
-        const formup = $('input[name="formup_location"]').val();
-        const papType = $('select[name="pap_type"]').val();
-        const comms = $('input[name="comms"]').val();
-        const doctrine = $('input[name="doctrine"]').val() || $('#doctrineSelect option:selected').text();
-        const embedColor = $('#embedColor').val();
-        const channelName = $('select[name="channel_link"] option:selected').text();
-        
-        // Determine embed title based on type
-        let embedTitle = '📢 Fleet Broadcast';
-        if (embedType === 'announcement') {
-            embedTitle = '📣 Announcement';
-        } else if (embedType === 'message') {
-            embedTitle = '💬 Message';
-        } else if (embedType === 'prepping') {
-            embedTitle = '‼️ PREPING ‼️';
-        }
-        
-        // Update preview modal
-        $('#previewTitle').text(embedTitle);
-        $('#previewMessage').text(message || 'No message entered');
-        $('#embedPreview').css('border-left-color', embedColor);
-        
-        // Build fields HTML
-        let fieldsHtml = '';
-        if (fcName) {
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">👤 FC Name</span><br>
-                <span style="color: #dcddde;">${fcName}</span>
-            </div>`;
-        }
-        if (formup) {
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">📍 Formup Location</span><br>
-                <span style="color: #dcddde;">${formup}</span>
-            </div>`;
-        }
-        if (papType) {
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">🎯 PAP Type</span><br>
-                <span style="color: #dcddde;">${papType}</span>
-            </div>`;
-        }
-        if (comms || (channelName && channelName !== 'No Discord Channel...')) {
-            const channelValue = (channelName && channelName !== 'No Discord Channel...') ? channelName : comms;
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">🎧 Comms / Channel</span><br>
-                <span style="color: #dcddde;">${channelValue}</span>
-            </div>`;
-        }
-        if (doctrine && doctrine !== 'Select Doctrine...') {
-            fieldsHtml += `<div style="margin-bottom: 8px;">
-                <span style="color: #8e9297; font-weight: bold;">🚀 Doctrine</span><br>
-                <span style="color: #dcddde;">${doctrine}</span>
-            </div>`;
-        }
-        
-        $('#previewFields').html(fieldsHtml);
-        
-        // Update footer
-        const userName = '{{ auth()->user()->name }}';
-        const currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        $('#previewFooter').text(`This was a broadcast from ${userName} to discord at ${currentTime} EVE`);
-        
-        // Show modal
-        $('#previewModal').modal('show');
-    });
-
-    // Save as Template AJAX
-    $('#saveTemplateBtn').click(function() {
+    $('#saveTemplateBtn').on('click', function () {
         var name = $('#templateName').val().trim();
+
         if (!name) {
-            $('#saveTemplateAlert').html('<div class="alert alert-danger">Please enter a template name.</div>').show();
+            templateAlert('danger', 'Please enter a template name.');
             return;
         }
 
-        var $btn = $(this);
-        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        var $button = $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        var data = $.extend(BroadcastForm.read(), { _token: @json(csrf_token()), name: name });
 
-        var formData = {
-            _token: '{{ csrf_token() }}',
-            name: name,
-            message: $('textarea[name="message"]').val(),
-            embed_type: $('select[name="embed_type"]').val(),
-            fc_name: $('input[name="fc_name"]').val(),
-            formup_location: $('#formupLocation').val(),
-            pap_type: $('select[name="pap_type"]').val(),
-            comms: $('input[name="comms"]').val(),
-            mention_type: $('select[name="mention_type"]').val(),
-            mention_role_id: $('select[name="role_mention"]').val() || null,
-            embed_color: $('#embedColor').val()
-        };
-
-        // Handle doctrine - get from dropdown or manual input
-        if ($('#doctrineSelect').length && $('#doctrineSelect').val() && $('#doctrineSelect').val() !== 'custom') {
-            formData.doctrine = $('#doctrineSelect option:selected').text().trim();
-        } else if ($('#doctrineManual').length && $('#doctrineManual').val()) {
-            formData.doctrine = $('#doctrineManual').val();
-        } else {
-            formData.doctrine = $('input[name="doctrine"]').val();
-        }
-
-        $.post('{{ route("discordpings.templates.quicksave") }}', formData)
-        .done(function(response) {
-            $('#saveTemplateAlert').html('<div class="alert alert-success">Template saved!</div>').show();
-            setTimeout(function() {
-                $('#saveTemplateModal').modal('hide');
-                location.reload();
-            }, 1000);
-        })
-        .fail(function(xhr) {
-            var msg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to save template.';
-            $('#saveTemplateAlert').html('<div class="alert alert-danger">' + msg + '</div>').show();
-        })
-        .always(function() {
-            $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save Template');
-        });
+        $.post(@json(route('discordpings.templates.quicksave')), data)
+            .done(function () {
+                templateAlert('success', 'Template saved!');
+                setTimeout(function () {
+                    $('#saveTemplateModal').modal('hide');
+                    location.reload();
+                }, 1000);
+            })
+            .fail(function (xhr) {
+                var json = xhr.responseJSON || {};
+                templateAlert('danger', json.error || json.message || 'Failed to save template.');
+            })
+            .always(function () {
+                $button.prop('disabled', false).html('<i class="fas fa-save"></i> Save Template');
+            });
     });
 
-    // Reset modal on close
-    $('#saveTemplateModal').on('hidden.bs.modal', function() {
+    $('#saveTemplateModal').on('hidden.bs.modal', function () {
         $('#templateName').val('');
-        $('#saveTemplateAlert').hide().html('');
+        $('#saveTemplateAlert').hide().empty();
     });
-
-    @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)
-    // Handle doctrine dropdown change (only if seat-fitting is installed)
-    $('#doctrineSelect').change(function() {
-        if ($(this).val() === 'custom') {
-            $('#doctrineManual').show().prop('required', false);
-            $(this).prop('name', ''); // Remove name so it doesn't submit
-            $('#doctrineManual').prop('name', 'doctrine'); // Set manual field name
-        } else {
-            $('#doctrineManual').hide().val('');
-            $(this).prop('name', 'doctrine_id'); // Restore dropdown name
-            $('#doctrineManual').prop('name', ''); // Remove manual field name
-        }
-    });
-    @endif
 });
 </script>
 @endpush

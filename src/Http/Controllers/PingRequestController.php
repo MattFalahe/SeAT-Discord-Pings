@@ -10,6 +10,8 @@ use DiscordPings\Services\PingRequests\ErrorText;
 use DiscordPings\Services\PingRequests\LocationLookup;
 use DiscordPings\Services\PingRequests\MemberAccount;
 use DiscordPings\Services\PingRequests\PingRequestSender;
+use DiscordPings\Services\PingRequests\RequestAnswers;
+use DiscordPings\Services\PingRequests\RequestBoard;
 use DiscordPings\Services\PingRequests\Sections;
 use DiscordPings\Services\PingRequests\ShipLookup;
 use Illuminate\Http\Request;
@@ -89,7 +91,38 @@ class PingRequestController extends Controller
         $characters = MemberAccount::characterNames((int) $user->id);
         $active = $sender->openFor($user);
 
-        return view('discordpings::requests.index', compact('cards', 'recent', 'recentDays', 'identity', 'characters', 'active'));
+        $recentAnswers = RequestAnswers::forRequests($recent->pluck('id')->all()) ?? [];
+
+        // FCs answer from FC Opportunities for a day, so until the newest delivered request is that old the page keeps checking.
+        $watchAnswers = $recent->contains(fn ($row) => $row->status === 'sent' && $row->created_at->gte(now()->subHours(RequestBoard::HOURS)));
+
+        return view('discordpings::requests.index', compact('cards', 'recent', 'recentDays', 'identity', 'characters', 'active', 'recentAnswers', 'watchAnswers'));
+    }
+
+    /**
+     * Who has answered the member's own requests from the last day, keyed by
+     * History id, so the page can show it without a reload.
+     */
+    public function answers()
+    {
+        try {
+            $ids = PingHistory::where('user_id', auth()->id())
+                ->memberRequests()
+                ->where('created_at', '>=', now()->subHours(RequestBoard::HOURS))
+                ->pluck('id')
+                ->all();
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] Could not read a member\'s recent requests: ' . ErrorText::safe($e->getMessage()));
+            $ids = null;
+        }
+
+        $answers = $ids === null ? null : RequestAnswers::forRequests($ids);
+
+        if ($answers === null) {
+            return response()->json(['message' => 'Could not check who answered.'], 503);
+        }
+
+        return response()->json(['answers' => (object) array_map([RequestAnswers::class, 'forPage'], $answers)]);
     }
 
     public function systems(LocationLookup $lookup)

@@ -5,7 +5,7 @@
 
 @push('head')
 <link rel="stylesheet" href="{{ asset('vendor/discordpings/css/vendor/dataTables.bootstrap4.min.css') }}">
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <style>
     .pr-notice { border-left: 4px solid var(--pings-info); }
     .pr-card { height: 100%; margin-bottom: 0; }
@@ -30,6 +30,8 @@
     /* The plugin's buttons go full width on a phone, and this one shares its row with the name. */
     .pr-active-head .pr-active-close { flex: none; width: auto; margin: 0; }
     .pr-active-when { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 2px 0 10px; font-size: 0.875rem; }
+    .pr-active-handled { margin: -4px 0 10px; padding: 6px 10px; border-left: 3px solid #17a2b8; background: rgba(23, 162, 184, 0.12); border-radius: 3px; font-size: 0.875rem; }
+    .pr-handled-badge { margin-left: 4px; }
     .pr-active-left { font-variant-numeric: tabular-nums; }
     .pr-active-item .form-group { margin-bottom: 10px; }
     .pr-suggests { position: relative; }
@@ -175,6 +177,15 @@
                                 <td>
                                     @if($history->status === 'sent')
                                         <span class="badge badge-success">Delivered</span>
+                                        {{-- Filled in again by the page as FCs answer. --}}
+                                        <span class="pr-handled" data-history-id="{{ $history->id }}">
+                                            @if (! empty($recentAnswers[$history->id]))
+                                                <span class="badge badge-info pr-handled-badge" title="An FC has sent a broadcast for this request">
+                                                    <i class="fas fa-user-check"></i>
+                                                    Handled by {{ implode(', ', array_column($recentAnswers[$history->id], 'name')) }}
+                                                </span>
+                                            @endif
+                                        </span>
                                     @elseif($history->status === 'blocked')
                                         <span class="badge badge-secondary">Cooldown</span>
                                     @elseif($history->status === 'rate_limited')
@@ -257,10 +268,12 @@
         presetUrl: @json(url('discord-pings/requests/presets/__ID__')),
         systemsUrl: @json(url('discord-pings/requests/systems')),
         shipsUrl: @json(url('discord-pings/requests/ships')),
-        locationsUrl: @json(url('discord-pings/requests/systems/__ID__/locations'))
+        locationsUrl: @json(url('discord-pings/requests/systems/__ID__/locations')),
+        answersUrl: @json(route('discordpings.requests.answers')),
+        watchAnswers: @json($watchAnswers ?? false)
     };
 </script>
-<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=5"></script>
+<script src="{{ asset('vendor/discordpings/js/ping-requests.js') }}?v=6"></script>
 <script src="{{ asset('vendor/discordpings/js/vendor/jquery.dataTables.min.js') }}"></script>
 <script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
 <script>

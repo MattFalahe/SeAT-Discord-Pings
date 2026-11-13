@@ -321,17 +321,56 @@ class SourceTest extends TestCase
         }
     }
 
-    /** A Form-up link carries the request's id, so it must not open one the FC couldn't see on the board. */
+    /** Form-up and the link in Discord carry the request's id or ref, so neither may open one the FC couldn't see on the board. */
     public function test_form_up_opens_a_request_only_through_the_board(): void
     {
         $controller = file_get_contents(self::SRC . 'Http/Controllers/PingController.php');
 
-        $this->assertStringContainsString("RequestBoard::find(auth()->user(), \$request->input('ping_request_id'))", $controller);
-        $this->assertSame(2, substr_count($controller, "'ping_request_id'"), 'PingController reads the request id somewhere the board does not check');
+        $this->assertStringContainsString("RequestBoard::find(\$user, \$request->input('ping_request_id'))", $controller);
+        $this->assertStringContainsString("RequestBoard::findByRef(\$user, \$request->input('request'))", $controller);
+        $this->assertSame(1, substr_count($controller, "input('ping_request_id')"), 'PingController reads the request id somewhere the board does not check');
+        $this->assertSame(1, substr_count($controller, "input('request')"), 'PingController reads the ref somewhere the board does not check');
 
-        // The list and a Form-up link both leave out what never reached Discord.
+        // The board, Form-up and the link all leave out what never reached Discord.
         $board = file_get_contents(self::SRC . 'Services/PingRequests/RequestBoard.php');
-        $this->assertSame(2, substr_count($board, "->where('status', 'sent')"));
+        $this->assertSame(1, substr_count($board, "->where('status', 'sent')"));
+        $this->assertSame(3, substr_count($board, 'self::open()'), 'Something in RequestBoard reads requests without the board\'s rule');
     }
 
+    /** The hidden field that says what a broadcast answers is the browser's word, so it's checked against the board on every save. */
+    public function test_a_broadcast_answers_a_request_only_through_the_board(): void
+    {
+        $send = file_get_contents(self::SRC . 'Http/Controllers/PingController.php');
+        $this->assertStringContainsString("unset(\$validated['answers_request']);", $send);
+        $this->assertStringContainsString("RequestBoard::find(auth()->user(), \$request->input('answers_request'))", $send);
+        $this->assertSame(2, substr_count($send, 'withAnsweredRequest($request, '), 'A send path keeps answers_request without the board checking it');
+
+        $scheduled = file_get_contents(self::SRC . 'Http/Controllers/ScheduledController.php');
+        $this->assertStringContainsString("RequestBoard::find(auth()->user(), \$validated['answers_request'])", $scheduled);
+        $this->assertSame(1, substr_count($scheduled, "\$fields['answers_request'] = (int) \$validated['answers_request'];"));
+    }
+
+    /** Send, Schedule and Templates share one set of boxes, so a field added to one can't go missing from the others. */
+    public function test_every_broadcast_form_uses_the_shared_boxes(): void
+    {
+        foreach (['send', 'scheduled/create', 'scheduled/edit', 'templates/create', 'templates/edit'] as $page) {
+            $view = file_get_contents(self::SRC . 'resources/views/' . $page . '.blade.php');
+
+            foreach (['broadcast-main', 'broadcast-optional', 'broadcast-scripts'] as $partial) {
+                $this->assertStringContainsString("@include('discordpings::partials." . $partial . "'", $view, $page . ' is missing ' . $partial);
+            }
+
+            $this->assertStringNotContainsString('<textarea', $view, $page . ' has a message box of its own');
+        }
+    }
+
+    /** FC Opportunities is read through Manager Core, so the menu shows it whenever MC is there and never when it isn't. */
+    public function test_fc_opportunities_shows_only_with_manager_core(): void
+    {
+        $menu = file_get_contents(self::SRC . 'Config/Menu/package.sidebar.php');
+
+        $this->assertStringContainsString("class_exists('\\ManagerCore\\Services\\EventBus')", $menu);
+        $this->assertStringNotContainsString('StructureManager', $menu);
+        $this->assertStringNotContainsString('MiningManager', $menu);
+    }
 }

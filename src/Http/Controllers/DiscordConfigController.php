@@ -13,6 +13,8 @@ use DiscordPings\Models\StagingLocation;
 use DiscordPings\Models\PapType;
 use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\PluginSetting;
+use DiscordPings\Helpers\DiscordHelper;
+use DiscordPings\Services\BroadcastForm;
 use DiscordPings\Services\DiscordRoleResolver;
 
 class DiscordConfigController extends Controller
@@ -71,6 +73,11 @@ class DiscordConfigController extends Controller
         $audienceOptions = PingRequestButton::audienceOptions();
         $pickerRoles = DiscordRoleResolver::listRoles();
 
+        // Send Form tab.
+        $sendFormMode = BroadcastForm::mode();
+        $sendFormDefaults = BroadcastForm::saved();
+        $doctrineNames = collect(DiscordHelper::listFittingDoctrines())->pluck('name')->filter()->unique()->values()->all();
+
         return view('discordpings::config.index', compact(
             'webhooks', 'roles', 'channels', 'stagings', 'papTypes',
             'structureAlertsEnabled', 'miningAlertsEnabled',
@@ -78,8 +85,42 @@ class DiscordConfigController extends Controller
             'formupOffsetMinutes',
             'alertWebhooks', 'miningAlertWebhooks', 'routingCorpNames',
             'connectorRoles', 'connectorAvailable', 'connectorProviderLabel',
-            'requestButtons', 'requestCorporations', 'requestAlliances', 'audienceOptions', 'pickerRoles'
+            'requestButtons', 'requestCorporations', 'requestAlliances', 'audienceOptions', 'pickerRoles',
+            'sendFormMode', 'sendFormDefaults', 'doctrineNames'
         ));
+    }
+
+    /**
+     * Settings > Send Form: whether the Send and Schedule forms start empty or
+     * from these defaults. Saved either way, so the defaults can be got ready
+     * before they're switched on.
+     */
+    public function updateSendDefaults(Request $request)
+    {
+        $validated = $request->validate([
+            'send_form_mode' => 'required|in:' . BroadcastForm::EMPTY . ',' . BroadcastForm::DEFAULTS,
+            'webhook_id' => 'nullable|integer|exists:discord_webhooks,id',
+            'embed_type' => 'nullable|in:' . implode(',', BroadcastForm::EMBED_TYPES),
+            'mention_type' => 'nullable|in:' . implode(',', BroadcastForm::MENTION_TYPES),
+            'role_mention' => 'nullable|integer|exists:discord_roles,id',
+            'custom_mention' => 'nullable|string|max:100',
+            'channel_link' => 'nullable|integer|exists:discord_channels,id',
+            'embed_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'fc_main' => 'nullable|boolean',
+            'formup_location' => 'nullable|string|max:100',
+            'pap_type' => 'nullable|string|max:100',
+            'comms' => 'nullable|string|max:200',
+            'doctrine' => 'nullable|string|max:200',
+        ]);
+
+        try {
+            BroadcastForm::save($validated['send_form_mode'], $validated);
+
+            return redirect()->back()->with('success', 'Send form settings saved.');
+        } catch (\Exception $e) {
+            Log::error('Discord Pings send form settings error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to save the send form settings.');
+        }
     }
 
     /**

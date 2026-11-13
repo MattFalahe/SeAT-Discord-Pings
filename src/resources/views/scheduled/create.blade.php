@@ -4,7 +4,7 @@
 @section('page_header', 'Schedule Discord Ping')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=3">
 <script src="{{ asset('vendor/discordpings/js/eve-time.js') }}?v=1" defer></script>
 <style>
     /* Page-specific only — chrome lives in canonical CSS */
@@ -43,16 +43,16 @@
     <form method="POST" action="{{ route('discordpings.scheduled.store') }}" id="scheduledPingForm">
         @csrf
 
-        @if(! empty($tacticalEventId) && ! empty($tacticalEvent))
+        @if (! empty($tacticalEventId) && ! empty($tacticalEvent))
             <input type="hidden" name="tactical_event_id" value="{{ $tacticalEventId }}">
             <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
                 <i class="fas fa-satellite-dish"></i>
                 <strong>Form-up for tactical op:</strong>
                 {{ $tacticalEvent->title }}
-                @if($tacticalEvent->system_name)
+                @if ($tacticalEvent->system_name)
                     in <strong>{{ $tacticalEvent->system_name }}</strong>
                 @endif
-                @if($tacticalEvent->eve_time)
+                @if ($tacticalEvent->eve_time)
                     , timer at
                     <strong>
                         <span class="eve-time" data-eve-time="{{ $tacticalEvent->eve_time->toIso8601String() }}" data-show-local>
@@ -61,6 +61,19 @@
                     </strong>
                 @endif
                 . The form below has been pre-filled; review and adjust before scheduling.
+            </div>
+        @endif
+
+        @if (! empty($pingRequest))
+            {{-- Checked again when the form comes back, so this only says which request it means. --}}
+            <input type="hidden" name="answers_request" value="{{ $pingRequest->id }}">
+            <div class="alert-pings-styled alert-pings-info" style="margin-bottom: 15px;">
+                <i class="fas fa-hand-paper"></i>
+                <strong>Answering:</strong>
+                {{ $pingRequest->fields['button'] ?? 'a ping request' }},
+                {{ $pingRequest->isEmergencyRequest() ? 'an emergency' : 'a request' }} from
+                <strong>{{ $pingRequest->fields['main'] ?? $pingRequest->user_name }}</strong>.
+                It counts as answered when this broadcast goes out.
             </div>
         @endif
 
@@ -112,25 +125,6 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>Webhook <span class="text-danger">*</span></label>
-                            <select name="webhook_id" class="form-control" id="webhookSelect" required>
-                                <option value="">Select Webhook...</option>
-                                @foreach($webhooks as $webhook)
-                                    <option value="{{ $webhook->id }}" data-color="{{ $webhook->embed_color }}">
-                                        {{ $webhook->name }}
-                                        @if($webhook->channel_type)
-                                            ({{ $webhook->channel_type }})
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
                             <label>Repeat Interval</label>
                             <select name="repeat_interval" class="form-control">
                                 <option value="">One-time (No Repeat)</option>
@@ -140,8 +134,6 @@
                                 <option value="monthly">Monthly</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="col-md-6">
                         <div class="form-group">
                             <label id="repeatTimeLabel">
                                 Repeat Until <span class="text-muted" id="repeatModeHint">(EVE Time / UTC)</span>
@@ -159,92 +151,17 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="form-group">
-                    <label>Message <span class="text-danger">*</span></label>
-                    <textarea name="message" class="form-control" rows="4" required
-                              maxlength="2000">{{ old('message', $prefill['message'] ?? '') }}</textarea>
-                    <small class="form-text text-muted">
-                        <span id="charCount">0</span>/2000 characters
-                    </small>
-                </div>
-                
-                {{-- Broadcast Type Selection --}}
-                <div class="form-group">
-                    <label>Broadcast Type</label>
-                    <select name="embed_type" class="form-control" id="embedType">
-                        @foreach(['fleet' => '📢 Fleet Broadcast', 'announcement' => '📣 Announcement', 'message' => '💬 Message', 'prepping' => '‼️ PREPING ‼️'] as $embedVal => $embedLabel)
-                            <option value="{{ $embedVal }}" {{ old('embed_type', $prefill['embed_type'] ?? 'fleet') === $embedVal ? 'selected' : '' }}>{{ $embedLabel }}</option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">
-                        Choose the type of broadcast to display in Discord
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Mentions</label>
-                    <select name="mention_type" class="form-control" id="mentionType">
-                        <option value="none">No Mention</option>
-                        <option value="everyone">@everyone</option>
-                        <option value="here">@here</option>
-                        <option value="role">Discord Role</option>
-                        <option value="custom">Custom</option>
-                    </select>
-                </div>
-
-                {{-- Role Mention Dropdown (hidden by default) --}}
-                <div class="form-group" id="roleMentionDiv" style="display: none;">
-                    <label>Select Role to Mention</label>
-                    <select name="role_mention" class="form-control">
-                        <option value="">Select Role...</option>
-                        @foreach($roles ?? [] as $role)
-                            <option value="{{ $role->id }}">
-                                {{ $role->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Custom Mention Input (hidden by default) --}}
-                <div class="form-group" id="customMentionDiv" style="display: none;">
-                    <label>Custom Mention</label>
-                    <input type="text" name="custom_mention" class="form-control" 
-                           placeholder="@username or custom mention">
-                </div>
-
-                {{-- Channel Link Dropdown --}}
-                <div class="form-group">
-                    <label>Discord Channel (Optional)</label>
-                    <select name="channel_link" class="form-control" id="channelSelect">
-                        <option value="">No Discord Channel...</option>
-                        @foreach($channels ?? [] as $channel)
-                            <option value="{{ $channel->id }}">
-                                #{{ $channel->name }} 
-                                <small class="text-muted">({{ ucfirst($channel->channel_type) }})</small>
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="form-text text-muted">
-                        <i class="fas fa-info-circle"></i> Select a pre-configured Discord channel. 
-                        <strong>If you select a channel here, leave the Comms field empty</strong> to avoid duplicate entries.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label>Embed Color</label>
-                    <div class="input-group">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text p-1">
-                                <input type="color" id="colorPicker" value="#5865F2"
-                                       style="width:34px;height:34px;padding:2px;border:none;cursor:pointer;background:none;">
-                            </span>
-                        </div>
-                        <input type="text" name="embed_color" class="form-control"
-                               id="embedColor" value="#5865F2" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB">
-                    </div>
-                    <small class="form-text text-muted">Use the color picker or type a hex code directly</small>
-                </div>
+        <div class="card card-dark">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-paper-plane"></i> Broadcast
+                </h3>
+            </div>
+            <div class="card-body">
+                @include('discordpings::partials.broadcast-main')
             </div>
         </div>
 
@@ -255,99 +172,7 @@
                 </h3>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-user"></i> FC Name</label>
-                            <input type="text" name="fc_name" class="form-control"
-                                   value="{{ old('fc_name', $prefill['fc_name'] ?? '') }}">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-map-marker-alt"></i> Formup Location</label>
-                            <div class="input-group">
-                                <input type="text" name="formup_location" id="formupLocation" class="form-control"
-                                       placeholder="e.g., Jita 4-4" value="{{ old('formup_location', $prefill['formup_location'] ?? '') }}">
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
-                                            data-toggle="dropdown">
-                                        <i class="fas fa-list"></i>
-                                    </button>
-                                    <div class="dropdown-menu dropdown-menu-right">
-                                        <h6 class="dropdown-header">Quick Select Staging</h6>
-                                        @forelse($stagings ?? [] as $staging)
-                                            <a class="dropdown-item staging-select" href="#" 
-                                               data-location="{{ $staging->getFullLocationString() }}">
-                                                {{ $staging->name }}
-                                                @if($staging->is_default)
-                                                    <span class="badge badge-primary ml-1">Default</span>
-                                                @endif
-                                                <br>
-                                                <small class="text-muted">{{ $staging->getFullLocationString() }}</small>
-                                            </a>
-                                        @empty
-                                            <span class="dropdown-item text-muted">No staging locations configured</span>
-                                        @endforelse
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> PAP Type</label>
-                            <select name="pap_type" class="form-control">
-                                <option value="">None</option>
-                                @foreach($papTypes as $pap)
-                                    <option value="{{ $pap->name }}">{{ $pap->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><i class="fas fa-headset"></i> Comms</label>
-                            <input type="text" name="comms" class="form-control" id="commsField"
-                                   placeholder="e.g., Mumble Channel 3 or TeamSpeak Room 5"
-                                   value="{{ old('comms') }}">
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle"></i> For voice comms or custom channels. 
-                                <strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label><i class="fas fa-rocket"></i> Doctrine</label>
-                    @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)
-                        {{-- Show dropdown if seat-fitting is installed --}}
-                        <div class="input-group">
-                            <select name="doctrine_id" id="doctrineSelect" class="form-control">
-                                <option value="">Select Doctrine...</option>
-                                @foreach($doctrines as $doctrine)
-                                    <option value="{{ $doctrine->id }}">
-                                        {{ $doctrine->name }}
-                                    </option>
-                                @endforeach
-                                <option value="custom">-- Manual Entry --</option>
-                            </select>
-                        </div>
-                        <input type="text" name="doctrine" id="doctrineManual" class="form-control mt-2" 
-                               placeholder="Or type doctrine manually" 
-                               value="{{ old('doctrine') }}"
-                               style="display: none;">
-                    @else
-                        {{-- Show text input if seat-fitting is not installed --}}
-                        <input type="text" name="doctrine" class="form-control" 
-                               placeholder="Doctrine name" 
-                               value="{{ old('doctrine') }}">
-                    @endif
-                </div>
+                @include('discordpings::partials.broadcast-optional')
             </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-pings-primary">
@@ -363,6 +188,13 @@
 @stop
 
 @push('javascript')
+@php
+    // A form that came back with errors keeps what was typed. Otherwise it
+    // starts from Settings' defaults and whatever the page was opened for.
+    $oldInput = collect(old())->except(['_token', '_method'])->all();
+    $formValues = $oldInput !== [] ? $oldInput : ($prefill ?? []);
+@endphp
+@include('discordpings::partials.broadcast-scripts', ['suggestions' => $suggestions ?? []])
 <script>
 $(document).ready(function() {
     // ============================================================
@@ -503,112 +335,54 @@ $(document).ready(function() {
     applyModeLabels();
     updateTimeDisplay();
     updateRepeatDisplay();
-    
-    // Character counter
-    $('textarea[name="message"]').on('input', function() {
-        $('#charCount').text($(this).val().length);
-    });
-    
-    // Load saved form data from localStorage if coming from send page
-    const savedData = localStorage.getItem('pingFormData');
-    if (savedData) {
-        const formData = JSON.parse(savedData);
-        formData.forEach(function(field) {
-            if (field.name !== '_token' && field.name !== 'webhook_id') {
-                $(`[name="${field.name}"]`).val(field.value);
-            }
-        });
-        localStorage.removeItem('pingFormData');
-        
-        // Trigger character count update
-        $('textarea[name="message"]').trigger('input');
+
+    BroadcastForm.init('#scheduledPingForm', @json($formValues));
+
+    // What Send's Schedule button brought along: every box, as the FC left it.
+    // Read once and cleared, and only if it's fresh, so an old one never
+    // turns up in a form opened some other way later.
+    function carriedFromSend() {
+        var saved;
+
+        try {
+            saved = localStorage.getItem('pingFormData');
+            localStorage.removeItem('pingFormData');
+            saved = saved ? JSON.parse(saved) : null;
+        } catch (e) {
+            return null;
+        }
+
+        if (saved && saved.v === 2 && saved.values && typeof saved.values === 'object') {
+            return Date.now() - (saved.at || 0) < 10 * 60 * 1000 ? saved.values : null;
+        }
+
+        // A Send page loaded before this version stored the boxes as name and value pairs.
+        if ($.isArray(saved)) {
+            var values = {};
+
+            saved.forEach(function (box) {
+                if (!box || typeof box.name !== 'string' || box.name === '_token') {
+                    return;
+                }
+
+                if (box.name === 'webhook_ids[]') {
+                    (values.webhook_ids = values.webhook_ids || []).push(box.value);
+                } else {
+                    values[box.name] = box.value;
+                }
+            });
+
+            return values;
+        }
+
+        return null;
     }
 
-    // Mention type change
-    $('#mentionType').change(function() {
-        const val = $(this).val();
-        $('#roleMentionDiv, #customMentionDiv').hide();
-        
-        if (val === 'role') {
-            $('#roleMentionDiv').show();
-        } else if (val === 'custom') {
-            $('#customMentionDiv').show();
-        }
-    });
+    var carried = carriedFromSend();
+    if (carried) {
+        BroadcastForm.fill(carried);
+    }
 
-    // Staging selection
-    $('.staging-select').click(function(e) {
-        e.preventDefault();
-        const location = $(this).data('location');
-        $('#formupLocation').val(location);
-    });
-
-    // Channel/Comms conflict handling
-    $('#channelSelect').change(function() {
-        if ($(this).val()) {
-            $('#commsField').attr('placeholder', 'Leave empty - Discord channel already selected');
-            $('#commsField').parent().find('.text-warning').addClass('text-danger font-weight-bold');
-            
-            if ($('#commsField').val()) {
-                if (confirm('You have selected a Discord channel. Clear the Comms field to avoid duplication?')) {
-                    $('#commsField').val('');
-                }
-            }
-        } else {
-            $('#commsField').attr('placeholder', 'e.g., Mumble Channel 3 or TeamSpeak Room 5');
-            $('#commsField').parent().find('.text-warning').removeClass('text-danger font-weight-bold');
-        }
-    });
-    
-    $('#commsField').on('input', function() {
-        if ($('#channelSelect').val() && $(this).val()) {
-            $(this).parent().find('small').html(
-                '<i class="fas fa-exclamation-triangle text-warning"></i> ' +
-                '<strong class="text-danger">Warning: Discord channel already selected. This may create duplicate entries!</strong>'
-            );
-        } else if (!$('#channelSelect').val()) {
-            $(this).parent().find('small').html(
-                '<i class="fas fa-info-circle"></i> For voice comms or custom channels. ' +
-                '<strong class="text-warning">Leave empty if Discord Channel is selected above</strong>.'
-            );
-        }
-    });
-
-    // Color picker sync
-    $('#colorPicker').on('input change', function() {
-        $('#embedColor').val($(this).val());
-    });
-
-    $('#embedColor').on('input', function() {
-        const val = $(this).val();
-        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-            $('#colorPicker').val(val);
-        }
-    });
-
-    $('#webhookSelect').change(function() {
-        const color = $(this).find(':selected').data('color');
-        if (color) {
-            $('#embedColor').val(color);
-            $('#colorPicker').val(color);
-        }
-    });
-
-    @if(($hasFittingPlugin ?? false) && ($doctrines ?? collect())->count() > 0)
-    // Handle doctrine dropdown
-    $('#doctrineSelect').change(function() {
-        if ($(this).val() === 'custom') {
-            $('#doctrineManual').show();
-            $(this).prop('name', '');
-            $('#doctrineManual').prop('name', 'doctrine');
-        } else {
-            $('#doctrineManual').hide().val('');
-            $(this).prop('name', 'doctrine_id');
-            $('#doctrineManual').prop('name', '');
-        }
-    });
-    @endif
-    
     // Handle form submission — emit canonical UTC ISO via the
     // scheduled_at_utc / repeat_until_utc hidden fields regardless
     // of whether the user entered EVE or local time. The server side

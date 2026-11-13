@@ -162,6 +162,7 @@
                                         'audience_permissions' => $button->audience_permissions ?? [],
                                         'sort_order' => $button->sort_order,
                                         'is_active' => $button->is_active,
+                                        'answer_defaults' => $button->answer_defaults ?: (object) [],
                                     ]) }}">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -345,6 +346,91 @@
                             @endforeach
                         </div>
                         <small class="text-muted">Tick one or more and members need any one of them, on top of Line Member. Leave them all empty for every line member.</small>
+                    </div>
+
+                    <div class="form-group prb-answer-defaults">
+                        <label class="d-block">When an FC answers</label>
+                        <small class="text-muted d-block mb-2">
+                            What the Send form starts with when an FC answers a request from this button, from the link in its Discord message
+                            or from FC Opportunities. The message starts as what the member wrote, and the FC fills in where to form up and the doctrine.
+                            Anything left empty here comes from the Send Form tab.
+                        </small>
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label for="prb_answer_webhook_id">Webhook</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_webhook_id" name="answer_defaults[webhook_id]" data-key="webhook_id">
+                                    <option value="">No default</option>
+                                    @foreach ($webhooks->where('is_active', true) as $webhook)
+                                        <option value="{{ $webhook->id }}">{{ $webhook->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="prb_answer_embed_type">Broadcast type</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_embed_type" name="answer_defaults[embed_type]" data-key="embed_type">
+                                    <option value="">No default (PREPING)</option>
+                                    <option value="fleet">📢 Fleet Broadcast</option>
+                                    <option value="announcement">📣 Announcement</option>
+                                    <option value="message">💬 Message</option>
+                                    <option value="prepping">‼️ PREPING ‼️</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_mention_type">Mentions</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_mention_type" name="answer_defaults[mention_type]" data-key="mention_type">
+                                    <option value="">No default</option>
+                                    <option value="none">No Mention</option>
+                                    <option value="everyone">@everyone</option>
+                                    <option value="here">@here</option>
+                                    <option value="role">Discord Role</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_role_mention">Role, for Discord Role</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_role_mention" name="answer_defaults[role_mention]" data-key="role_mention">
+                                    <option value="">No default</option>
+                                    @foreach ($roles->where('is_active', true) as $role)
+                                        <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_custom_mention">Custom mention</label>
+                                <input type="text" class="form-control js-prb-answer" id="prb_answer_custom_mention" name="answer_defaults[custom_mention]" data-key="custom_mention" maxlength="100">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_channel_link">Discord channel</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_channel_link" name="answer_defaults[channel_link]" data-key="channel_link">
+                                    <option value="">No default</option>
+                                    @foreach ($channels->where('is_active', true) as $channel)
+                                        <option value="{{ $channel->id }}">#{{ $channel->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_pap_type">PAP type</label>
+                                <select class="form-control js-prb-answer" id="prb_answer_pap_type" name="answer_defaults[pap_type]" data-key="pap_type">
+                                    <option value="">No default</option>
+                                    @foreach ($papTypes->where('is_active', true) as $pap)
+                                        <option value="{{ $pap->name }}">{{ $pap->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 form-group">
+                                <label for="prb_answer_embed_color">Embed color</label>
+                                <input type="text" class="form-control js-prb-answer" id="prb_answer_embed_color" name="answer_defaults[embed_color]" data-key="embed_color"
+                                       maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#RRGGBB">
+                            </div>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="prb_answer_comms">Comms</label>
+                            <input type="text" class="form-control js-prb-answer" id="prb_answer_comms" name="answer_defaults[comms]" data-key="comms" maxlength="200">
+                        </div>
                     </div>
 
                     <div class="row">
@@ -609,6 +695,12 @@ $(document).ready(function () {
         });
         $('#prb_sort_order').val(button ? button.sort_order : 0);
         $('#prb_is_active').prop('checked', button ? button.is_active : false);
+
+        var answerDefaults = (button && button.answer_defaults) || {};
+        $('.js-prb-answer').each(function () {
+            var value = answerDefaults[$(this).attr('data-key')];
+            $(this).val(value === undefined || value === null ? '' : String(value));
+        });
 
         var $picker = $('#inlineRolePickerRequestButton').hide();
         $picker.find('.js-inline-role-filter, .js-inline-role-source').val('');

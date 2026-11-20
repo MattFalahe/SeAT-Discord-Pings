@@ -1,0 +1,15 @@
+{
+    "plugin": "seat-discord-pings",
+    "manager_core": { "relation": "optional", "minimum": "1.1.0" },
+    "migration_identifier": "discord_ping",
+    "publishes": ["pings.broadcast.sent", "pings.formup.scheduled"],
+    "subscribes": [
+        { "topic": "mining.extraction_*", "handler": "mining.extraction.ingest" },
+        { "topic": "structure_manager.timer.*", "handler": "structure.timer.ingest" }
+    ],
+    "capabilities": {
+        "provides": ["mining.extraction.ingest", "structure.timer.ingest"],
+        "calls": []
+    },
+    "routes": { "serves": [], "uses": [] }
+}

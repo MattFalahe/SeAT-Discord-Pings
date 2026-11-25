@@ -166,7 +166,7 @@
     </div>
 
     {{-- Event Detail Modal --}}
-    <div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog">
+    <div class="modal fade discord-pings-wrapper" id="eventDetailModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#editPingBtn').hide();
             }
 
-            $('#eventDetailModal').modal('show');
+            $('#eventDetailModal').appendTo('body').modal('show');
         },
         dateClick: function(info) {
             // Click on empty date -> go to create form with date pre-filled

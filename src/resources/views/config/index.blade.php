@@ -788,7 +788,7 @@
     </div>
 
     {{-- Add PAP Type Modal --}}
-    <div class="modal fade" id="addPapTypeModal" tabindex="-1">
+    <div class="modal fade discord-pings-wrapper" id="addPapTypeModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="{{ route('discordpings.config.pap-types.store') }}">
@@ -824,7 +824,7 @@
     </div>
 
     {{-- Add Role Modal --}}
-    <div class="modal fade" id="addRoleModal" tabindex="-1">
+    <div class="modal fade discord-pings-wrapper" id="addRoleModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="{{ route('discordpings.config.roles.store') }}">
@@ -908,7 +908,7 @@
     </div>
 
     {{-- Add Channel Modal --}}
-    <div class="modal fade" id="addChannelModal" tabindex="-1">
+    <div class="modal fade discord-pings-wrapper" id="addChannelModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="{{ route('discordpings.config.channels.store') }}">
@@ -962,7 +962,7 @@
     </div>
 
     {{-- Add Staging Modal --}}
-    <div class="modal fade" id="addStagingModal" tabindex="-1">
+    <div class="modal fade discord-pings-wrapper" id="addStagingModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="POST" action="{{ route('discordpings.config.stagings.store') }}">
@@ -1025,6 +1025,13 @@
 <script src="{{ asset('vendor/discordpings/js/vendor/dataTables.bootstrap4.min.js') }}"></script>
 <script>
 $(document).ready(function() {
+    // AdminLTE's content wrapper is a stacking context of its own, so a modal left inside it sits under its backdrop and takes no clicks.
+    $(document).on('show.bs.modal', '#addPapTypeModal, #addRoleModal, #addChannelModal, #addStagingModal', function () {
+        if (!$(this).parent().is('body')) {
+            $(this).appendTo('body');
+        }
+    });
+
     // Initialize DataTables on all config tables
     var dtOptions = {
         pageLength: 25,

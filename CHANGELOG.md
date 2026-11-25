@@ -82,7 +82,10 @@ Each version entry lists key changes for easier reference and upgrade planning.
 
 ### 🧪 Under the hood
 
-- A test suite and GitHub checks now run on every push
+- A test suite and GitHub checks now run on every push, along with the checks every plugin in the suite shares
+- The schedule seeder loads and is registered, so a later change to a schedule can reach installs through it. The two schedules already in place stay as they are
+- Every queued job says how many tries it gets and how long it waits between them. The history cleanup now gets three
+- The Add Role, Add Channel, Add Staging and Add PAP Type windows in Settings, and the calendar's event window, move to the page body before they open, like the newer ones, so SeAT's layout can't leave them under their own backdrop
 
 ### 📦 Upgrade
 

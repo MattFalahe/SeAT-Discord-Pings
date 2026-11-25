@@ -20,7 +20,8 @@
     },
     "autoload": {
         "psr-4": {
-            "DiscordPings\\": "src/"
+            "DiscordPings\\": "src/",
+            "DiscordPings\\Database\\Seeders\\": "src/database/seeders/"
         }
     },
     "autoload-dev": {

@@ -62,6 +62,11 @@ class DiscordPingsServiceProvider extends AbstractSeatPlugin
      */
     private function add_database_seeders()
     {
+        // Migration 000006 already adds the same two schedules, and the seeder only inserts one that's missing.
+        $this->registerDatabaseSeeders([
+            \DiscordPings\Database\Seeders\ScheduleSeeder::class,
+        ]);
+
         $this->publishes([
             __DIR__ . '/database/seeders/' => database_path('seeders/'),
         ], ['seeders', 'seat']);

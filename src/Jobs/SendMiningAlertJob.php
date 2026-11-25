@@ -28,6 +28,8 @@ class SendMiningAlertJob implements ShouldQueue
 
     public $tries = 1;
 
+    public $backoff = [60];
+
     public function __construct(
         public int $webhookId,
         public int $tacticalEventId,

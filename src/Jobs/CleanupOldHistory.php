@@ -18,6 +18,10 @@ class CleanupOldHistory implements ShouldQueue
 
     public $timeout = 300;
 
+    public $tries = 3;
+
+    public $backoff = [60, 300];
+
     /**
      * Execute the job
      */

@@ -20,6 +20,8 @@ class SendScheduledPing implements ShouldQueue
 
     public $tries = 1;
 
+    public $backoff = [60];
+
     /**
      * If a scheduled ping comes back rate-limited, we retry it on each
      * cron tick (no state change) up to this many minutes past its

@@ -71,6 +71,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - The plugin's tables have proper page buttons and search boxes. A Bootstrap script they load was never shipped with the plugin, so each of those pages got a 404 and the page numbers ran together as plain text
 - **Schedule** on the Send form left the webhook behind, and a role or custom mention it carried over stayed hidden on the schedule page. It now carries every field
 - Templates kept no webhook, custom mention or Discord channel, and one saved from the Send form lost its role. They now keep every field
+- The calendar's event window can be read on SeAT's default light skin. Its time, message, FC name and the other details were near-white on a white window. It now takes its text colour from the skin, so it reads on every skin SeAT ships
 
 ### 📖 Documentation
 

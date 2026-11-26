@@ -110,11 +110,12 @@
         flex-shrink: 0;
     }
 
-    /* Event detail modal */
+    /* Event detail modal. The window follows the skin, white on a light one and dark on a
+       dark one, so its text keeps the window's own colour instead of a fixed light grey. */
     .event-detail-row {
         display: flex;
         padding: 8px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
     }
 
     .event-detail-row:last-child {
@@ -123,13 +124,9 @@
 
     .event-detail-label {
         font-weight: 600;
-        color: #9ca3af;
+        opacity: 0.85;
         width: 120px;
         flex-shrink: 0;
-    }
-
-    .event-detail-value {
-        color: #e2e8f0;
     }
 </style>
 @endpush

@@ -57,6 +57,15 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Send, Schedule and the template pages share one set of boxes, so each has every field the others do
 - Preview shows the formatting and Discord timestamps the way Discord will
 
+**📣 Pinging members**
+- A **Custom** mention pings members. Type @ and their SeAT main or Discord name, or paste their Discord user ID, and several can go in one box
+- Names are looked up among the accounts seat-connector has linked, as the broadcast goes out, so a scheduled one finds whoever is linked by then. A name nobody has, or one that more than one linked account goes by, goes out as typed rather than pinging the wrong person
+- **Pick from Discord** beside the box lists every linked member by SeAT main and Discord name, with a search box, and adds the one you pick. Alts aren't listed, so the list doesn't tell FCs who flies what
+- A line under the box says who it will ping and which names it can't find
+- A pasted ID that belongs to a role on the Discord Roles tab, or one seat-connector knows, pings the role
+- The box takes 300 characters instead of 100, room for about a dozen members
+- Without seat-connector a pasted user ID still pings, and the box says so
+
 **📜 History**
 - Requests show on the History page with a **Request** badge, or a red **Emergency** one, and an All / Broadcasts / Ping requests filter. They can't be resent
 - They stay off the Calendar and out of an FC's recent pings
@@ -72,12 +81,14 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - **Schedule** on the Send form left the webhook behind, and a role or custom mention it carried over stayed hidden on the schedule page. It now carries every field
 - Templates kept no webhook, custom mention or Discord channel, and one saved from the Send form lost its role. They now keep every field
 - The calendar's event window can be read on SeAT's default light skin. Its time, message, FC name and the other details were near-white on a white window. It now takes its text colour from the skin, so it reads on every skin SeAT ships
+- A member typed as @name in a **Custom** mention posted as plain text and pinged nobody, because Discord only pings a member written as their ID, and the box suggested typing @username. Names now ping when seat-connector has linked the account, and a pasted user ID pings with or without it
 
 ### 📖 Documentation
 
 - **Mining extraction windows.** Mining Manager now gives each chunk the mining window its refinery's moon drilling rigs allow: 48 hours, or 72 / 96 hours with a Moon Drilling Stability or Proficiency rig. FC Opportunities already takes each extraction's deadline from Mining Manager's `window_closes_at`, so a rigged moon shows its longer window with no change here. Help and the README no longer say a flat 48h
 - Help & Documentation has a Ping Requests section, a Live Updates box under Key Features and a Line Member recipe, and its NEW badges now mark what 2.0.2 adds. The permission list now uses the name SeAT shows for View
 - Help covers answering a request, the Send Form tab, the formatting bar and Discord time, and the suggestions. It no longer says FC Opportunities needs Structure Manager
+- Help says how to ping a member, and its troubleshooting covers a typed name that doesn't ping. It used to say only that Custom took free text
 - **Plugins & Ecosystem** in Help: every plugin SeAT Broadcast works with, crucial and optional, and whether this server has it. Key Features gives each feature that needs another plugin a box of its own, marked red while Manager Core is missing and yellow while only an optional plugin is
 - Help and Settings no longer say structure timers show on the Calendar. They've been on FC Opportunities since 2.0.0, where **Form-up** sends a broadcast straight away and **Schedule** plans one for later
 

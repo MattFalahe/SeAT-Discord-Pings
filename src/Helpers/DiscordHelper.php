@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use DiscordPings\Models\PingHistory;
 use DiscordPings\Services\BroadcastEventPublisher;
+use DiscordPings\Services\MemberMentions;
 use DiscordPings\Services\PingRequests\RequestAnswers;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
@@ -102,7 +103,7 @@ class DiscordHelper
                     break;
                 case 'role':
                 case 'custom':
-                    $payload['content'] = $data['custom_mention'] ?? '';
+                    $payload['content'] = MemberMentions::forDiscord($data['custom_mention'] ?? '');
                     break;
             }
         }

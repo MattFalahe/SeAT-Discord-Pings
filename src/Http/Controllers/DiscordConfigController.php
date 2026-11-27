@@ -15,6 +15,7 @@ use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Models\PluginSetting;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\MemberMentions;
 use DiscordPings\Services\DiscordRoleResolver;
 
 class DiscordConfigController extends Controller
@@ -103,7 +104,7 @@ class DiscordConfigController extends Controller
             'embed_type' => 'nullable|in:' . implode(',', BroadcastForm::EMBED_TYPES),
             'mention_type' => 'nullable|in:' . implode(',', BroadcastForm::MENTION_TYPES),
             'role_mention' => 'nullable|integer|exists:discord_roles,id',
-            'custom_mention' => 'nullable|string|max:100',
+            'custom_mention' => 'nullable|string|max:' . MemberMentions::MAX_LENGTH,
             'channel_link' => 'nullable|integer|exists:discord_channels,id',
             'embed_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'fc_main' => 'nullable|boolean',

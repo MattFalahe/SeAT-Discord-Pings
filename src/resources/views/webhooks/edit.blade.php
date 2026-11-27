@@ -4,7 +4,7 @@
 @section('page_header', 'Edit Discord Webhook')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=5">
 @endpush
 
 @section('left')

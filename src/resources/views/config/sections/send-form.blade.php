@@ -72,7 +72,8 @@
             </div>
             <div class="col-md-4 form-group">
                 <label for="send_default_custom_mention">Custom mention</label>
-                <input type="text" class="form-control" id="send_default_custom_mention" name="custom_mention" maxlength="100"
+                <input type="text" class="form-control" id="send_default_custom_mention" name="custom_mention"
+                       maxlength="{{ \DiscordPings\Services\MemberMentions::MAX_LENGTH }}" placeholder="@Main Name or a Discord user ID"
                        value="{{ $saved['custom_mention'] ?? '' }}">
             </div>
         </div>

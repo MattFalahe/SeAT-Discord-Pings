@@ -59,6 +59,56 @@ class DiscordUserResolver
         ];
     }
 
+    /**
+     * Every active SeAT account with a linked Discord account, by its main.
+     * Alts are left out on purpose: the list goes to every FC, and naming an
+     * account's alts beside its Discord would tell them who flies what.
+     *
+     * @return array<int, array{id: string, main: ?string, discord: ?string}>
+     */
+    public static function linkedMembers(): array
+    {
+        if (! self::isAvailable()) {
+            return [];
+        }
+
+        try {
+            $rows = DB::table(self::CONNECTOR_TABLE . ' as s')
+                ->join('users as u', 'u.id', '=', 's.user_id')
+                ->leftJoin('character_infos as c', 'c.character_id', '=', 'u.main_character_id')
+                ->where('s.connector_type', 'discord')
+                ->where('u.active', true)
+                ->get(['s.connector_id', 's.connector_name', 'c.name as main', 'u.name as account']);
+        } catch (\Throwable $e) {
+            Log::warning('[DiscordPings] DiscordUserResolver: could not list the linked accounts: ' . $e->getMessage());
+            return [];
+        }
+
+        $members = [];
+
+        foreach ($rows as $row) {
+            $id = (string) ($row->connector_id ?? '');
+            if ($id === '' || isset($members[$id])) {
+                continue;
+            }
+
+            // SeAT names an account after the main it was made with, for when that main isn't loaded yet.
+            $main = trim((string) ($row->main ?? '')) ?: trim((string) ($row->account ?? ''));
+            $discord = trim((string) ($row->connector_name ?? ''));
+
+            $members[$id] = [
+                'id' => $id,
+                'main' => $main !== '' ? $main : null,
+                'discord' => $discord !== '' ? $discord : null,
+            ];
+        }
+
+        $members = array_values($members);
+        usort($members, fn ($a, $b) => strcasecmp($a['main'] ?? $a['discord'] ?? '', $b['main'] ?? $b['discord'] ?? ''));
+
+        return $members;
+    }
+
     public static function senderIdentity($user): SenderIdentity
     {
         $mainId = (int) ($user->main_character_id ?? 0);

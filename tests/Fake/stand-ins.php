@@ -358,10 +358,15 @@ namespace Illuminate\Support\Facades {
 }
 
 namespace Illuminate\Support {
-    class Collection
+    class Collection implements \IteratorAggregate
     {
         public function __construct(private array $items = [])
         {
+        }
+
+        public function getIterator(): \ArrayIterator
+        {
+            return new \ArrayIterator($this->items);
         }
 
         public function map(callable $callback): self

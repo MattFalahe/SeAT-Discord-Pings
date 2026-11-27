@@ -399,7 +399,7 @@
                             </div>
                             <div class="col-md-4 form-group">
                                 <label for="prb_answer_custom_mention">Custom mention</label>
-                                <input type="text" class="form-control js-prb-answer" id="prb_answer_custom_mention" name="answer_defaults[custom_mention]" data-key="custom_mention" maxlength="100">
+                                <input type="text" class="form-control js-prb-answer" id="prb_answer_custom_mention" name="answer_defaults[custom_mention]" data-key="custom_mention" maxlength="{{ \DiscordPings\Services\MemberMentions::MAX_LENGTH }}" placeholder="@Main Name or a Discord user ID">
                             </div>
                         </div>
                         <div class="row">

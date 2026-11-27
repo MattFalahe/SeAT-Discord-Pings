@@ -41,7 +41,7 @@ final class BroadcastForm
     private const LOOKED_BACK = 50;
 
     /** The same limits the Send form checks, so a default can't be one it refuses. */
-    private const LENGTHS = ['custom_mention' => 100, 'formup_location' => 100, 'pap_type' => 100, 'comms' => 200, 'doctrine' => 200];
+    private const LENGTHS = ['custom_mention' => MemberMentions::MAX_LENGTH, 'formup_location' => 100, 'pap_type' => 100, 'comms' => 200, 'doctrine' => 200];
 
     /**
      * Only the keys asked for, each in a shape the form takes. Anything empty

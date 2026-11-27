@@ -4,7 +4,7 @@
 @section('page_header', trans('discordpings::help.help_documentation'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('vendor/discordpings/css/discord-pings.css') }}?v=5">
 <style>
     /* Page-specific only — chrome lives in canonical CSS */
 
@@ -501,6 +501,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{!! trans('discordpings::help.recent_changes_emergency_details') !!}</li>
                     <li>{!! trans('discordpings::help.recent_changes_answers') !!}</li>
                     <li>{!! trans('discordpings::help.recent_changes_broadcast_form') !!}</li>
+                    <li>{!! trans('discordpings::help.recent_changes_member_mentions') !!}</li>
                     <li>{!! trans('discordpings::help.recent_changes_fc_opportunities') !!}</li>
                 </ul>
             </div>
@@ -741,7 +742,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                 <h4>{{ trans('discordpings::help.sending_multiple') }}</h4>
                 <p>{{ trans('discordpings::help.sending_multiple_desc') }}</p>
 
-                <h4>{{ trans('discordpings::help.sending_mentions') }}</h4>
+                <h4>{{ trans('discordpings::help.sending_mentions') }}
+                    <span class="v2-badge v2-badge-inline">{{ trans('discordpings::help.v2_badge') }}</span>
+                </h4>
                 <p>{{ trans('discordpings::help.sending_mentions_desc') }}</p>
 
                 <h4>{{ trans('discordpings::help.sending_embed_types') }}</h4>
@@ -1345,6 +1348,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution1') }}</li>
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution2') }}</li>
                     <li>{{ trans('discordpings::help.issue_mentions_not_working_solution3') }}</li>
+                    <li>{{ trans('discordpings::help.issue_mentions_not_working_solution4') }}</li>
                 </ul>
 
                 <h4><i class="fas fa-exclamation-circle text-info"></i> {{ trans('discordpings::help.issue_fc_opps_empty_title') }}</h4>

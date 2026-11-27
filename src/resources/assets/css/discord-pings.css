@@ -2774,6 +2774,32 @@ div.discord-pings-wrapper div.tab-pane {
     background: #4c5fd5;
 }
 
+/* The member picker has no colours of its own: it sits on the card like the rest of the form. */
+.discord-pings-wrapper .bf-mention-row {
+    display: flex;
+    gap: 6px;
+}
+
+.discord-pings-wrapper .bf-member-picker {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 4px;
+}
+
+.discord-pings-wrapper .bf-member-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.discord-pings-wrapper .bf-member-discord {
+    margin-left: 6px;
+}
+
 .discord-pings-wrapper .mt-toolbar {
     display: flex;
     flex-wrap: wrap;

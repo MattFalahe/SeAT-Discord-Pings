@@ -158,7 +158,7 @@
             }
 
             if (has(values, 'custom_mention')) {
-                field('custom_mention').val(values.custom_mention);
+                field('custom_mention').val(values.custom_mention).trigger('input');
             }
 
             // Comms before the channel, so the channel's warning reads both as they end up.
@@ -544,6 +544,180 @@
             });
     }
 
+    /*
+     * The line under the mention box says who it will ping. It asks the server
+     * rather than guessing here, so it reads the names the same way the
+     * broadcast does as it goes out.
+     */
+    var mentionTimer = null;
+    var mentionAsked = 0;
+    var members = null;
+    var membersLoading = false;
+
+    function mentionHint(lines) {
+        var $hint = $('#customMentionHint');
+
+        if (!lines) {
+            $hint.text($hint.attr('data-help') || '');
+        } else {
+            $hint.empty().append(lines);
+        }
+    }
+
+    function hintLine(icon, iconClass, text) {
+        return $('<span class="d-block">')
+            .append($('<i aria-hidden="true">').addClass('fas ' + icon + ' ' + iconClass))
+            .append(document.createTextNode(' ' + text));
+    }
+
+    function checkMentions() {
+        var text = String(field('custom_mention').val() || '').trim();
+        var asked = ++mentionAsked;
+
+        if (!config.mentionsUrl || text === '') {
+            mentionHint(null);
+            return;
+        }
+
+        $.getJSON(config.mentionsUrl, { text: text }).done(function (result) {
+            // An answer to something typed before the last key is no use.
+            if (asked !== mentionAsked) {
+                return;
+            }
+
+            var lines = [];
+
+            if (result.pings && result.pings.length) {
+                lines.push(hintLine('fa-bell', 'text-success', 'Pings ' + result.pings.join(', ') + '.'));
+            }
+
+            if (result.ambiguous && result.ambiguous.length) {
+                lines.push(hintLine('fa-exclamation-triangle', 'text-warning', 'More than one linked account goes by ' +
+                    result.ambiguous.join(', ') + ', so it pings nobody. Pick the one you mean from the list.'));
+            }
+
+            if (result.unknown && result.unknown.length) {
+                lines.push(hintLine('fa-exclamation-triangle', 'text-warning', 'Nobody found for ' + result.unknown.join(', ') +
+                    ', so it goes out as plain text and pings nobody. ' + (result.connector
+                        ? 'Check the spelling, or pick them from the list.'
+                        : 'Without SeAT Connector only a Discord user ID pings a member.')));
+            }
+
+            mentionHint(lines.length ? lines : [hintLine('fa-info-circle', '', 'Nothing here pings anyone.')]);
+        }).fail(function () {
+            if (asked === mentionAsked) {
+                mentionHint(null);
+            }
+        });
+    }
+
+    function queueMentionCheck() {
+        clearTimeout(mentionTimer);
+        mentionTimer = setTimeout(checkMentions, 350);
+    }
+
+    function listNote(text) {
+        $('#memberPickerList').empty().append($('<span class="text-muted">').text(text));
+    }
+
+    function showMembers() {
+        var needle = String($('#memberPickerFilter').val() || '').trim().toLowerCase();
+        var $list = $('#memberPickerList').empty();
+
+        members.forEach(function (member) {
+            var words = ((member.main || '') + ' ' + (member.discord || '')).toLowerCase();
+
+            if (needle !== '' && words.indexOf(needle) === -1) {
+                return;
+            }
+
+            var $pick = $('<button type="button" class="btn btn-sm btn-pings-secondary js-member-pick">')
+                .attr('data-id', member.id)
+                .text(member.main || member.discord || member.id);
+
+            if (member.main && member.discord) {
+                $pick.append($('<small class="bf-member-discord">').text(member.discord));
+            }
+
+            $list.append($pick);
+        });
+
+        if (!members.length) {
+            listNote('Nobody has linked a Discord account through SeAT Connector yet.');
+        } else if (!$list.children().length) {
+            listNote('Nobody matches that.');
+        }
+    }
+
+    function loadMembers() {
+        if (members !== null || membersLoading || !config.membersUrl) {
+            return;
+        }
+
+        membersLoading = true;
+        listNote('Loading...');
+
+        $.getJSON(config.membersUrl).done(function (list) {
+            members = $.isArray(list) ? list : [];
+            showMembers();
+        }).fail(function () {
+            listNote('The list didn\'t load. A typed name or ID still works.');
+        }).always(function () {
+            membersLoading = false;
+        });
+    }
+
+    function bindMentions() {
+        field('custom_mention').on('input', queueMentionCheck);
+
+        $('#memberPickerToggle').on('click', function () {
+            var open = !$('#memberPicker').is(':visible');
+
+            $(this).attr('aria-expanded', open ? 'true' : 'false');
+            $('#memberPicker').slideToggle(150);
+
+            if (open) {
+                loadMembers();
+                $('#memberPickerFilter').trigger('focus');
+            }
+        });
+
+        $('#memberPickerFilter').on('input', function () {
+            if (members !== null) {
+                showMembers();
+            }
+        }).on('keydown', function (event) {
+            // Enter in a search box would send the broadcast.
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                $('#memberPickerToggle').trigger('click').trigger('focus');
+            }
+        });
+
+        $form.on('click', '.js-member-pick', function () {
+            var $box = field('custom_mention');
+            var mention = '<@' + $(this).attr('data-id') + '>';
+            var typed = String($box.val() || '').replace(/\s+$/, '');
+            var most = parseInt($box.attr('maxlength'), 10) || 0;
+
+            if (typed.indexOf(mention) !== -1) {
+                return;
+            }
+
+            var next = typed === '' ? mention : typed + ' ' + mention;
+
+            if (most && next.length > most) {
+                mentionHint([hintLine('fa-exclamation-triangle', 'text-warning',
+                    'The box is full. A Discord role reaches a bigger group in one ping.')]);
+                return;
+            }
+
+            $box.val(next).trigger('input');
+        });
+    }
+
     /* What every box does by itself, the same on both pages. */
     function bindBoxes() {
         field('message').on('input', function () {
@@ -555,6 +729,10 @@
 
             $('#roleMentionDiv').toggle(value === 'role');
             $('#customMentionDiv').toggle(value === 'custom');
+
+            if (value === 'custom') {
+                queueMentionCheck();
+            }
         });
 
         $form.on('click', '.staging-select', function (event) {
@@ -633,6 +811,7 @@
             $form = $(selector);
             webhookRequired = $('#webhookSelect').prop('required') === true;
             bindBoxes();
+            bindMentions();
             bindSuggestions();
             fill(values || {});
         },

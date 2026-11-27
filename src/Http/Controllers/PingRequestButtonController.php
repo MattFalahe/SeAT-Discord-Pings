@@ -5,6 +5,7 @@ namespace DiscordPings\Http\Controllers;
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\PingRequestButton;
 use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\MemberMentions;
 use DiscordPings\Services\PingRequests\Sections;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -156,7 +157,7 @@ class PingRequestButtonController extends Controller
             'answer_defaults.embed_type' => ['nullable', Rule::in(BroadcastForm::EMBED_TYPES)],
             'answer_defaults.mention_type' => ['nullable', Rule::in(BroadcastForm::MENTION_TYPES)],
             'answer_defaults.role_mention' => 'nullable|integer|exists:discord_roles,id',
-            'answer_defaults.custom_mention' => 'nullable|string|max:100',
+            'answer_defaults.custom_mention' => 'nullable|string|max:' . MemberMentions::MAX_LENGTH,
             'answer_defaults.channel_link' => 'nullable|integer|exists:discord_channels,id',
             'answer_defaults.embed_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'answer_defaults.pap_type' => 'nullable|string|max:100',

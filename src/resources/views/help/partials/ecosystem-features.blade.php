@@ -31,6 +31,13 @@
             'until' => 'Until then, a request names the SeAT main and corporation.',
             'new' => true,
         ],
+        'member-mentions' => [
+            'icon' => 'fa-at',
+            'title' => 'Members by Name',
+            'text' => 'A broadcast\'s Custom mention pings a member typed as @ and their SeAT main or Discord name, and Pick from Discord lists every linked member. The line under the box says who it will ping.',
+            'until' => 'Until then, ping a member by pasting their Discord user ID.',
+            'new' => true,
+        ],
         'role-list' => [
             'icon' => 'fa-user-tag',
             'title' => 'Discord Roles by Name',

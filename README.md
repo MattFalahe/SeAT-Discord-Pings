@@ -21,7 +21,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 
 ### Core (works standalone)
 
-- 📢 **Send broadcasts to Discord** with rich embeds, role mentions, channel links, doctrine integration
+- 📢 **Send broadcasts to Discord** with rich embeds, role and member mentions, channel links, doctrine integration
 - 📅 **Schedule pings** for any future EVE time, one-off or recurring (hourly/daily/weekly/monthly)
 - ✏️ **Edit / delete scheduled pings** — recurring series changes apply from the new time onwards
 - 🕒 **EVE → local time auto-conversion**: every EVE timestamp gains a hover tooltip showing your browser-local time; high-priority surfaces (Calendar, FC Opportunities, Scheduled list) also show an inline `· HH:MM local` pill. Browser-detected via `Intl.DateTimeFormat()` — DST-safe, no per-user configuration
@@ -76,7 +76,7 @@ SeAT Broadcast works perfectly fine standalone — without Manager Core installe
 - **Laravel** 10.0+
 - **Discord webhook URLs**
 - **Queue worker + scheduler** running for scheduled pings and EventBus delivery
-- *Optional* — Manager Core, Structure Manager, Mining Manager and HR Manager (for the cross-plugin integrations described above), seat-connector with its Discord driver (adds the sender's Discord name to Ping Requests, and your Discord roles to pick from in Settings), seat-fitting (doctrines to pick from on the broadcast forms)
+- *Optional* — Manager Core, Structure Manager, Mining Manager and HR Manager (for the cross-plugin integrations described above), seat-connector with its Discord driver (adds the sender's Discord name to Ping Requests, members pinged by name or picked from a list on the broadcast forms, and your Discord roles to pick from in Settings), seat-fitting (doctrines to pick from on the broadcast forms)
 
 Help & Documentation has a Plugins & Ecosystem page that shows which of them this server has, and Key Features marks each feature whose plugin is missing.
 

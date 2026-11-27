@@ -61,6 +61,7 @@ final class PluginStatus
             ['role' => self::OPTIONAL, 'any' => ['hr-manager']],
         ],
         'sender-discord' => [['role' => self::OPTIONAL, 'any' => ['seat-connector']]],
+        'member-mentions' => [['role' => self::OPTIONAL, 'any' => ['seat-connector']]],
         'role-list' => [['role' => self::OPTIONAL, 'any' => ['seat-connector', 'warlof-discord']]],
         'doctrines' => [['role' => self::OPTIONAL, 'any' => ['seat-fitting']]],
     ];

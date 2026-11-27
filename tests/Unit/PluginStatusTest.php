@@ -56,7 +56,7 @@ class PluginStatusTest extends TestCase
             $this->assertSame('Manager Core and ' . $partner, $status['features'][$key]['needs'], $key);
         }
 
-        foreach (['sender-discord' => 'SeAT Connector', 'role-list' => 'SeAT Connector', 'doctrines' => 'SeAT Fitting'] as $key => $needs) {
+        foreach (['sender-discord' => 'SeAT Connector', 'member-mentions' => 'SeAT Connector', 'role-list' => 'SeAT Connector', 'doctrines' => 'SeAT Fitting'] as $key => $needs) {
             $this->assertSame('yellow', $status['features'][$key]['state'], $key);
             $this->assertSame($needs, $status['features'][$key]['needs'], $key);
         }
@@ -105,6 +105,7 @@ class PluginStatusTest extends TestCase
             'moon-extractions' => 'Manager Core and Mining Manager',
             'fc-activity' => 'Manager Core and HR Manager',
             'sender-discord' => 'SeAT Connector',
+            'member-mentions' => 'SeAT Connector',
             'role-list' => 'SeAT Connector',
             'doctrines' => 'SeAT Fitting',
         ] as $key => $using) {

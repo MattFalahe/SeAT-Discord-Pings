@@ -15,6 +15,7 @@ use DiscordPings\Models\TacticalEvent;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Jobs\SendPingJob;
 use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\MemberMentions;
 use DiscordPings\Services\DiscordUserResolver;
 use DiscordPings\Services\PingRequests\RequestAnswers;
 use DiscordPings\Services\PingRequests\RequestBoard;
@@ -132,7 +133,7 @@ class PingController extends Controller
                 'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
                 'role_mention' => 'nullable|exists:discord_roles,id',
                 'channel_link' => 'nullable|exists:discord_channels,id',
-                'custom_mention' => 'nullable|string|max:100',
+                'custom_mention' => 'nullable|string|max:' . MemberMentions::MAX_LENGTH,
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
                 'answers_request' => 'nullable|integer',
             ]);
@@ -217,7 +218,7 @@ class PingController extends Controller
                 'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
                 'role_mention' => 'nullable|exists:discord_roles,id',
                 'channel_link' => 'nullable|exists:discord_channels,id',
-                'custom_mention' => 'nullable|string|max:100',
+                'custom_mention' => 'nullable|string|max:' . MemberMentions::MAX_LENGTH,
                 'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
                 'answers_request' => 'nullable|integer',
             ]);

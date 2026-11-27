@@ -9,6 +9,8 @@
     $broadcastFormConfig = [
         'systemsUrl' => $canLookUp ? route('discordpings.send.systems') : null,
         'locationsUrl' => $canLookUp ? url('discord-pings/send/systems/__ID__/locations') : null,
+        'mentionsUrl' => $canLookUp ? route('discordpings.send.mentions') : null,
+        'membersUrl' => $canLookUp ? route('discordpings.send.members') : null,
         'characters' => $suggestions['characters'] ?? [],
         'typedBefore' => $suggestions['typedBefore'] ?? [],
         'singleAction' => $singleAction ?? null,
@@ -19,4 +21,4 @@
     window.BROADCAST_FORM = @json($broadcastFormConfig);
 </script>
 <script src="{{ asset('vendor/discordpings/js/message-tools.js') }}?v=1"></script>
-<script src="{{ asset('vendor/discordpings/js/broadcast-form.js') }}?v=1"></script>
+<script src="{{ asset('vendor/discordpings/js/broadcast-form.js') }}?v=2"></script>

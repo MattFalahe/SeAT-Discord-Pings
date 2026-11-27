@@ -10,6 +10,11 @@
     $multipleWebhooks = $multipleWebhooks ?? false;
     $webhookRequired = $webhookRequired ?? true;
     $embedTypes = ['fleet' => '📢 Fleet Broadcast', 'announcement' => '📣 Announcement', 'message' => '💬 Message', 'prepping' => '‼️ PREPING ‼️'];
+    $linkedAccounts = \DiscordPings\Services\DiscordUserResolver::isAvailable();
+    $memberPicker = $linkedAccounts && auth()->user()->can('discordpings.send');
+    $mentionHelp = $linkedAccounts
+        ? 'Type @ and a member\'s main or Discord name, pick them from the list, or paste their Discord user ID. Several can go in one box.'
+        : 'To ping a member, paste their Discord user ID: with Developer Mode on in Discord, right-click their name and pick Copy User ID. A typed @name pings nobody without SeAT Connector.';
 @endphp
 
 <div class="form-group" id="singleWebhookDiv">
@@ -97,9 +102,26 @@
 </div>
 
 <div class="form-group" id="customMentionDiv" style="display: none;">
-    <label>Custom Mention</label>
-    <input type="text" name="custom_mention" class="form-control" maxlength="100"
-           placeholder="@username or custom mention">
+    <label for="customMention">Custom Mention</label>
+    <div class="bf-mention-row">
+        <input type="text" name="custom_mention" id="customMention" class="form-control" autocomplete="off"
+               maxlength="{{ \DiscordPings\Services\MemberMentions::MAX_LENGTH }}"
+               placeholder="{{ $linkedAccounts ? '@Main Name, @discord_name or a Discord user ID' : 'A Discord user ID, or @everyone and @here' }}">
+        @if ($memberPicker)
+            <button type="button" class="btn btn-sm btn-pings-secondary text-nowrap" id="memberPickerToggle"
+                    aria-expanded="false" aria-controls="memberPicker">
+                <i class="fas fa-user"></i> Pick from Discord
+            </button>
+        @endif
+    </div>
+    @if ($memberPicker)
+        <div id="memberPicker" class="bf-member-picker" style="display: none;">
+            <input type="search" class="form-control form-control-sm" id="memberPickerFilter"
+                   placeholder="Search by main or Discord name" aria-label="Search the linked members">
+            <div class="bf-member-list" id="memberPickerList"></div>
+        </div>
+    @endif
+    <small class="form-text text-muted" id="customMentionHint" data-help="{{ $mentionHelp }}">{{ $mentionHelp }}</small>
 </div>
 
 <div class="form-group">

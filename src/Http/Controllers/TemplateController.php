@@ -13,6 +13,7 @@ use DiscordPings\Models\StagingLocation;
 use DiscordPings\Models\PapType;
 use DiscordPings\Helpers\DiscordHelper;
 use DiscordPings\Services\BroadcastForm;
+use DiscordPings\Services\MemberMentions;
 
 class TemplateController extends Controller
 {
@@ -34,7 +35,7 @@ class TemplateController extends Controller
         'mention_type' => 'nullable|string|in:none,everyone,here,role,custom',
         'role_mention' => 'nullable|integer|exists:discord_roles,id',
         'mention_role_id' => 'nullable|integer|exists:discord_roles,id',
-        'custom_mention' => 'nullable|string|max:100',
+        'custom_mention' => 'nullable|string|max:' . MemberMentions::MAX_LENGTH,
         'channel_link' => 'nullable|integer|exists:discord_channels,id',
         'embed_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
     ];

@@ -30,7 +30,7 @@
             'icon' => 'fa-plug',
             'url' => 'https://github.com/zenobio93/seat-connector',
             'text' => 'Links SeAT accounts to your Discord server and knows its roles.',
-            'here' => 'Ping requests name the sender\'s Discord account, and Settings offers your Discord roles to pick from instead of typing their IDs. The older Warlof Discord connector covers the roles, but not the Discord account.',
+            'here' => 'Ping requests name the sender\'s Discord account, a broadcast can ping members by name or from a list of everyone linked, and Settings offers your Discord roles to pick from instead of typing their IDs. The older Warlof Discord connector covers the roles, but not the Discord accounts.',
         ],
         'seat-fitting' => [
             'icon' => 'fa-clipboard-list',

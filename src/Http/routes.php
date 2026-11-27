@@ -114,6 +114,15 @@ Route::group([
         ->name('discordpings.send.locations')
         ->middleware('can:discordpings.send')
         ->where('id', '[0-9]+');
+
+    // Who the mention box pings, and the linked Discord accounts to pick from
+    Route::get('/send/mentions', 'BroadcastLookupController@mentions')
+        ->name('discordpings.send.mentions')
+        ->middleware('can:discordpings.send');
+
+    Route::get('/send/members', 'BroadcastLookupController@members')
+        ->name('discordpings.send.members')
+        ->middleware('can:discordpings.send');
     
     // Discord Configuration (Webhooks, Roles, Channels)
     Route::get('/config', 'DiscordConfigController@index')

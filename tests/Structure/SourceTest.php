@@ -373,4 +373,79 @@ class SourceTest extends TestCase
         $this->assertStringNotContainsString('StructureManager', $menu);
         $this->assertStringNotContainsString('MiningManager', $menu);
     }
+
+    /**
+     * Lines of each validate() call inside a try whose first catch isn't
+     * ValidationException. A catch-all there turns a refused field into
+     * "please check logs", and the form never hears what was wrong.
+     *
+     * @return int[]
+     */
+    private static function validationsSwallowed(string $source): array
+    {
+        $tokens = array_values(array_filter(token_get_all($source), fn ($t) => ! is_array($t) || ! in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)));
+        $names = [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED];
+        $blocks = [];
+        $opens = null;
+        $tries = 0;
+        $inside = [];
+        $firstCatch = [];
+
+        foreach ($tokens as $i => $token) {
+            $kind = is_array($token) ? $token[0] : $token;
+
+            if ($kind === T_TRY || $kind === T_FUNCTION) {
+                $opens = $kind;
+            } elseif ($kind === '{' || $kind === T_CURLY_OPEN || $kind === T_DOLLAR_OPEN_CURLY_BRACES) {
+                $blocks[] = $kind === '{' && $opens !== null ? [$opens, $opens === T_TRY ? ++$tries : 0] : [null, 0];
+                $opens = null;
+            } elseif ($kind === '}') {
+                [$opener, $try] = array_pop($blocks);
+                $next = $tokens[$i + 1] ?? null;
+                if ($opener === T_TRY && is_array($next) && $next[0] === T_CATCH && is_array($tokens[$i + 3] ?? null) && in_array($tokens[$i + 3][0], $names, true)) {
+                    $firstCatch[$try] = ltrim($tokens[$i + 3][1], '\\');
+                }
+            } elseif (($kind === T_OBJECT_OPERATOR || $kind === T_NULLSAFE_OBJECT_OPERATOR) && is_array($tokens[$i + 1] ?? null) && $tokens[$i + 1][1] === 'validate' && ($tokens[$i + 2] ?? null) === '(') {
+                for ($b = count($blocks) - 1; $b >= 0 && $blocks[$b][0] !== T_FUNCTION; $b--) {
+                    if ($blocks[$b][0] === T_TRY) {
+                        $inside[] = [$token[2], $blocks[$b][1]];
+                        break;
+                    }
+                }
+            }
+        }
+
+        $swallowed = [];
+        foreach ($inside as [$line, $try]) {
+            if (! in_array($firstCatch[$try] ?? '', ['ValidationException', 'Illuminate\Validation\ValidationException'], true)) {
+                $swallowed[] = $line;
+            }
+        }
+
+        return $swallowed;
+    }
+
+    public function test_the_validation_check_finds_what_it_should(): void
+    {
+        $method = fn (string $body) => self::validationsSwallowed("<?php class C { public function f(\$request) {\n" . $body . "\n} }");
+
+        $this->assertSame([3], $method("try {\n\$request->validate([]);\n} catch (\\Exception \$e) {}"));
+        $this->assertSame([3], $method("try {\n\$v = \$request->validate([]);\nif (\$v) { \$x = \"{\$v['a']}\"; }\n} catch (\\Throwable \$e) {} catch (ValidationException \$e) {}"));
+        $this->assertSame([], $method("try {\n\$request->validate([]);\n} catch (ValidationException \$e) {\nthrow \$e;\n} catch (\\Exception \$e) {}"));
+        $this->assertSame([], $method("try { \$a = 1; } catch (\\Exception \$e) {}\n\$request->validate([]);"));
+        $this->assertSame([], $method("try {\n\$f = function (\$r) { return \$r->validate([]); };\n} catch (\\Exception \$e) {}"));
+    }
+
+    /** Laravel sends a refused field back to the form with what was typed; a catch-all in the way hides why. */
+    public function test_a_refused_field_reaches_the_form(): void
+    {
+        $checked = 0;
+        foreach (self::files('.php', 'Http/Controllers') as $path) {
+            $source = file_get_contents($path);
+            $checked += substr_count($source, '->validate(');
+            $this->assertSame([], self::validationsSwallowed($source), basename($path) . ' swallows validation on these lines');
+        }
+
+        $this->assertGreaterThan(10, $checked);
+    }
 }

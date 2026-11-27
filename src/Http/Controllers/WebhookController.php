@@ -5,6 +5,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Schema;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Helpers\DiscordHelper;
@@ -101,6 +102,8 @@ class WebhookController extends Controller
             return redirect()->route('discordpings.webhooks')
                 ->with('success', 'Webhook created successfully!');
                 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings webhook store error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to create webhook. Please check logs.');
@@ -160,6 +163,8 @@ class WebhookController extends Controller
             return redirect()->route('discordpings.webhooks')
                 ->with('success', 'Webhook updated successfully!');
                 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings webhook update error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update webhook. Please check logs.');

@@ -5,6 +5,7 @@ namespace DiscordPings\Http\Controllers;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use DiscordPings\Models\PingTemplate;
 use DiscordPings\Models\DiscordChannel;
 use DiscordPings\Models\DiscordRole;
@@ -86,6 +87,8 @@ class TemplateController extends Controller
 
             return redirect()->route('discordpings.templates')
                 ->with('success', 'Template created successfully!');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings template store error: ' . $e->getMessage());
             return redirect()->back()->withInput()
@@ -142,6 +145,8 @@ class TemplateController extends Controller
 
             return redirect()->route('discordpings.templates')
                 ->with('success', 'Template updated successfully!');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings template update error: ' . $e->getMessage());
             return redirect()->back()->withInput()
@@ -215,6 +220,8 @@ class TemplateController extends Controller
                 'success' => true,
                 'template' => $template,
             ]);
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings template quick save error: ' . $e->getMessage());
             return response()->json([

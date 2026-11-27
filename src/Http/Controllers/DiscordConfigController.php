@@ -6,6 +6,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\DiscordChannel;
 use DiscordPings\Models\DiscordWebhook;
@@ -252,6 +253,8 @@ class DiscordConfigController extends Controller
             
             return redirect()->back()->with('success', 'Discord role added successfully!');
             
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord role creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to add Discord role.');
@@ -296,6 +299,8 @@ class DiscordConfigController extends Controller
             
             return redirect()->back()->with('success', 'Discord channel added successfully!');
             
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord channel creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to add Discord channel.');
@@ -333,6 +338,8 @@ class DiscordConfigController extends Controller
             
             return redirect()->back()->with('success', 'Staging location added successfully!');
             
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Staging location creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to add staging location.');
@@ -457,6 +464,8 @@ class DiscordConfigController extends Controller
 
             return redirect()->back()->with('success', 'PAP type added successfully!');
 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('PAP type creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to add PAP type: ' . $e->getMessage());

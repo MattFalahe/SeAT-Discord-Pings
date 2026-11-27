@@ -82,6 +82,7 @@ Each version entry lists key changes for easier reference and upgrade planning.
 - Templates kept no webhook, custom mention or Discord channel, and one saved from the Send form lost its role. They now keep every field
 - The calendar's event window can be read on SeAT's default light skin. Its time, message, FC name and the other details were near-white on a white window. It now takes its text colour from the skin, so it reads on every skin SeAT ships
 - A member typed as @name in a **Custom** mention posted as plain text and pinged nobody, because Discord only pings a member written as their ID, and the box suggested typing @username. Names now ping when seat-connector has linked the account, and a pasted user ID pings with or without it
+- A field a form refused never said why. Send, sending to multiple webhooks, Schedule, Templates, Save as Template, the webhook forms and the Add windows in Settings answered with a general "Failed to…", dropped what had been typed, and wrote the refusal to the log as an error. They now say which field and why, keep what was typed, and log nothing
 
 ### 📖 Documentation
 

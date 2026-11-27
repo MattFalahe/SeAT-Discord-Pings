@@ -4,6 +4,7 @@ namespace DiscordPings\Http\Controllers;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use DiscordPings\Models\ScheduledPing;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\DiscordRole;
@@ -278,6 +279,8 @@ class ScheduledController extends Controller
                     $scheduledAt->format('Y-m-d H:i:s')
                 ));
                 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled store error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
             return redirect()->back()
@@ -439,6 +442,8 @@ class ScheduledController extends Controller
             return redirect()->route('discordpings.scheduled.calendar')
                 ->with('success', sprintf('Broadcast updated and rescheduled for %s EVE!', $scheduledAt->format('Y-m-d H:i')));
 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord Pings scheduled update error: ' . $e->getMessage());
             return redirect()->back()->withInput()->with('error', 'Failed to update scheduled broadcast. Error: ' . $e->getMessage());

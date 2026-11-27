@@ -4,6 +4,7 @@ namespace DiscordPings\Http\Controllers;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use DiscordPings\Models\DiscordWebhook;
 use DiscordPings\Models\DiscordRole;
 use DiscordPings\Models\DiscordChannel;
@@ -188,6 +189,8 @@ class PingController extends Controller
 
             return redirect()->back()->with('success', 'Broadcast queued for delivery to Discord.');
 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord ping send error', [
                 'error' => $e->getMessage(),
@@ -288,6 +291,8 @@ class PingController extends Controller
 
             return redirect()->back()->with('success', $message);
             
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Discord multiple ping send error', [
                 'error' => $e->getMessage(),
